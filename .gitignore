@@ -1,0 +1,49 @@
+# Node.js dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Electron build output
+dist/
+out/
+release/
+*.asar
+
+# React / Vite build
+frontend/dist/
+frontend/node_modules/
+frontend/package-lock.json
+frontend/yarn.lock
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# VS Code
+.vscode/
+
+# MacOS
+*.DS_Store
+
+# Windows
+*.exe
+*.dll
+
+# Temporary files
+tmp/
+temp/
+*.swp
+notes.md

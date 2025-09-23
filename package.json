@@ -1,0 +1,19 @@
+{
+  "name": "ecclesia",
+  "version": "1.0.0",
+  "description": "A church management system designed for the Church of South India, providing tools for congregation reports, member records, and administrative management.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "rexmi.in",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^38.1.2"
+  },
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}
