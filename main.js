@@ -1,14 +1,13 @@
-const { app, BrowserWindow, Menu, nativeTheme } = require('electron');
+const { app, BrowserWindow, Menu, nativeTheme, ipcMain } = require('electron');
 const path = require('path');
-
-// Force light theme
-nativeTheme.themeSource = 'light';
 
 let mainWindow;
 
 function createWindow() {
-  // Force light theme before creating window
-  nativeTheme.themeSource = 'light';
+  // Force light theme before creating window (if available)
+  if (nativeTheme) {
+    nativeTheme.themeSource = 'light';
+  }
   
   // Remove the menu bar completely
   Menu.setApplicationMenu(null);
@@ -16,15 +15,17 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 900,
     height: 600,
+    icon: path.join(__dirname, 'frontend/src/assets/Church_of_South_India.png'), // CSI logo as app icon
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: false
+      enableRemoteModule: false,
+      preload: path.join(__dirname, 'preload.js')
     },
     autoHideMenuBar: true, // Hides the menu bar
-    frame: true,
-    titleBarStyle: 'default',
-    backgroundColor: '#ffffff',
+    frame: false, // Frameless window for custom title bar
+    backgroundColor: '#B5316A',
+    title: 'Ecclesia',
     show: false // Don't show until ready
   });
 
@@ -40,6 +41,29 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+// IPC handlers for window controls
+ipcMain.on('window-minimize', () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+  }
+});
+
+ipcMain.on('window-maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.restore();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.on('window-close', () => {
+  if (mainWindow) {
+    mainWindow.close();
+  }
+});
 
 app.on('ready', createWindow);
 

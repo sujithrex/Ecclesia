@@ -1,7 +1,16 @@
+/* Font Face Declaration for Meribold */
+@font-face {
+  font-family: 'Meribold';
+  src: url('./assets/Meribold.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Microsoft Teams Theme CSS Variables */
 :root {
-  --teams-primary: #6264A7;
-  --teams-primary-hover: #464775;
+  --teams-primary: #B5316A;
+  --teams-primary-hover: #B5316A;
   --teams-background: #F3F2F1;
   --teams-surface: #FFFFFF;
   --teams-border: #E1DFDD;
@@ -28,10 +37,10 @@
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  height: 100vh;
   background-color: var(--teams-background);
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', sans-serif;
-  overflow-x: hidden;
+  overflow: hidden; /* Disable both X and Y scrolling */
 }
 
 #root {
@@ -40,6 +49,7 @@ body {
   margin: 0;
   padding: 0;
   background-color: var(--teams-background);
+  overflow: hidden; /* Disable both X and Y scrolling */
 }
 
 /* Typography */

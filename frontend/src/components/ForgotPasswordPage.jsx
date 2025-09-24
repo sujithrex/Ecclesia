@@ -6,7 +6,8 @@ import {
   EyeRegular,
   EyeOffRegular,
   MailRegular,
-  LockClosedRegular
+  LockClosedRegular,
+  KeyRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import csiLogo from '../assets/Church_of_South_India.png';
@@ -89,18 +90,18 @@ const useStyles = makeStyles({
     maxWidth: '300px',
     color: 'white',
   },
-  loginForm: {
+  forgotPasswordForm: {
     width: '100%',
     maxWidth: '360px',
   },
-  loginTitle: {
+  forgotPasswordTitle: {
     fontSize: '24px',
     fontWeight: '600',
     color: '#323130',
     margin: '0 0 8px 0',
     textAlign: 'center',
   },
-  loginSubtitle: {
+  forgotPasswordSubtitle: {
     fontSize: '14px',
     color: '#605e5c',
     marginBottom: '32px',
@@ -159,21 +160,7 @@ const useStyles = makeStyles({
       color: '#323130',
     }
   },
-  checkboxContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: '24px',
-  },
-  checkbox: {
-    marginRight: '8px',
-    accentColor: '#B5316A',
-  },
-  checkboxLabel: {
-    fontSize: '14px',
-    color: '#323130',
-    cursor: 'pointer',
-  },
-  loginButton: {
+  resetButton: {
     width: '100%',
     backgroundColor: '#B5316A',
     color: 'white',
@@ -194,21 +181,6 @@ const useStyles = makeStyles({
       outlineOffset: '2px',
     }
   },
-  forgotPasswordLink: {
-    display: 'block',
-    textAlign: 'center',
-    fontSize: '14px',
-    color: '#B5316A',
-    textDecoration: 'none',
-    marginBottom: '20px',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontFamily: 'Segoe UI, sans-serif',
-    '&:hover': {
-      textDecoration: 'underline',
-    }
-  },
   backButton: {
     background: 'none',
     border: 'none',
@@ -222,27 +194,33 @@ const useStyles = makeStyles({
   }
 });
 
-const LoginPage = ({ onBack, onForgotPassword }) => {
+const ForgotPasswordPage = ({ onBack }) => {
   const styles = useStyles();
-  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberMe: false
+    username: '',
+    pin: '',
+    newPassword: '',
+    confirmPassword: ''
   });
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempt:', formData);
+    if (formData.newPassword !== formData.confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    // Handle password reset logic here
+    console.log('Password reset attempt:', formData);
   };
 
   return (
@@ -266,93 +244,112 @@ const LoginPage = ({ onBack, onForgotPassword }) => {
             <h1 className={styles.logoText}>Ecclesia</h1>
           </div>
           <p className={styles.tagline}>
-            Manage your congregation with modern tools and insights.
+            Reset your password securely and get back to managing your congregation with ease.
           </p>
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
+      {/* Right Panel - Reset Password Form */}
       <div className={styles.rightPanel}>
-        <form className={styles.loginForm} onSubmit={handleSubmit}>
-          <h2 className={styles.loginTitle}>Sign in</h2>
-          <p className={styles.loginSubtitle}>
-            Enter your credentials to access Ecclesia
+        <form className={styles.forgotPasswordForm} onSubmit={handleSubmit}>
+          <h2 className={styles.forgotPasswordTitle}>Reset Password</h2>
+          <p className={styles.forgotPasswordSubtitle}>
+            Enter your details to reset your password
           </p>
 
-          {/* User Name Input */}
+          {/* Username Input */}
           <div className={styles.inputGroup}>
-            <label htmlFor="email" className={styles.label}>User name</label>
+            <label htmlFor="username" className={styles.label}>Username</label>
             <div className={styles.inputContainer}>
               <PersonRegular className={styles.inputIcon} />
               <input
                 type="text"
-                id="email"
-                name="email"
+                id="username"
+                name="username"
                 className={styles.input}
-                placeholder="Enter your user name"
-                value={formData.email}
+                placeholder="Enter your username"
+                value={formData.username}
                 onChange={handleInputChange}
                 required
               />
             </div>
           </div>
 
-          {/* Password Input */}
+          {/* PIN Input */}
           <div className={styles.inputGroup}>
-            <label htmlFor="password" className={styles.label}>Password</label>
+            <label htmlFor="pin" className={styles.label}>PIN</label>
+            <div className={styles.inputContainer}>
+              <KeyRegular className={styles.inputIcon} />
+              <input
+                type="password"
+                id="pin"
+                name="pin"
+                className={styles.input}
+                placeholder="Enter your PIN"
+                value={formData.pin}
+                onChange={handleInputChange}
+                maxLength="6"
+                required
+              />
+            </div>
+          </div>
+
+          {/* New Password Input */}
+          <div className={styles.inputGroup}>
+            <label htmlFor="newPassword" className={styles.label}>New Password</label>
             <div className={styles.inputContainer}>
               <LockClosedRegular className={styles.inputIcon} />
               <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
+                type={showNewPassword ? 'text' : 'password'}
+                id="newPassword"
+                name="newPassword"
                 className={`${styles.input} ${styles.passwordInput}`}
-                placeholder="Enter your password"
-                value={formData.password}
+                placeholder="Enter new password"
+                value={formData.newPassword}
                 onChange={handleInputChange}
                 required
               />
-              <span
+              <span 
                 className={styles.eyeIcon}
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowNewPassword(!showNewPassword)}
               >
-                {showPassword ? <EyeOffRegular /> : <EyeRegular />}
+                {showNewPassword ? <EyeOffRegular /> : <EyeRegular />}
               </span>
             </div>
           </div>
 
-          {/* Remember Me */}
-          <div className={styles.checkboxContainer}>
-            <input
-              type="checkbox"
-              id="rememberMe"
-              name="rememberMe"
-              className={styles.checkbox}
-              checked={formData.rememberMe}
-              onChange={handleInputChange}
-            />
-            <label htmlFor="rememberMe" className={styles.checkboxLabel}>
-              Keep me signed in
-            </label>
+          {/* Confirm Password Input */}
+          <div className={styles.inputGroup}>
+            <label htmlFor="confirmPassword" className={styles.label}>Confirm New Password</label>
+            <div className={styles.inputContainer}>
+              <LockClosedRegular className={styles.inputIcon} />
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirmPassword"
+                name="confirmPassword"
+                className={`${styles.input} ${styles.passwordInput}`}
+                placeholder="Confirm new password"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                required
+              />
+              <span 
+                className={styles.eyeIcon}
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOffRegular /> : <EyeRegular />}
+              </span>
+            </div>
           </div>
 
-          {/* Login Button */}
-          <button type="submit" className={styles.loginButton}>
-            Sign in
+          {/* Reset Button */}
+          <button type="submit" className={styles.resetButton}>
+            Reset Password
           </button>
 
-          {/* Forgot Password */}
-          <button
-            type="button"
-            className={styles.forgotPasswordLink}
-            onClick={onForgotPassword}
-          >
-            Forgot your password?
-          </button>
-
-          {/* Back to Welcome */}
+          {/* Back to Login */}
           <button type="button" className={styles.backButton} onClick={onBack}>
-            ← Back to welcome
+            ← Back to Sign In
           </button>
         </form>
       </div>
@@ -363,4 +360,4 @@ const LoginPage = ({ onBack, onForgotPassword }) => {
   );
 };
 
-export default LoginPage;
+export default ForgotPasswordPage;

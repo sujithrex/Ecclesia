@@ -1,0 +1,77 @@
+.title-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background-color: #B5316A;
+  display: flex;
+  align-items: center;
+  z-index: 1000;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.title-bar-content {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title-bar-title {
+  font-family: 'Meribold', 'Segoe UI', sans-serif;
+  font-size: 14px;
+  color: white;
+  font-weight: normal;
+  margin-left: 12px;
+  line-height: 32px;
+}
+
+.title-bar-controls {
+  display: flex;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.title-bar-button {
+  width: 46px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 16px;
+  transition: background-color 0.2s ease;
+}
+
+.title-bar-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.title-bar-button.close:hover {
+  background-color: #e81123;
+}
+
+.title-bar-button.maximize:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.title-bar-button.minimize:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.title-bar-icon {
+  display: block;
+  line-height: 1;
+}
+
+/* Adjust main content to account for title bar */
+#root {
+  padding-top: 32px;
+}
