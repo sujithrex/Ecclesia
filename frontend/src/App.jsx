@@ -10,11 +10,17 @@ import LoginPage from './components/LoginPage';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import Dashboard from './components/Dashboard';
 import ProfilePage from './components/ProfilePage';
+import CreatePastorateModal from './components/CreatePastorateModal';
+import PastorateSelectionModal from './components/PastorateSelectionModal';
 import { LoadingProvider } from './contexts/LoadingContext';
 
 function App() {
   const [user, setUser] = useState(null);
   const [sessionId, setSessionId] = useState(null);
+  const [currentPastorate, setCurrentPastorate] = useState(null);
+  const [showCreatePastorateModal, setShowCreatePastorateModal] = useState(false);
+  const [showPastorateSelectionModal, setShowPastorateSelectionModal] = useState(false);
+  const [userPastorates, setUserPastorates] = useState([]);
   const navigate = useNavigate();
 
   // Check for existing session ONLY on app startup
@@ -27,7 +33,8 @@ function App() {
           if (result.success) {
             setUser(result.user);
             setSessionId(savedSessionId);
-            navigate('/dashboard');
+            // Check pastorate after successful session validation
+            await handlePastorateCheck(result.user);
           } else {
             localStorage.removeItem('ecclesia_session');
           }
@@ -63,10 +70,47 @@ function App() {
     navigate('/login');
   };
 
-  const handleLoginSuccess = (userData, userSessionId) => {
+  const handlePastorateCheck = async (userData) => {
+    try {
+      // Get user's pastorates
+      const pastoratesResult = await window.electron.pastorate.getUserPastorates(userData.id);
+      
+      if (pastoratesResult.success) {
+        const pastorates = pastoratesResult.pastorates;
+        setUserPastorates(pastorates);
+        
+        if (pastorates.length === 0) {
+          // No pastorates - show create pastorate modal
+          setShowCreatePastorateModal(true);
+        } else {
+          // Check for last selected pastorate
+          const lastSelectedResult = await window.electron.pastorate.getLastSelected(userData.id);
+          
+          if (lastSelectedResult.success && lastSelectedResult.pastorate) {
+            // Has last selected pastorate - auto-select it
+            setCurrentPastorate(lastSelectedResult.pastorate);
+            navigate('/dashboard');
+          } else {
+            // Has pastorates but no last selected - show selection modal
+            setShowPastorateSelectionModal(true);
+          }
+        }
+      } else {
+        console.error('Failed to get user pastorates:', pastoratesResult.error);
+        // If we can't get pastorates, show create modal
+        setShowCreatePastorateModal(true);
+      }
+    } catch (error) {
+      console.error('Pastorate check error:', error);
+      setShowCreatePastorateModal(true);
+    }
+  };
+
+  const handleLoginSuccess = async (userData, userSessionId) => {
     setUser(userData);
     setSessionId(userSessionId);
-    navigate('/dashboard');
+    // Check pastorate logic after successful login
+    await handlePastorateCheck(userData);
   };
 
   const handleLogout = async () => {
@@ -77,12 +121,16 @@ function App() {
       localStorage.removeItem('ecclesia_session');
       setUser(null);
       setSessionId(null);
+      setCurrentPastorate(null);
+      setUserPastorates([]);
       navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
       localStorage.removeItem('ecclesia_session');
       setUser(null);
       setSessionId(null);
+      setCurrentPastorate(null);
+      setUserPastorates([]);
       navigate('/login');
     }
   };
@@ -97,6 +145,35 @@ function App() {
 
   const handleProfileUpdate = (updatedUser) => {
     setUser(updatedUser);
+  };
+
+  const handlePastorateCreated = (pastorate) => {
+    setCurrentPastorate(pastorate);
+    setShowCreatePastorateModal(false);
+    setUserPastorates(prev => [...prev, pastorate]);
+    navigate('/dashboard');
+  };
+
+  const handlePastorateSelected = (pastorate) => {
+    setCurrentPastorate(pastorate);
+    setShowPastorateSelectionModal(false);
+    navigate('/dashboard');
+  };
+
+  const handlePastorateChange = (pastorate) => {
+    setCurrentPastorate(pastorate);
+    // Update the pastorates list with new last_selected_at
+    setUserPastorates(prev =>
+      prev.map(p =>
+        p.id === pastorate.id
+          ? { ...p, last_selected_at: new Date().toISOString() }
+          : { ...p, last_selected_at: null }
+      )
+    );
+  };
+
+  const handleCreatePastorateFromStatus = () => {
+    setShowCreatePastorateModal(true);
   };
 
   return (
@@ -130,8 +207,11 @@ function App() {
             user ? (
               <Dashboard
                 user={user}
+                currentPastorate={currentPastorate}
                 onLogout={handleLogout}
                 onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
               />
             ) : (
               <Navigate to="/login" replace />
@@ -144,8 +224,11 @@ function App() {
             user ? (
               <ProfilePage
                 user={user}
+                currentPastorate={currentPastorate}
                 onBack={handleBackToDashboard}
                 onProfileUpdate={handleProfileUpdate}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
               />
             ) : (
               <Navigate to="/login" replace />
@@ -155,6 +238,22 @@ function App() {
         {/* Redirect any unknown routes to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+
+        {/* Pastorate Modals */}
+        <CreatePastorateModal
+          isOpen={showCreatePastorateModal}
+          onClose={() => setShowCreatePastorateModal(false)}
+          onSuccess={handlePastorateCreated}
+          user={user}
+        />
+        
+        <PastorateSelectionModal
+          isOpen={showPastorateSelectionModal}
+          onClose={() => setShowPastorateSelectionModal(false)}
+          onSelect={handlePastorateSelected}
+          user={user}
+          pastorates={userPastorates}
+        />
       </LoadingProvider>
     </FluentProvider>
   );

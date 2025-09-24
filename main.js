@@ -4,11 +4,13 @@ const fs = require('fs').promises;
 const DatabaseManager = require('./backend/database.js');
 const AuthService = require('./backend/authService.js');
 const UserService = require('./backend/userService.js');
+const PastorateService = require('./backend/pastorateService.js');
 
 let mainWindow;
 let db;
 let authService;
 let userService;
+let pastorateService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -112,6 +114,35 @@ ipcMain.handle('user-change-password', async (event, { userId, oldPassword, newP
 
 ipcMain.handle('user-update-pin', async (event, { userId, newPin }) => {
   return await userService.updatePin(userId, newPin);
+});
+
+// Pastorate management IPC handlers
+ipcMain.handle('pastorate-create', async (event, { pastorate_name, pastorate_short_name, userId }) => {
+  return await pastorateService.createPastorate(pastorate_name, pastorate_short_name, userId);
+});
+
+ipcMain.handle('pastorate-get-user-pastorates', async (event, userId) => {
+  return await pastorateService.getUserPastorates(userId);
+});
+
+ipcMain.handle('pastorate-get-last-selected', async (event, userId) => {
+  return await pastorateService.getLastSelectedPastorate(userId);
+});
+
+ipcMain.handle('pastorate-select', async (event, { userId, pastorateId }) => {
+  return await pastorateService.selectPastorate(userId, pastorateId);
+});
+
+ipcMain.handle('pastorate-get-all', async (event) => {
+  return await pastorateService.getAllPastorates();
+});
+
+ipcMain.handle('pastorate-assign-user', async (event, { userId, pastorateId }) => {
+  return await pastorateService.assignUserToPastorate(userId, pastorateId);
+});
+
+ipcMain.handle('pastorate-remove-user', async (event, { userId, pastorateId }) => {
+  return await pastorateService.removeUserFromPastorate(userId, pastorateId);
 });
 
 // File management IPC handlers
@@ -231,6 +262,7 @@ app.on('ready', async () => {
   db = new DatabaseManager();
   authService = new AuthService(db);
   userService = new UserService(db);
+  pastorateService = new PastorateService(db);
   
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

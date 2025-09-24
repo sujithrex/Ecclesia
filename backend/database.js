@@ -44,6 +44,31 @@ class DatabaseManager {
                     )
                 `);
 
+                // Pastorates table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS pastorates (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_name TEXT UNIQUE NOT NULL,
+                        pastorate_short_name TEXT UNIQUE NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                `);
+
+                // User-Pastorates junction table (many-to-many relationship)
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS user_pastorates (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        last_selected_at DATETIME,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(user_id, pastorate_id)
+                    )
+                `);
+
                 // Settings table for app configurations
                 this.db.run(`
                     CREATE TABLE IF NOT EXISTS settings (
@@ -275,6 +300,139 @@ class DatabaseManager {
                     resolve({ success: false, error: err.message });
                 } else {
                     resolve({ success: true });
+                }
+            });
+        });
+    }
+
+    // Pastorate management methods
+    async createPastorate(pastorate_name, pastorate_short_name) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                INSERT INTO pastorates (pastorate_name, pastorate_short_name)
+                VALUES (?, ?)
+            `, [pastorate_name, pastorate_short_name], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getPastorateById(id) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM pastorates WHERE id = ?', [id], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getAllPastorates() {
+        return new Promise((resolve, reject) => {
+            this.db.all('SELECT * FROM pastorates ORDER BY pastorate_name', (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getUserPastorates(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT p.*, up.last_selected_at, up.created_at as assigned_at
+                FROM pastorates p
+                JOIN user_pastorates up ON p.id = up.pastorate_id
+                WHERE up.user_id = ?
+                ORDER BY up.last_selected_at DESC NULLS LAST, p.pastorate_name
+            `, [userId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async assignUserToPastorate(userId, pastorateId) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                INSERT OR IGNORE INTO user_pastorates (user_id, pastorate_id)
+                VALUES (?, ?)
+            `, [userId, pastorateId], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async updateLastSelectedPastorate(userId, pastorateId) {
+        return new Promise((resolve) => {
+            this.db.serialize(() => {
+                // Clear previous last_selected_at for this user
+                this.db.run(`
+                    UPDATE user_pastorates
+                    SET last_selected_at = NULL
+                    WHERE user_id = ?
+                `, [userId]);
+
+                // Set the new last selected pastorate
+                this.db.run(`
+                    UPDATE user_pastorates
+                    SET last_selected_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND pastorate_id = ?
+                `, [userId, pastorateId], function(err) {
+                    if (err) {
+                        resolve({ success: false, error: err.message });
+                    } else {
+                        resolve({ success: true, changes: this.changes });
+                    }
+                });
+            });
+        });
+    }
+
+    async getLastSelectedPastorate(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT p.*, up.last_selected_at
+                FROM pastorates p
+                JOIN user_pastorates up ON p.id = up.pastorate_id
+                WHERE up.user_id = ? AND up.last_selected_at IS NOT NULL
+                ORDER BY up.last_selected_at DESC
+                LIMIT 1
+            `, [userId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async removeUserFromPastorate(userId, pastorateId) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                DELETE FROM user_pastorates
+                WHERE user_id = ? AND pastorate_id = ?
+            `, [userId, pastorateId], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
                 }
             });
         });

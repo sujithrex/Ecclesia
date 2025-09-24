@@ -27,5 +27,16 @@ contextBridge.exposeInMainWorld('electron', {
     openImagePicker: () => ipcRenderer.invoke('file-open-image-picker'),
     saveProfileImage: (data) => ipcRenderer.invoke('file-save-profile-image', data),
     getImagePath: (filename) => ipcRenderer.invoke('file-get-image-path', filename)
+  },
+
+  // Pastorate management API
+  pastorate: {
+    create: (data) => ipcRenderer.invoke('pastorate-create', data),
+    getUserPastorates: (userId) => ipcRenderer.invoke('pastorate-get-user-pastorates', userId),
+    getLastSelected: (userId) => ipcRenderer.invoke('pastorate-get-last-selected', userId),
+    select: (data) => ipcRenderer.invoke('pastorate-select', data),
+    getAll: () => ipcRenderer.invoke('pastorate-get-all'),
+    assignUser: (data) => ipcRenderer.invoke('pastorate-assign-user', data),
+    removeUser: (data) => ipcRenderer.invoke('pastorate-remove-user', data)
   }
 });

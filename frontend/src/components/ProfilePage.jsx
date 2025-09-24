@@ -264,7 +264,14 @@ const useStyles = makeStyles({
   }
 });
 
-const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
+const ProfilePage = ({
+  user,
+  onBack,
+  onProfileUpdate,
+  currentPastorate,
+  onPastorateChange,
+  onCreatePastorate
+}) => {
   const styles = useStyles();
   const navigate = useNavigate();
   const { startLoading, stopLoading, isLoading } = useLoading();
@@ -878,23 +885,30 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
       </div>
 
       {/* Status Bar */}
-      <StatusBar user={user} onLogout={async () => {
-        try {
-          // Call backend logout
-          await window.electron.auth.logout();
-          
-          // Clear local storage
-          localStorage.removeItem('ecclesia_session');
-          
-          // Navigate to login page using React Router
-          navigate('/login');
-        } catch (error) {
-          console.error('Logout error:', error);
-          // Still logout locally even if backend call fails
-          localStorage.removeItem('ecclesia_session');
-          navigate('/login');
-        }
-      }} onProfileClick={null} />
+      <StatusBar
+        user={user}
+        onLogout={async () => {
+          try {
+            // Call backend logout
+            await window.electron.auth.logout();
+            
+            // Clear local storage
+            localStorage.removeItem('ecclesia_session');
+            
+            // Navigate to login page using React Router
+            navigate('/login');
+          } catch (error) {
+            console.error('Logout error:', error);
+            // Still logout locally even if backend call fails
+            localStorage.removeItem('ecclesia_session');
+            navigate('/login');
+          }
+        }}
+        onProfileClick={null}
+        currentPastorate={currentPastorate}
+        onPastorateChange={onPastorateChange}
+        onCreatePastorate={onCreatePastorate}
+      />
     </div>
   );
 };
