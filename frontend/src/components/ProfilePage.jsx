@@ -15,6 +15,8 @@ import {
   EyeOffRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
+import LoadingSpinner from './LoadingSpinner';
+import { useLoading } from '../contexts/LoadingContext';
 
 const useStyles = makeStyles({
   container: {
@@ -145,41 +147,6 @@ const useStyles = makeStyles({
       outlineOffset: '2px',
     }
   },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  loadingSpinner: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '16px',
-  },
-  spinner: {
-    width: '32px',
-    height: '32px',
-    border: '3px solid #f3f3f3',
-    borderTop: '3px solid #B5316A',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-  },
-  '@keyframes spin': {
-    '0%': { transform: 'rotate(0deg)' },
-    '100%': { transform: 'rotate(360deg)' }
-  },
-  loadingText: {
-    fontSize: '14px',
-    color: '#323130',
-    fontWeight: '500',
-  },
   notification: {
     position: 'fixed',
     top: '20px',
@@ -240,7 +207,7 @@ const useStyles = makeStyles({
 
 const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
   const styles = useStyles();
-  const [isLoading, setIsLoading] = useState(false);
+  const { startLoading, stopLoading, isLoading } = useLoading();
   const [notification, setNotification] = useState(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -330,7 +297,12 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
       }
     }
 
-    setIsLoading(true);
+    startLoading('profile', {
+      type: 'overlay',
+      spinner: 'ring',
+      text: 'Saving changes...',
+      subtext: 'Please wait while we update your profile'
+    });
 
     try {
       // Update profile information
@@ -349,7 +321,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
       
       if (!profileResult.success) {
         showNotification(profileResult.error || 'Failed to update profile', 'error');
-        setIsLoading(false);
+        stopLoading('profile');
         return;
       }
 
@@ -365,7 +337,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
 
         if (!passwordResult.success) {
           showNotification(passwordResult.error || 'Failed to change password', 'error');
-          setIsLoading(false);
+          stopLoading('profile');
           return;
         }
         passwordChanged = true;
@@ -380,7 +352,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
 
         if (!pinResult.success) {
           showNotification(pinResult.error || 'Failed to update PIN', 'error');
-          setIsLoading(false);
+          stopLoading('profile');
           return;
         }
       }
@@ -410,7 +382,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
       console.error('Profile update error:', error);
       showNotification('Connection error. Please try again.', 'error');
     } finally {
-      setIsLoading(false);
+      stopLoading('profile');
     }
   };
 
@@ -461,15 +433,15 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
       </div>
 
       {/* Content */}
-      <div className={styles.content}>
+      <div className={styles.content} style={{ position: 'relative' }}>
         {/* Loading Overlay */}
-        {isLoading && (
-          <div className={styles.loadingOverlay}>
-            <div className={styles.loadingSpinner}>
-              <div className={styles.spinner}></div>
-              <span className={styles.loadingText}>Saving changes...</span>
-            </div>
-          </div>
+        {isLoading('profile') && (
+          <LoadingSpinner
+            type="overlay"
+            spinner="ring"
+            text="Saving changes..."
+            subtext="Please wait while we update your profile"
+          />
         )}
 
         <form className={styles.formContainer} onSubmit={handleSubmit}>
@@ -489,7 +461,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                   placeholder="Enter your full name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  disabled={isLoading}
+                  disabled={isLoading('profile')}
                   required
                 />
               </div>
@@ -508,7 +480,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                   placeholder="Enter your username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  disabled={isLoading}
+                  disabled={isLoading('profile')}
                   required
                 />
               </div>
@@ -527,7 +499,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                   placeholder="Enter your email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  disabled={isLoading}
+                  disabled={isLoading('profile')}
                 />
               </div>
             </div>
@@ -547,7 +519,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                   placeholder="Enter your phone number"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  disabled={isLoading}
+                  disabled={isLoading('profile')}
                 />
               </div>
             </div>
@@ -565,7 +537,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                   placeholder="Enter image URL"
                   value={formData.image}
                   onChange={handleInputChange}
-                  disabled={isLoading}
+                  disabled={isLoading('profile')}
                 />
               </div>
             </div>
@@ -583,7 +555,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                   placeholder="Enter reset PIN"
                   value={formData.resetPin}
                   onChange={handleInputChange}
-                  disabled={isLoading}
+                  disabled={isLoading('profile')}
                   maxLength="6"
                 />
               </div>
@@ -604,7 +576,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                   placeholder="Confirm reset PIN"
                   value={formData.confirmPin}
                   onChange={handleInputChange}
-                  disabled={isLoading}
+                  disabled={isLoading('profile')}
                   maxLength="6"
                 />
               </div>
@@ -627,12 +599,12 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                   placeholder="Enter current password"
                   value={formData.currentPassword}
                   onChange={handleInputChange}
-                  disabled={isLoading}
+                  disabled={isLoading('profile')}
                 />
                 <span
                   className={styles.eyeIcon}
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  style={{ cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}
+                  style={{ cursor: isLoading('profile') ? 'not-allowed' : 'pointer', opacity: isLoading('profile') ? 0.5 : 1 }}
                 >
                   {showCurrentPassword ? <EyeOffRegular /> : <EyeRegular />}
                 </span>
@@ -652,12 +624,12 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                   placeholder="Enter new password"
                   value={formData.newPassword}
                   onChange={handleInputChange}
-                  disabled={isLoading}
+                  disabled={isLoading('profile')}
                 />
                 <span
                   className={styles.eyeIcon}
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  style={{ cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}
+                  style={{ cursor: isLoading('profile') ? 'not-allowed' : 'pointer', opacity: isLoading('profile') ? 0.5 : 1 }}
                 >
                   {showNewPassword ? <EyeOffRegular /> : <EyeRegular />}
                 </span>
@@ -677,12 +649,12 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                   placeholder="Confirm new password"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  disabled={isLoading}
+                  disabled={isLoading('profile')}
                 />
                 <span
                   className={styles.eyeIcon}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{ cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}
+                  style={{ cursor: isLoading('profile') ? 'not-allowed' : 'pointer', opacity: isLoading('profile') ? 0.5 : 1 }}
                 >
                   {showConfirmPassword ? <EyeOffRegular /> : <EyeRegular />}
                 </span>
@@ -694,18 +666,27 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
           <div className={styles.buttonContainer}>
             <button 
               type="submit" 
-              className={`${styles.saveButton} ${isLoading ? styles.disabledButton : ''}`}
-              disabled={isLoading}
+              className={`${styles.saveButton} ${isLoading('profile') ? styles.disabledButton : ''}`}
+              disabled={isLoading('profile')}
             >
-              <SaveRegular />
-              {isLoading ? 'Saving...' : 'Save Changes'}
+              {isLoading('profile') ? (
+                <>
+                  <LoadingSpinner type="button" spinner="pulse" size={12} />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <SaveRegular />
+                  Save Changes
+                </>
+              )}
             </button>
           </div>
         </form>
       </div>
 
       {/* Status Bar */}
-      <StatusBar user={user} onLogout={onBack} />
+      <StatusBar user={user} onLogout={onBack} onProfileClick={null} />
     </div>
   );
 };

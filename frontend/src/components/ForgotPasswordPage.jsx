@@ -13,6 +13,8 @@ import {
   InfoRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
+import LoadingSpinner from './LoadingSpinner';
+import { useLoading } from '../contexts/LoadingContext';
 import csiLogo from '../assets/Church_of_South_India.png';
 import dioceseLogo from '../assets/CSI_Tirunelveli_Diocese_Logo.png';
 
@@ -195,42 +197,6 @@ const useStyles = makeStyles({
       color: '#B5316A',
     }
   },
-  // Loading and notification styles
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  loadingSpinner: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '16px',
-  },
-  spinner: {
-    width: '32px',
-    height: '32px',
-    border: '3px solid #f3f3f3',
-    borderTop: '3px solid #B5316A',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-  },
-  '@keyframes spin': {
-    '0%': { transform: 'rotate(0deg)' },
-    '100%': { transform: 'rotate(360deg)' }
-  },
-  loadingText: {
-    fontSize: '14px',
-    color: '#323130',
-    fontWeight: '500',
-  },
   notification: {
     position: 'fixed',
     top: '20px',
@@ -283,9 +249,9 @@ const useStyles = makeStyles({
 
 const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
   const styles = useStyles();
+  const { startLoading, stopLoading, isLoading } = useLoading();
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState(null);
   const [formData, setFormData] = useState({
     pin: '',
@@ -332,7 +298,12 @@ const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
       return;
     }
 
-    setIsLoading(true);
+    startLoading('forgotPassword', {
+      type: 'overlay',
+      spinner: 'hash',
+      text: 'Resetting password...',
+      subtext: 'Please wait while we update your password'
+    });
     
     try {
       const result = await window.electron.auth.forgotPassword({
@@ -365,7 +336,7 @@ const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
       console.error('Password reset error:', error);
       showNotification('Connection error. Please try again.', 'error');
     } finally {
-      setIsLoading(false);
+      stopLoading('forgotPassword');
     }
   };
 
@@ -428,15 +399,15 @@ const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
       </div>
 
       {/* Right Panel - Reset Password Form */}
-      <div className={styles.rightPanel}>
+      <div className={styles.rightPanel} style={{ position: 'relative' }}>
         {/* Loading Overlay */}
-        {isLoading && (
-          <div className={styles.loadingOverlay}>
-            <div className={styles.loadingSpinner}>
-              <div className={styles.spinner}></div>
-              <span className={styles.loadingText}>Resetting password...</span>
-            </div>
-          </div>
+        {isLoading('forgotPassword') && (
+          <LoadingSpinner
+            type="overlay"
+            spinner="hash"
+            text="Resetting password..."
+            subtext="Please wait while we update your password"
+          />
         )}
 
         <form className={styles.forgotPasswordForm} onSubmit={handleSubmit}>
@@ -459,7 +430,7 @@ const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
                 value={formData.pin}
                 onChange={handleInputChange}
                 maxLength="6"
-                disabled={isLoading}
+                disabled={isLoading('forgotPassword')}
                 required
               />
             </div>
@@ -478,13 +449,13 @@ const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
                 placeholder="Enter new password (min 6 characters)"
                 value={formData.newPassword}
                 onChange={handleInputChange}
-                disabled={isLoading}
+                disabled={isLoading('forgotPassword')}
                 required
               />
               <span
                 className={styles.eyeIcon}
                 onClick={() => setShowNewPassword(!showNewPassword)}
-                style={{ cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}
+                style={{ cursor: isLoading('forgotPassword') ? 'not-allowed' : 'pointer', opacity: isLoading('forgotPassword') ? 0.5 : 1 }}
               >
                 {showNewPassword ? <EyeOffRegular /> : <EyeRegular />}
               </span>
@@ -504,13 +475,13 @@ const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
                 placeholder="Confirm new password"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                disabled={isLoading}
+                disabled={isLoading('forgotPassword')}
                 required
               />
               <span
                 className={styles.eyeIcon}
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={{ cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}
+                style={{ cursor: isLoading('forgotPassword') ? 'not-allowed' : 'pointer', opacity: isLoading('forgotPassword') ? 0.5 : 1 }}
               >
                 {showConfirmPassword ? <EyeOffRegular /> : <EyeRegular />}
               </span>
@@ -520,10 +491,17 @@ const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
           {/* Reset Button */}
           <button
             type="submit"
-            className={`${styles.resetButton} ${isLoading ? styles.disabledButton : ''}`}
-            disabled={isLoading}
+            className={`${styles.resetButton} ${isLoading('forgotPassword') ? styles.disabledButton : ''}`}
+            disabled={isLoading('forgotPassword')}
           >
-            {isLoading ? 'Resetting Password...' : 'Reset Password'}
+            {isLoading('forgotPassword') ? (
+              <>
+                <LoadingSpinner type="button" spinner="scale" size={12} />
+                Resetting Password...
+              </>
+            ) : (
+              'Reset Password'
+            )}
           </button>
 
           {/* Back to Login */}
@@ -531,8 +509,8 @@ const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
             type="button"
             className={styles.backButton}
             onClick={onBack}
-            disabled={isLoading}
-            style={{ opacity: isLoading ? 0.5 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
+            disabled={isLoading('forgotPassword')}
+            style={{ opacity: isLoading('forgotPassword') ? 0.5 : 1, cursor: isLoading('forgotPassword') ? 'not-allowed' : 'pointer' }}
           >
             ← Back to Sign In
           </button>

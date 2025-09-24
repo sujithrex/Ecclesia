@@ -97,8 +97,8 @@ const StatusBar = ({ user, onLogout, onProfileClick }) => {
       <span
         className={styles.statusLeft}
         onClick={handleProfileClick}
-        style={{ cursor: user ? 'pointer' : 'default' }}
-        title={user ? 'Click to view profile' : ''}
+        style={{ cursor: (user && onProfileClick) ? 'pointer' : 'default' }}
+        title={user && onProfileClick ? 'Click to view profile' : (user ? 'Profile' : '')}
       >
         {user ? user.name || user.username : 'Ready'}
       </span>

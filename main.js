@@ -48,8 +48,7 @@ function createWindow() {
     mainWindow.maximize(); // Maximize the window (not fullscreen)
     mainWindow.show();
     
-    // Open DevTools for debugging
-    mainWindow.webContents.openDevTools();
+    
   });
 
   mainWindow.on('closed', () => {

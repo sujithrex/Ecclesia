@@ -10,10 +10,12 @@ import LoginPage from './components/LoginPage';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import Dashboard from './components/Dashboard';
 import ProfilePage from './components/ProfilePage';
+import { LoadingProvider } from './contexts/LoadingContext';
 
 function App() {
   const [user, setUser] = useState(null);
   const [sessionId, setSessionId] = useState(null);
+  const [isNavigating, setIsNavigating] = useState(false);
   const navigate = useNavigate();
 
   // Check for existing session on app startup
@@ -94,11 +96,19 @@ function App() {
   };
 
   const handleProfileClick = () => {
+    if (isNavigating) return; // Prevent double navigation
+    setIsNavigating(true);
     navigate('/profile');
+    // Reset navigation flag after a short delay
+    setTimeout(() => setIsNavigating(false), 500);
   };
 
   const handleBackToDashboard = () => {
+    if (isNavigating) return; // Prevent double navigation
+    setIsNavigating(true);
     navigate('/dashboard');
+    // Reset navigation flag after a short delay
+    setTimeout(() => setIsNavigating(false), 500);
   };
 
   const handleProfileUpdate = (updatedUser) => {
@@ -107,8 +117,9 @@ function App() {
 
   return (
     <FluentProvider theme={webLightTheme}>
-      <TitleBar />
-      <Routes>
+      <LoadingProvider>
+        <TitleBar />
+        <Routes>
         <Route path="/" element={<WelcomeScreen onGetStarted={handleGetStarted} />} />
         <Route
           path="/login"
@@ -159,7 +170,8 @@ function App() {
         />
         {/* Redirect any unknown routes to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+        </Routes>
+      </LoadingProvider>
     </FluentProvider>
   );
 }

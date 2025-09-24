@@ -12,6 +12,8 @@ import {
   InfoRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
+import LoadingSpinner from './LoadingSpinner';
+import { useLoading } from '../contexts/LoadingContext';
 import csiLogo from '../assets/Church_of_South_India.png';
 import dioceseLogo from '../assets/CSI_Tirunelveli_Diocese_Logo.png';
 
@@ -223,42 +225,6 @@ const useStyles = makeStyles({
       color: '#B5316A',
     }
   },
-  // Loading and notification styles
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  loadingSpinner: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '16px',
-  },
-  spinner: {
-    width: '32px',
-    height: '32px',
-    border: '3px solid #f3f3f3',
-    borderTop: '3px solid #B5316A',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-  },
-  '@keyframes spin': {
-    '0%': { transform: 'rotate(0deg)' },
-    '100%': { transform: 'rotate(360deg)' }
-  },
-  loadingText: {
-    fontSize: '14px',
-    color: '#323130',
-    fontWeight: '500',
-  },
   notification: {
     position: 'fixed',
     top: '20px',
@@ -311,14 +277,16 @@ const useStyles = makeStyles({
 
 const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
   const styles = useStyles();
+  const { startLoading, stopLoading, isLoading } = useLoading();
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState(null);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     rememberMe: false
   });
+  
+  const loading = isLoading('login');
 
   // Check for existing session on component mount
   useEffect(() => {
@@ -368,7 +336,12 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
       return;
     }
 
-    setIsLoading(true);
+    startLoading('login', {
+      type: 'overlay',
+      spinner: 'clip',
+      text: 'Signing you in...',
+      subtext: 'Please wait while we verify your credentials'
+    });
     
     try {
       const result = await window.electron.auth.login({
@@ -396,7 +369,7 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
       console.error('Login error:', error);
       showNotification('Connection error. Please try again.', 'error');
     } finally {
-      setIsLoading(false);
+      stopLoading('login');
     }
   };
 
@@ -459,15 +432,15 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className={styles.rightPanel}>
+      <div className={styles.rightPanel} style={{ position: 'relative' }}>
         {/* Loading Overlay */}
-        {isLoading && (
-          <div className={styles.loadingOverlay}>
-            <div className={styles.loadingSpinner}>
-              <div className={styles.spinner}></div>
-              <span className={styles.loadingText}>Signing you in...</span>
-            </div>
-          </div>
+        {loading && (
+          <LoadingSpinner
+            type="overlay"
+            spinner="clip"
+            text="Signing you in..."
+            subtext="Please wait while we verify your credentials"
+          />
         )}
 
         <form className={styles.loginForm} onSubmit={handleSubmit}>
@@ -489,7 +462,7 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
                 placeholder="Enter your user name"
                 value={formData.username}
                 onChange={handleInputChange}
-                disabled={isLoading}
+                disabled={loading}
                 required
               />
             </div>
@@ -508,13 +481,13 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleInputChange}
-                disabled={isLoading}
+                disabled={loading}
                 required
               />
               <span
                 className={styles.eyeIcon}
                 onClick={() => setShowPassword(!showPassword)}
-                style={{ cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}
+                style={{ cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1 }}
               >
                 {showPassword ? <EyeOffRegular /> : <EyeRegular />}
               </span>
@@ -530,7 +503,7 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
               className={styles.checkbox}
               checked={formData.rememberMe}
               onChange={handleInputChange}
-              disabled={isLoading}
+              disabled={loading}
             />
             <label htmlFor="rememberMe" className={styles.checkboxLabel}>
               Keep me signed in
@@ -540,10 +513,17 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
           {/* Login Button */}
           <button
             type="submit"
-            className={`${styles.loginButton} ${isLoading ? styles.disabledButton : ''}`}
-            disabled={isLoading}
+            className={`${styles.loginButton} ${loading ? styles.disabledButton : ''}`}
+            disabled={loading}
           >
-            {isLoading ? 'Signing in...' : 'Sign in'}
+            {loading ? (
+              <>
+                <LoadingSpinner type="button" spinner="beat" size={12} />
+                Signing in...
+              </>
+            ) : (
+              'Sign in'
+            )}
           </button>
 
           {/* Forgot Password */}
@@ -551,8 +531,8 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
             type="button"
             className={styles.forgotPasswordLink}
             onClick={onForgotPassword}
-            disabled={isLoading}
-            style={{ opacity: isLoading ? 0.5 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
+            disabled={loading}
+            style={{ opacity: loading ? 0.5 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
           >
             Forgot your password?
           </button>
@@ -562,8 +542,8 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
             type="button"
             className={styles.backButton}
             onClick={onBack}
-            disabled={isLoading}
-            style={{ opacity: isLoading ? 0.5 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
+            disabled={loading}
+            style={{ opacity: loading ? 0.5 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
           >
             ← Back to welcome
           </button>
