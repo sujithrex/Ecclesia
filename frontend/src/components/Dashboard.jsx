@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { makeStyles } from '@fluentui/react-components';
 import StatusBar from './StatusBar';
 
@@ -85,6 +85,35 @@ const useStyles = makeStyles({
 
 const Dashboard = ({ user, onLogout, onProfileClick }) => {
   const styles = useStyles();
+  const [userImageUrl, setUserImageUrl] = useState(null);
+
+  // Load user image when user or user.image changes
+  useEffect(() => {
+    const loadUserImage = async () => {
+      if (user?.image) {
+        try {
+          if (user.image.startsWith('http') || user.image.startsWith('data:')) {
+            setUserImageUrl(user.image);
+          } else {
+            // Get the local file path
+            const result = await window.electron.file.getImagePath(user.image);
+            if (result.success) {
+              setUserImageUrl(result.url);
+            } else {
+              setUserImageUrl(null);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading user image:', error);
+          setUserImageUrl(null);
+        }
+      } else {
+        setUserImageUrl(null);
+      }
+    };
+
+    loadUserImage();
+  }, [user?.image]);
 
   // Get user avatar letter
   const getAvatarLetter = () => {
@@ -119,9 +148,9 @@ const Dashboard = ({ user, onLogout, onProfileClick }) => {
           </p>
           <div className={styles.userInfo}>
             <div className={styles.userAvatar}>
-              {user?.image ? (
+              {userImageUrl ? (
                 <img
-                  src={user.image}
+                  src={userImageUrl}
                   alt="Profile"
                   style={{
                     width: '100%',
@@ -129,6 +158,7 @@ const Dashboard = ({ user, onLogout, onProfileClick }) => {
                     borderRadius: '50%',
                     objectFit: 'cover'
                   }}
+                  onError={() => setUserImageUrl(null)}
                 />
               ) : (
                 getAvatarLetter()

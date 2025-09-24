@@ -206,6 +206,77 @@ const useStyles = makeStyles({
     margin: '0 0 16px 0',
     paddingBottom: '8px',
     borderBottom: '2px solid #B5316A',
+  },
+  imageUploadContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '20px',
+    border: '2px dashed #8a8886',
+    borderRadius: '8px',
+    backgroundColor: '#fafafa',
+    transition: 'border-color 0.2s ease',
+    '&:hover': {
+      borderColor: '#B5316A',
+    }
+  },
+  imagePreview: {
+    width: '120px',
+    height: '120px',
+    borderRadius: '50%',
+    objectFit: 'cover',
+    border: '3px solid #B5316A',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)'
+  },
+  noImagePlaceholder: {
+    width: '120px',
+    height: '120px',
+    borderRadius: '50%',
+    backgroundColor: '#e1dfdd',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '48px',
+    color: '#605e5c',
+    border: '3px solid #8a8886'
+  },
+  uploadButton: {
+    backgroundColor: '#0078d4',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '8px 16px',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    transition: 'background-color 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#106ebe',
+    }
+  },
+  removeButton: {
+    backgroundColor: '#d13438',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#b01e24',
+    }
+  },
+  imageUploadText: {
+    fontSize: '14px',
+    color: '#605e5c',
+    textAlign: 'center',
+    margin: '8px 0'
   }
 });
 
@@ -217,6 +288,8 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -244,8 +317,32 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
         resetPin: user.reset_pin || '1919',
         confirmPin: user.reset_pin || '1919'
       }));
+      
+      // Set image preview if user has an image
+      if (user.image) {
+        loadImagePreview(user.image);
+      } else {
+        // Clear image preview if no image
+        setImagePreview(null);
+      }
     }
   }, [user]);
+
+  const loadImagePreview = async (imagePath) => {
+    try {
+      if (imagePath.startsWith('http') || imagePath.startsWith('data:')) {
+        setImagePreview(imagePath);
+      } else {
+        // Try to get the local file path
+        const result = await window.electron.file.getImagePath(imagePath);
+        if (result.success) {
+          setImagePreview(result.url);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading image preview:', error);
+    }
+  };
 
   const showNotification = (message, type = 'info') => {
     setNotification({ message, type });
@@ -260,6 +357,35 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleImagePicker = async () => {
+    try {
+      const result = await window.electron.file.openImagePicker();
+      
+      if (result.success && !result.canceled) {
+        setSelectedImage(result.data);
+        
+        // Create preview URL
+        const previewUrl = `data:${result.data.mimeType};base64,${result.data.base64Data}`;
+        setImagePreview(previewUrl);
+        
+        showNotification('Image selected successfully', 'info');
+      }
+    } catch (error) {
+      console.error('Error selecting image:', error);
+      showNotification('Failed to select image', 'error');
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    setFormData(prev => ({
+      ...prev,
+      image: ''
+    }));
+    showNotification('Image removed', 'info');
   };
 
   const handleSubmit = async (e) => {
@@ -310,6 +436,24 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
     });
 
     try {
+      let imagePath = formData.image.trim();
+      
+      // Upload new image if selected
+      if (selectedImage) {
+        const uploadResult = await window.electron.file.saveProfileImage({
+          userId: user.id,
+          imageData: selectedImage
+        });
+        
+        if (uploadResult.success) {
+          imagePath = uploadResult.filename;
+        } else {
+          showNotification('Failed to upload image: ' + uploadResult.error, 'error');
+          stopLoading('profile');
+          return;
+        }
+      }
+
       // Update profile information
       const profileData = {
         userId: user.id,
@@ -318,7 +462,7 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
           username: formData.username.trim(),
           email: formData.email.trim(),
           phone: formData.phone.trim(),
-          image: formData.image.trim()
+          image: imagePath
         }
       };
 
@@ -378,6 +522,20 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
         confirmPin: formData.resetPin
       }));
 
+      // Clear selected image after successful upload
+      setSelectedImage(null);
+      
+      // Update form data with new image path
+      setFormData(prev => ({
+        ...prev,
+        image: imagePath
+      }));
+      
+      // Update the image preview to show the saved image
+      if (imagePath && imagePath !== formData.image) {
+        await loadImagePreview(imagePath);
+      }
+      
       // Update parent component with new user data
       if (onProfileUpdate) {
         onProfileUpdate(profileResult.user);
@@ -528,24 +686,6 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
 
             <div className={styles.inputGroup}>
               <label className={styles.label}>
-                <ImageRegular /> Profile Image URL
-              </label>
-              <div className={styles.inputContainer}>
-                <ImageRegular className={styles.inputIcon} />
-                <input
-                  type="url"
-                  name="image"
-                  className={styles.input}
-                  placeholder="Enter image URL"
-                  value={formData.image}
-                  onChange={handleInputChange}
-                  disabled={isLoading('profile')}
-                />
-              </div>
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label className={styles.label}>
                 <KeyRegular /> Reset PIN
               </label>
               <div className={styles.inputContainer}>
@@ -660,6 +800,60 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
                 >
                   {showConfirmPassword ? <EyeOffRegular /> : <EyeRegular />}
                 </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Profile Image */}
+          <h2 className={styles.sectionTitle}>Profile Image</h2>
+          <div className={styles.formRow}>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>
+                <ImageRegular /> Profile Image
+              </label>
+              <div className={styles.imageUploadContainer}>
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="Profile Preview"
+                    className={styles.imagePreview}
+                    onError={(e) => {
+                      console.error('Image load error:', e);
+                      setImagePreview(null);
+                    }}
+                  />
+                ) : (
+                  <div className={styles.noImagePlaceholder}>
+                    <ImageRegular />
+                  </div>
+                )}
+                
+                <div className={styles.imageUploadText}>
+                  {imagePreview ? 'Current profile image' : 'No image selected'}
+                </div>
+                
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className={styles.uploadButton}
+                    onClick={handleImagePicker}
+                    disabled={isLoading('profile')}
+                  >
+                    <ImageRegular />
+                    {imagePreview ? 'Change Image' : 'Select Image'}
+                  </button>
+                  
+                  {imagePreview && (
+                    <button
+                      type="button"
+                      className={styles.removeButton}
+                      onClick={removeImage}
+                      disabled={isLoading('profile')}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

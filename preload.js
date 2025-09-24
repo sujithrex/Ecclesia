@@ -20,5 +20,12 @@ contextBridge.exposeInMainWorld('electron', {
     updateProfile: (data) => ipcRenderer.invoke('user-update-profile', data),
     changePassword: (data) => ipcRenderer.invoke('user-change-password', data),
     updatePin: (data) => ipcRenderer.invoke('user-update-pin', data)
+  },
+
+  // File management API
+  file: {
+    openImagePicker: () => ipcRenderer.invoke('file-open-image-picker'),
+    saveProfileImage: (data) => ipcRenderer.invoke('file-save-profile-image', data),
+    getImagePath: (filename) => ipcRenderer.invoke('file-get-image-path', filename)
   }
 });

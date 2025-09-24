@@ -1,5 +1,6 @@
-const { app, BrowserWindow, Menu, nativeTheme, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, nativeTheme, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs').promises;
 const DatabaseManager = require('./backend/database.js');
 const AuthService = require('./backend/authService.js');
 const UserService = require('./backend/userService.js');
@@ -112,6 +113,111 @@ ipcMain.handle('user-change-password', async (event, { userId, oldPassword, newP
 ipcMain.handle('user-update-pin', async (event, { userId, newPin }) => {
   return await userService.updatePin(userId, newPin);
 });
+
+// File management IPC handlers
+ipcMain.handle('file-open-image-picker', async (event) => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select Profile Image',
+      filters: [
+        {
+          name: 'Images',
+          extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
+        }
+      ],
+      properties: ['openFile']
+    });
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      const filePath = result.filePaths[0];
+      
+      // Read the file and convert to base64
+      const fileBuffer = await fs.readFile(filePath);
+      const base64Data = fileBuffer.toString('base64');
+      const fileName = path.basename(filePath);
+      const fileExtension = path.extname(filePath).toLowerCase();
+      
+      return {
+        success: true,
+        data: {
+          fileName,
+          fileExtension,
+          base64Data,
+          mimeType: getMimeType(fileExtension)
+        }
+      };
+    }
+
+    return { success: false, canceled: true };
+  } catch (error) {
+    console.error('Error opening image picker:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file-save-profile-image', async (event, { userId, imageData }) => {
+  try {
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = path.join(__dirname, 'uploads', 'profiles');
+    await fs.mkdir(uploadsDir, { recursive: true });
+    
+    // Generate unique filename
+    const timestamp = Date.now();
+    const filename = `profile_${userId}_${timestamp}${imageData.fileExtension}`;
+    const filepath = path.join(uploadsDir, filename);
+    
+    // Save the file
+    const buffer = Buffer.from(imageData.base64Data, 'base64');
+    await fs.writeFile(filepath, buffer);
+    
+    return {
+      success: true,
+      filename,
+      path: filepath
+    };
+  } catch (error) {
+    console.error('Error saving profile image:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('file-get-image-path', async (event, filename) => {
+  try {
+    if (!filename) {
+      return { success: false, error: 'No filename provided' };
+    }
+    
+    const filepath = path.join(__dirname, 'uploads', 'profiles', filename);
+    
+    // Check if file exists
+    try {
+      await fs.access(filepath);
+      return {
+        success: true,
+        path: filepath,
+        url: `file://${filepath.replace(/\\/g, '/')}`
+      };
+    } catch (accessError) {
+      return { success: false, error: 'File not found' };
+    }
+  } catch (error) {
+    console.error('Error getting image path:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Helper function to get MIME type from file extension
+function getMimeType(extension) {
+  const mimeTypes = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.bmp': 'image/bmp',
+    '.webp': 'image/webp'
+  };
+  return mimeTypes[extension] || 'image/jpeg';
+}
 
 // Clean up database connection when app quits
 app.on('before-quit', () => {
