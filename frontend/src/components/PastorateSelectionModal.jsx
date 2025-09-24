@@ -208,7 +208,7 @@ const useStyles = makeStyles({
   },
 });
 
-const PastorateSelectionModal = ({ isOpen, onClose, onSelect, user, pastorates: initialPastorates, selectedPastorateId }) => {
+const PastorateSelectionModal = ({ isOpen, onClose, onSelect, user, pastorates: initialPastorates, selectedPastorateId, onCreatePastorate }) => {
   const styles = useStyles();
   const [pastorates, setPastorates] = useState(initialPastorates || []);
   const [selectedId, setSelectedId] = useState(selectedPastorateId || null);
@@ -236,6 +236,15 @@ const PastorateSelectionModal = ({ isOpen, onClose, onSelect, user, pastorates: 
       const result = await window.electron.pastorate.getUserPastorates(user.id);
       if (result.success) {
         setPastorates(result.pastorates);
+        
+        // If no pastorates exist, close this modal and trigger create modal
+        if (result.pastorates.length === 0) {
+          onClose();
+          if (onCreatePastorate) {
+            onCreatePastorate();
+          }
+          return;
+        }
         
         // Auto-select the first pastorate if none selected
         if (result.pastorates.length > 0 && !selectedId) {
@@ -364,6 +373,19 @@ const PastorateSelectionModal = ({ isOpen, onClose, onSelect, user, pastorates: 
               <BuildingRegular />
             </div>
             <p>You don't have any pastorates assigned yet.</p>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => {
+                onClose();
+                if (onCreatePastorate) {
+                  onCreatePastorate();
+                }
+              }}
+              style={{ marginTop: '16px' }}
+            >
+              Create Your First Pastorate
+            </button>
           </div>
         ) : (
           <div className={styles.pastorateList}>

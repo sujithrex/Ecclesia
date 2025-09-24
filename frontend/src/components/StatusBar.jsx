@@ -541,6 +541,18 @@ const StatusBar = ({
               </div>
             )}
           </div>
+        ) : user ? (
+          <div className={styles.pastorateContainer}>
+            <button
+              ref={pastorateButtonRef}
+              className={styles.pastorateSelector}
+              onClick={handleCreatePastorate}
+              title="Click to create your first pastorate"
+            >
+              <BuildingRegular />
+              No Pastorate - Click to Create
+            </button>
+          </div>
         ) : (
           'rexmi.in'
         )}

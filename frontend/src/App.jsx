@@ -202,8 +202,11 @@ function App() {
         // Check if current pastorate still exists
         const currentExists = pastoratesResult.pastorates.some(p => p.id === currentPastorate?.id);
         if (!currentExists) {
-          // Current pastorate was deleted, select the first available or clear
+          // Current pastorate was deleted
+          setCurrentPastorate(null);
+          
           if (pastoratesResult.pastorates.length > 0) {
+            // Still have pastorates, select the best one
             const lastSelectedResult = await window.electron.pastorate.getLastSelected(user.id);
             if (lastSelectedResult.success && lastSelectedResult.pastorate) {
               setCurrentPastorate(lastSelectedResult.pastorate);
@@ -211,7 +214,8 @@ function App() {
               setCurrentPastorate(pastoratesResult.pastorates[0]);
             }
           } else {
-            setCurrentPastorate(null);
+            // No pastorates left - close selection modal and show create modal
+            setShowPastorateSelectionModal(false);
             setShowCreatePastorateModal(true);
           }
         }
@@ -309,6 +313,7 @@ function App() {
           onSelect={handlePastorateSelected}
           user={user}
           pastorates={userPastorates}
+          onCreatePastorate={handleCreatePastorateFromStatus}
         />
       </LoadingProvider>
     </FluentProvider>

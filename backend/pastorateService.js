@@ -230,10 +230,7 @@ class PastorateService {
                 return { success: false, error: 'You do not have access to this pastorate' };
             }
 
-            // Check if this is the user's last pastorate
-            if (userPastorates.length === 1) {
-                return { success: false, error: 'Cannot delete your last pastorate' };
-            }
+            // Allow deletion of last pastorate - frontend will handle creating new one
 
             // Get pastorate info before deletion for confirmation
             const pastorate = await this.db.getPastorateById(pastorateId);
