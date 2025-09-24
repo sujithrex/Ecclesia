@@ -15,10 +15,9 @@ import { LoadingProvider } from './contexts/LoadingContext';
 function App() {
   const [user, setUser] = useState(null);
   const [sessionId, setSessionId] = useState(null);
-  const [isNavigating, setIsNavigating] = useState(false);
   const navigate = useNavigate();
 
-  // Check for existing session on app startup
+  // Check for existing session ONLY on app startup
   useEffect(() => {
     const checkExistingSession = async () => {
       const savedSessionId = localStorage.getItem('ecclesia_session');
@@ -39,11 +38,10 @@ function App() {
       }
     };
 
-    // Only check session if electron API is available
     if (window.electron && window.electron.auth) {
       checkExistingSession();
     }
-  }, [navigate]);
+  }, []); // Remove navigate dependency - this should only run on mount
 
   const handleGetStarted = () => {
     navigate('/login');
@@ -73,21 +71,15 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      // Call backend logout
       if (sessionId) {
         await window.electron.auth.logout();
       }
-      
-      // Clear local storage
       localStorage.removeItem('ecclesia_session');
-      
-      // Reset state
       setUser(null);
       setSessionId(null);
       navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // Still logout locally even if backend call fails
       localStorage.removeItem('ecclesia_session');
       setUser(null);
       setSessionId(null);
@@ -96,19 +88,11 @@ function App() {
   };
 
   const handleProfileClick = () => {
-    if (isNavigating) return; // Prevent double navigation
-    setIsNavigating(true);
     navigate('/profile');
-    // Reset navigation flag after a short delay
-    setTimeout(() => setIsNavigating(false), 500);
   };
 
   const handleBackToDashboard = () => {
-    if (isNavigating) return; // Prevent double navigation
-    setIsNavigating(true);
     navigate('/dashboard');
-    // Reset navigation flag after a short delay
-    setTimeout(() => setIsNavigating(false), 500);
   };
 
   const handleProfileUpdate = (updatedUser) => {

@@ -288,30 +288,8 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
   
   const loading = isLoading('login');
 
-  // Check for existing session on component mount
-  useEffect(() => {
-    const checkExistingSession = async () => {
-      const sessionId = localStorage.getItem('ecclesia_session');
-      if (sessionId) {
-        try {
-          const result = await window.electron.auth.checkSession(sessionId);
-          if (result.success) {
-            showNotification('Welcome back! Logging you in...', 'info');
-            setTimeout(() => {
-              onLoginSuccess(result.user, sessionId);
-            }, 1000);
-          } else {
-            localStorage.removeItem('ecclesia_session');
-          }
-        } catch (error) {
-          console.error('Session check failed:', error);
-          localStorage.removeItem('ecclesia_session');
-        }
-      }
-    };
-
-    checkExistingSession();
-  }, [onLoginSuccess]);
+  // Session check is now handled by App.jsx to prevent double checking
+  // This component only focuses on the login form
 
   const showNotification = (message, type = 'info') => {
     setNotification({ message, type });
