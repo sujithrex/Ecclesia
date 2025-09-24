@@ -83,8 +83,28 @@ const useStyles = makeStyles({
   },
 });
 
-const Dashboard = () => {
+const Dashboard = ({ user, onLogout, onProfileClick }) => {
   const styles = useStyles();
+
+  // Get user avatar letter
+  const getAvatarLetter = () => {
+    if (user?.name) {
+      return user.name.charAt(0).toUpperCase();
+    } else if (user?.username) {
+      return user.username.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
+
+  // Get display name
+  const getDisplayName = () => {
+    if (user?.name) {
+      return user.name;
+    } else if (user?.username) {
+      return user.username;
+    }
+    return 'User';
+  };
 
   return (
     <div className={styles.container}>
@@ -93,20 +113,41 @@ const Dashboard = () => {
           <h1 className={styles.welcomeTitle}>Welcome to Ecclesia</h1>
           <h2 className={styles.welcomeSubtitle}>Your Church Management System</h2>
           <p className={styles.welcomeMessage}>
-            Manage your congregation with modern tools and insights. 
-            Access member information, track attendance, organize events, 
+            Manage your congregation with modern tools and insights.
+            Access member information, track attendance, organize events,
             and strengthen your church community all in one place.
           </p>
           <div className={styles.userInfo}>
-            <div className={styles.userAvatar}>U</div>
+            <div className={styles.userAvatar}>
+              {user?.image ? (
+                <img
+                  src={user.image}
+                  alt="Profile"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    objectFit: 'cover'
+                  }}
+                />
+              ) : (
+                getAvatarLetter()
+              )}
+            </div>
             <div className={styles.userDetails}>
-              <div className={styles.userName}>Welcome, User!</div>
-              <div className={styles.userRole}>Church Administrator</div>
+              <div className={styles.userName}>Welcome, {getDisplayName()}!</div>
+              <div className={styles.userRole}>
+                {user?.username === 'admin' ? 'Administrator' : 'Church Member'}
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <StatusBar />
+      <StatusBar
+        user={user}
+        onLogout={onLogout}
+        onProfileClick={onProfileClick}
+      />
     </div>
   );
 };

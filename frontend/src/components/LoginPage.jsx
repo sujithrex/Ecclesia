@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { makeStyles } from '@fluentui/react-components';
 import {
   BuildingRegular,
@@ -6,7 +6,10 @@ import {
   EyeRegular,
   EyeOffRegular,
   MailRegular,
-  LockClosedRegular
+  LockClosedRegular,
+  CheckmarkCircleRegular,
+  DismissCircleRegular,
+  InfoRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import csiLogo from '../assets/Church_of_South_India.png';
@@ -219,17 +222,135 @@ const useStyles = makeStyles({
     '&:hover': {
       color: '#B5316A',
     }
+  },
+  // Loading and notification styles
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  loadingSpinner: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  spinner: {
+    width: '32px',
+    height: '32px',
+    border: '3px solid #f3f3f3',
+    borderTop: '3px solid #B5316A',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+  },
+  '@keyframes spin': {
+    '0%': { transform: 'rotate(0deg)' },
+    '100%': { transform: 'rotate(360deg)' }
+  },
+  loadingText: {
+    fontSize: '14px',
+    color: '#323130',
+    fontWeight: '500',
+  },
+  notification: {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    padding: '16px 20px',
+    borderRadius: '4px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    zIndex: 1001,
+    maxWidth: '400px',
+    fontSize: '14px',
+    fontWeight: '500',
+    animation: 'slideIn 0.3s ease-out',
+  },
+  '@keyframes slideIn': {
+    from: {
+      transform: 'translateX(100%)',
+      opacity: 0,
+    },
+    to: {
+      transform: 'translateX(0)',
+      opacity: 1,
+    }
+  },
+  notificationSuccess: {
+    backgroundColor: '#DFF6DD',
+    color: '#107C10',
+    border: '1px solid #92C353',
+  },
+  notificationError: {
+    backgroundColor: '#FDE7E9',
+    color: '#D13438',
+    border: '1px solid #F7B9B9',
+  },
+  notificationInfo: {
+    backgroundColor: '#F0F6FF',
+    color: '#0078D4',
+    border: '1px solid #B3D6FC',
+  },
+  disabledButton: {
+    backgroundColor: '#a19f9d',
+    cursor: 'not-allowed',
+    '&:hover': {
+      backgroundColor: '#a19f9d',
+    }
   }
 });
 
 const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
   const styles = useStyles();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [notification, setNotification] = useState(null);
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: '',
     rememberMe: false
   });
+
+  // Check for existing session on component mount
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const sessionId = localStorage.getItem('ecclesia_session');
+      if (sessionId) {
+        try {
+          const result = await window.electron.auth.checkSession(sessionId);
+          if (result.success) {
+            showNotification('Welcome back! Logging you in...', 'info');
+            setTimeout(() => {
+              onLoginSuccess(result.user, sessionId);
+            }, 1000);
+          } else {
+            localStorage.removeItem('ecclesia_session');
+          }
+        } catch (error) {
+          console.error('Session check failed:', error);
+          localStorage.removeItem('ecclesia_session');
+        }
+      }
+    };
+
+    checkExistingSession();
+  }, [onLoginSuccess]);
+
+  const showNotification = (message, type = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 4000);
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -239,15 +360,80 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle login logic here - for now just navigate to dashboard
-    console.log('Login attempt:', formData);
-    onLoginSuccess();
+    
+    if (!formData.username.trim() || !formData.password.trim()) {
+      showNotification('Please fill in all fields', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const result = await window.electron.auth.login({
+        username: formData.username.trim(),
+        password: formData.password,
+        rememberMe: formData.rememberMe
+      });
+
+      if (result.success) {
+        // Store session if remember me is enabled
+        if (result.sessionId) {
+          localStorage.setItem('ecclesia_session', result.sessionId);
+        }
+        
+        showNotification('Login successful! Welcome to Ecclesia.', 'success');
+        
+        // Small delay to show success message
+        setTimeout(() => {
+          onLoginSuccess(result.user, result.sessionId);
+        }, 1500);
+      } else {
+        showNotification(result.error || 'Login failed. Please try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      showNotification('Connection error. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'success':
+        return <CheckmarkCircleRegular />;
+      case 'error':
+        return <DismissCircleRegular />;
+      case 'info':
+      default:
+        return <InfoRegular />;
+    }
+  };
+
+  const getNotificationStyle = (type) => {
+    switch (type) {
+      case 'success':
+        return styles.notificationSuccess;
+      case 'error':
+        return styles.notificationError;
+      case 'info':
+      default:
+        return styles.notificationInfo;
+    }
   };
 
   return (
     <div className={styles.container}>
+      {/* Notification */}
+      {notification && (
+        <div className={`${styles.notification} ${getNotificationStyle(notification.type)}`}>
+          {getNotificationIcon(notification.type)}
+          {notification.message}
+        </div>
+      )}
+
       {/* Left Panel - CSI and Diocese Logos */}
       <div className={styles.leftPanel}>
         <div className={styles.logoContainer}>
@@ -274,6 +460,16 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
 
       {/* Right Panel - Login Form */}
       <div className={styles.rightPanel}>
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className={styles.loadingOverlay}>
+            <div className={styles.loadingSpinner}>
+              <div className={styles.spinner}></div>
+              <span className={styles.loadingText}>Signing you in...</span>
+            </div>
+          </div>
+        )}
+
         <form className={styles.loginForm} onSubmit={handleSubmit}>
           <h2 className={styles.loginTitle}>Sign in</h2>
           <p className={styles.loginSubtitle}>
@@ -282,17 +478,18 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
 
           {/* User Name Input */}
           <div className={styles.inputGroup}>
-            <label htmlFor="email" className={styles.label}>User name</label>
+            <label htmlFor="username" className={styles.label}>User name</label>
             <div className={styles.inputContainer}>
               <PersonRegular className={styles.inputIcon} />
               <input
                 type="text"
-                id="email"
-                name="email"
+                id="username"
+                name="username"
                 className={styles.input}
                 placeholder="Enter your user name"
-                value={formData.email}
+                value={formData.username}
                 onChange={handleInputChange}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -311,11 +508,13 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleInputChange}
+                disabled={isLoading}
                 required
               />
               <span
                 className={styles.eyeIcon}
                 onClick={() => setShowPassword(!showPassword)}
+                style={{ cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}
               >
                 {showPassword ? <EyeOffRegular /> : <EyeRegular />}
               </span>
@@ -331,15 +530,20 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
               className={styles.checkbox}
               checked={formData.rememberMe}
               onChange={handleInputChange}
+              disabled={isLoading}
             />
             <label htmlFor="rememberMe" className={styles.checkboxLabel}>
-              Keep me signed in
+              Keep me signed in for 7 days
             </label>
           </div>
 
           {/* Login Button */}
-          <button type="submit" className={styles.loginButton}>
-            Sign in
+          <button
+            type="submit"
+            className={`${styles.loginButton} ${isLoading ? styles.disabledButton : ''}`}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Signing in...' : 'Sign in'}
           </button>
 
           {/* Forgot Password */}
@@ -347,12 +551,20 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
             type="button"
             className={styles.forgotPasswordLink}
             onClick={onForgotPassword}
+            disabled={isLoading}
+            style={{ opacity: isLoading ? 0.5 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
           >
             Forgot your password?
           </button>
 
           {/* Back to Welcome */}
-          <button type="button" className={styles.backButton} onClick={onBack}>
+          <button
+            type="button"
+            className={styles.backButton}
+            onClick={onBack}
+            disabled={isLoading}
+            style={{ opacity: isLoading ? 0.5 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
+          >
             ← Back to welcome
           </button>
         </form>

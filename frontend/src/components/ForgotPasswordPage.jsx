@@ -7,7 +7,10 @@ import {
   EyeOffRegular,
   MailRegular,
   LockClosedRegular,
-  KeyRegular
+  KeyRegular,
+  CheckmarkCircleRegular,
+  DismissCircleRegular,
+  InfoRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import csiLogo from '../assets/Church_of_South_India.png';
@@ -191,19 +194,111 @@ const useStyles = makeStyles({
     '&:hover': {
       color: '#B5316A',
     }
+  },
+  // Loading and notification styles
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  loadingSpinner: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  spinner: {
+    width: '32px',
+    height: '32px',
+    border: '3px solid #f3f3f3',
+    borderTop: '3px solid #B5316A',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+  },
+  '@keyframes spin': {
+    '0%': { transform: 'rotate(0deg)' },
+    '100%': { transform: 'rotate(360deg)' }
+  },
+  loadingText: {
+    fontSize: '14px',
+    color: '#323130',
+    fontWeight: '500',
+  },
+  notification: {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    padding: '16px 20px',
+    borderRadius: '4px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    zIndex: 1001,
+    maxWidth: '400px',
+    fontSize: '14px',
+    fontWeight: '500',
+    animation: 'slideIn 0.3s ease-out',
+  },
+  '@keyframes slideIn': {
+    from: {
+      transform: 'translateX(100%)',
+      opacity: 0,
+    },
+    to: {
+      transform: 'translateX(0)',
+      opacity: 1,
+    }
+  },
+  notificationSuccess: {
+    backgroundColor: '#DFF6DD',
+    color: '#107C10',
+    border: '1px solid #92C353',
+  },
+  notificationError: {
+    backgroundColor: '#FDE7E9',
+    color: '#D13438',
+    border: '1px solid #F7B9B9',
+  },
+  notificationInfo: {
+    backgroundColor: '#F0F6FF',
+    color: '#0078D4',
+    border: '1px solid #B3D6FC',
+  },
+  disabledButton: {
+    backgroundColor: '#a19f9d',
+    cursor: 'not-allowed',
+    '&:hover': {
+      backgroundColor: '#a19f9d',
+    }
   }
 });
 
-const ForgotPasswordPage = ({ onBack }) => {
+const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
   const styles = useStyles();
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [notification, setNotification] = useState(null);
   const [formData, setFormData] = useState({
-    username: '',
     pin: '',
     newPassword: '',
     confirmPassword: ''
   });
+
+  const showNotification = (message, type = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 4000);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -213,18 +308,101 @@ const ForgotPasswordPage = ({ onBack }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.newPassword !== formData.confirmPassword) {
-      alert('Passwords do not match');
+    
+    // Validation
+    if (!formData.pin.trim()) {
+      showNotification('Please enter your PIN', 'error');
       return;
     }
-    // Handle password reset logic here
-    console.log('Password reset attempt:', formData);
+    
+    if (!formData.newPassword.trim()) {
+      showNotification('Please enter a new password', 'error');
+      return;
+    }
+    
+    if (formData.newPassword !== formData.confirmPassword) {
+      showNotification('Passwords do not match', 'error');
+      return;
+    }
+
+    if (formData.newPassword.length < 6) {
+      showNotification('Password must be at least 6 characters long', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const result = await window.electron.auth.forgotPassword({
+        pin: formData.pin.trim(),
+        newPassword: formData.newPassword
+      });
+
+      if (result.success) {
+        showNotification('Password reset successful! You can now sign in with your new password.', 'success');
+        
+        // Clear form
+        setFormData({
+          pin: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        
+        // Navigate back to login after a delay
+        setTimeout(() => {
+          if (onPasswordReset) {
+            onPasswordReset();
+          } else {
+            onBack();
+          }
+        }, 2000);
+      } else {
+        showNotification(result.error || 'Password reset failed. Please check your PIN and try again.', 'error');
+      }
+    } catch (error) {
+      console.error('Password reset error:', error);
+      showNotification('Connection error. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'success':
+        return <CheckmarkCircleRegular />;
+      case 'error':
+        return <DismissCircleRegular />;
+      case 'info':
+      default:
+        return <InfoRegular />;
+    }
+  };
+
+  const getNotificationStyle = (type) => {
+    switch (type) {
+      case 'success':
+        return styles.notificationSuccess;
+      case 'error':
+        return styles.notificationError;
+      case 'info':
+      default:
+        return styles.notificationInfo;
+    }
   };
 
   return (
     <div className={styles.container}>
+      {/* Notification */}
+      {notification && (
+        <div className={`${styles.notification} ${getNotificationStyle(notification.type)}`}>
+          {getNotificationIcon(notification.type)}
+          {notification.message}
+        </div>
+      )}
+
       {/* Left Panel - CSI and Diocese Logos */}
       <div className={styles.leftPanel}>
         <div className={styles.logoContainer}>
@@ -244,44 +422,36 @@ const ForgotPasswordPage = ({ onBack }) => {
             <h1 className={styles.logoText}>Ecclesia</h1>
           </div>
           <p className={styles.tagline}>
-            Reset your password securely and get back to managing your congregation with ease.
+            Reset your password securely using your PIN and get back to managing your congregation with ease.
           </p>
         </div>
       </div>
 
       {/* Right Panel - Reset Password Form */}
       <div className={styles.rightPanel}>
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className={styles.loadingOverlay}>
+            <div className={styles.loadingSpinner}>
+              <div className={styles.spinner}></div>
+              <span className={styles.loadingText}>Resetting password...</span>
+            </div>
+          </div>
+        )}
+
         <form className={styles.forgotPasswordForm} onSubmit={handleSubmit}>
           <h2 className={styles.forgotPasswordTitle}>Reset Password</h2>
           <p className={styles.forgotPasswordSubtitle}>
-            Enter your details to reset your password
+            Enter your PIN and new password to reset your account
           </p>
-
-          {/* Username Input */}
-          <div className={styles.inputGroup}>
-            <label htmlFor="username" className={styles.label}>Username</label>
-            <div className={styles.inputContainer}>
-              <PersonRegular className={styles.inputIcon} />
-              <input
-                type="text"
-                id="username"
-                name="username"
-                className={styles.input}
-                placeholder="Enter your username"
-                value={formData.username}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-          </div>
 
           {/* PIN Input */}
           <div className={styles.inputGroup}>
-            <label htmlFor="pin" className={styles.label}>PIN</label>
+            <label htmlFor="pin" className={styles.label}>PIN (Default: 1919)</label>
             <div className={styles.inputContainer}>
               <KeyRegular className={styles.inputIcon} />
               <input
-                type="password"
+                type="text"
                 id="pin"
                 name="pin"
                 className={styles.input}
@@ -289,6 +459,7 @@ const ForgotPasswordPage = ({ onBack }) => {
                 value={formData.pin}
                 onChange={handleInputChange}
                 maxLength="6"
+                disabled={isLoading}
                 required
               />
             </div>
@@ -304,14 +475,16 @@ const ForgotPasswordPage = ({ onBack }) => {
                 id="newPassword"
                 name="newPassword"
                 className={`${styles.input} ${styles.passwordInput}`}
-                placeholder="Enter new password"
+                placeholder="Enter new password (min 6 characters)"
                 value={formData.newPassword}
                 onChange={handleInputChange}
+                disabled={isLoading}
                 required
               />
-              <span 
+              <span
                 className={styles.eyeIcon}
                 onClick={() => setShowNewPassword(!showNewPassword)}
+                style={{ cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}
               >
                 {showNewPassword ? <EyeOffRegular /> : <EyeRegular />}
               </span>
@@ -331,11 +504,13 @@ const ForgotPasswordPage = ({ onBack }) => {
                 placeholder="Confirm new password"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
+                disabled={isLoading}
                 required
               />
-              <span 
+              <span
                 className={styles.eyeIcon}
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={{ cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}
               >
                 {showConfirmPassword ? <EyeOffRegular /> : <EyeRegular />}
               </span>
@@ -343,12 +518,22 @@ const ForgotPasswordPage = ({ onBack }) => {
           </div>
 
           {/* Reset Button */}
-          <button type="submit" className={styles.resetButton}>
-            Reset Password
+          <button
+            type="submit"
+            className={`${styles.resetButton} ${isLoading ? styles.disabledButton : ''}`}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Resetting Password...' : 'Reset Password'}
           </button>
 
           {/* Back to Login */}
-          <button type="button" className={styles.backButton} onClick={onBack}>
+          <button
+            type="button"
+            className={styles.backButton}
+            onClick={onBack}
+            disabled={isLoading}
+            style={{ opacity: isLoading ? 0.5 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
+          >
             ← Back to Sign In
           </button>
         </form>
