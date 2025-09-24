@@ -6,6 +6,8 @@ const AuthService = require('./backend/authService.js');
 const UserService = require('./backend/userService.js');
 const PastorateService = require('./backend/pastorateService.js');
 const ChurchService = require('./backend/churchService.js');
+const AreaService = require('./backend/areaService.js');
+const PrayerCellService = require('./backend/prayerCellService.js');
 
 let mainWindow;
 let db;
@@ -13,6 +15,8 @@ let authService;
 let userService;
 let pastorateService;
 let churchService;
+let areaService;
+let prayerCellService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -200,6 +204,40 @@ ipcMain.handle('church-delete', async (event, { churchId, userId }) => {
   return await churchService.deleteChurch(churchId, userId);
 });
 
+// Area management IPC handlers
+ipcMain.handle('area-create', async (event, { churchId, area_name, area_identity, userId }) => {
+  return await areaService.createArea(churchId, area_name, area_identity, userId);
+});
+
+ipcMain.handle('area-get-by-church', async (event, { churchId, userId }) => {
+  return await areaService.getAreasByChurch(churchId, userId);
+});
+
+ipcMain.handle('area-update', async (event, { areaId, area_name, area_identity, userId }) => {
+  return await areaService.updateArea(areaId, area_name, area_identity, userId);
+});
+
+ipcMain.handle('area-delete', async (event, { areaId, userId }) => {
+  return await areaService.deleteArea(areaId, userId);
+});
+
+// Prayer Cell management IPC handlers
+ipcMain.handle('prayer-cell-create', async (event, { churchId, prayer_cell_name, prayer_cell_identity, userId }) => {
+  return await prayerCellService.createPrayerCell(churchId, prayer_cell_name, prayer_cell_identity, userId);
+});
+
+ipcMain.handle('prayer-cell-get-by-church', async (event, { churchId, userId }) => {
+  return await prayerCellService.getPrayerCellsByChurch(churchId, userId);
+});
+
+ipcMain.handle('prayer-cell-update', async (event, { prayerCellId, prayer_cell_name, prayer_cell_identity, userId }) => {
+  return await prayerCellService.updatePrayerCell(prayerCellId, prayer_cell_name, prayer_cell_identity, userId);
+});
+
+ipcMain.handle('prayer-cell-delete', async (event, { prayerCellId, userId }) => {
+  return await prayerCellService.deletePrayerCell(prayerCellId, userId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -319,6 +357,8 @@ app.on('ready', async () => {
   userService = new UserService(db);
   pastorateService = new PastorateService(db);
   churchService = new ChurchService(db);
+  areaService = new AreaService(db);
+  prayerCellService = new PrayerCellService(db);
   
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

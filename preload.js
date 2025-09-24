@@ -55,5 +55,21 @@ contextBridge.exposeInMainWorld('electron', {
     removeUser: (data) => ipcRenderer.invoke('church-remove-user', data),
     update: (data) => ipcRenderer.invoke('church-update', data),
     delete: (data) => ipcRenderer.invoke('church-delete', data)
+  },
+
+  // Area management API
+  area: {
+    create: (data) => ipcRenderer.invoke('area-create', data),
+    getByChurch: (data) => ipcRenderer.invoke('area-get-by-church', data),
+    update: (data) => ipcRenderer.invoke('area-update', data),
+    delete: (data) => ipcRenderer.invoke('area-delete', data)
+  },
+
+  // Prayer Cell management API
+  prayerCell: {
+    create: (data) => ipcRenderer.invoke('prayer-cell-create', data),
+    getByChurch: (data) => ipcRenderer.invoke('prayer-cell-get-by-church', data),
+    update: (data) => ipcRenderer.invoke('prayer-cell-update', data),
+    delete: (data) => ipcRenderer.invoke('prayer-cell-delete', data)
   }
 });

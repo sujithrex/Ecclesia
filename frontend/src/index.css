@@ -7,6 +7,15 @@
   font-display: swap;
 }
 
+/* Font Face Declaration for Pavanam (Tamil font) */
+@font-face {
+  font-family: 'Pavanam';
+  src: url('./assets/Pavanam-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Microsoft Teams Theme CSS Variables */
 :root {
   --teams-primary: #B5316A;

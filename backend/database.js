@@ -98,6 +98,36 @@ class DatabaseManager {
                     )
                 `);
 
+                // Areas table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS areas (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        church_id INTEGER NOT NULL,
+                        area_name TEXT NOT NULL,
+                        area_identity TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        UNIQUE(church_id, area_name),
+                        UNIQUE(church_id, area_identity)
+                    )
+                `);
+
+                // Prayer Cells table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS prayer_cells (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        church_id INTEGER NOT NULL,
+                        prayer_cell_name TEXT NOT NULL,
+                        prayer_cell_identity TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        UNIQUE(church_id, prayer_cell_name),
+                        UNIQUE(church_id, prayer_cell_identity)
+                    )
+                `);
+
                 // Settings table for app configurations
                 this.db.run(`
                     CREATE TABLE IF NOT EXISTS settings (
@@ -738,6 +768,154 @@ class DatabaseManager {
             `, [userId, churchId], function(err) {
                 if (err) {
                     resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // Areas management methods
+    async createArea(churchId, area_name, area_identity) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                INSERT INTO areas (church_id, area_name, area_identity)
+                VALUES (?, ?, ?)
+            `, [churchId, area_name, area_identity], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getAreaById(id) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM areas WHERE id = ?', [id], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getAreasByChurch(churchId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT * FROM areas
+                WHERE church_id = ?
+                ORDER BY area_name
+            `, [churchId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async updateArea(id, area_name, area_identity) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                UPDATE areas
+                SET area_name = ?, area_identity = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [area_name, area_identity, id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deleteArea(id) {
+        return new Promise((resolve) => {
+            this.db.run('DELETE FROM areas WHERE id = ?', [id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else if (this.changes === 0) {
+                    resolve({ success: false, error: 'Area not found' });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // Prayer Cells management methods
+    async createPrayerCell(churchId, prayer_cell_name, prayer_cell_identity) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                INSERT INTO prayer_cells (church_id, prayer_cell_name, prayer_cell_identity)
+                VALUES (?, ?, ?)
+            `, [churchId, prayer_cell_name, prayer_cell_identity], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getPrayerCellById(id) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM prayer_cells WHERE id = ?', [id], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getPrayerCellsByChurch(churchId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT * FROM prayer_cells
+                WHERE church_id = ?
+                ORDER BY prayer_cell_name
+            `, [churchId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async updatePrayerCell(id, prayer_cell_name, prayer_cell_identity) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                UPDATE prayer_cells
+                SET prayer_cell_name = ?, prayer_cell_identity = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [prayer_cell_name, prayer_cell_identity, id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deletePrayerCell(id) {
+        return new Promise((resolve) => {
+            this.db.run('DELETE FROM prayer_cells WHERE id = ?', [id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else if (this.changes === 0) {
+                    resolve({ success: false, error: 'Prayer Cell not found' });
                 } else {
                     resolve({ success: true, changes: this.changes });
                 }

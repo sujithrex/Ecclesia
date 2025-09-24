@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { makeStyles } from '@fluentui/react-components';
 import StatusBar from './StatusBar';
+import ChurchDashboard from './ChurchDashboard';
 
 const useStyles = makeStyles({
   container: {
@@ -151,6 +152,30 @@ const Dashboard = ({
     return 'User';
   };
 
+  // If a church is selected, show the Church Dashboard
+  if (currentChurch && currentPastorate) {
+    return (
+      <ChurchDashboard
+        user={user}
+        onLogout={onLogout}
+        onProfileClick={onProfileClick}
+        currentPastorate={currentPastorate}
+        userPastorates={userPastorates}
+        onPastorateChange={onPastorateChange}
+        onCreatePastorate={onCreatePastorate}
+        onEditPastorate={onEditPastorate}
+        onDeletePastorate={onDeletePastorate}
+        currentChurch={currentChurch}
+        userChurches={userChurches}
+        onChurchChange={onChurchChange}
+        onCreateChurch={onCreateChurch}
+        onEditChurch={onEditChurch}
+        onDeleteChurch={onDeleteChurch}
+      />
+    );
+  }
+
+  // Otherwise, show the General Dashboard
   return (
     <div className={styles.container}>
       <div className={styles.main}>
