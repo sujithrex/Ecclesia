@@ -1,0 +1,118 @@
+import React from 'react';
+import { makeStyles } from '@fluentui/react-components';
+import { ChevronRightRegular, HomeRegular } from '@fluentui/react-icons';
+
+const useStyles = makeStyles({
+  container: {
+    backgroundColor: '#B5316A',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    padding: '0 40px',
+    fontFamily: 'Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
+  },
+  pageTitle: {
+    fontSize: '28px',
+    fontWeight: '600',
+    color: 'white',
+    margin: '20px 0 12px 0',
+    lineHeight: '1.2',
+  },
+  breadcrumbNav: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    paddingBottom: '16px',
+    fontSize: '14px',
+    color: '#B5316A',
+    backgroundColor: '#f8f8f8',
+    padding: '12px 20px',
+    margin: '0 -40px -16px -40px',
+    borderRadius: '0',
+  },
+  breadcrumbItem: {
+    display: 'flex',
+    alignItems: 'center',
+    cursor: 'pointer',
+    color: '#B5316A',
+    textDecoration: 'none',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    transition: 'background-color 0.2s ease, color 0.2s ease',
+    '&:hover': {
+      backgroundColor: 'rgba(181, 49, 106, 0.1)',
+      color: '#9e2c5f',
+    }
+  },
+  breadcrumbCurrent: {
+    color: '#323130',
+    cursor: 'default',
+    '&:hover': {
+      backgroundColor: 'transparent',
+      color: '#323130',
+    }
+  },
+  breadcrumbIcon: {
+    fontSize: '16px',
+    marginRight: '6px',
+  },
+  separator: {
+    color: '#8a8886',
+    fontSize: '12px',
+    display: 'flex',
+    alignItems: 'center',
+  }
+});
+
+const Breadcrumb = ({ 
+  pageTitle, 
+  breadcrumbs = [], 
+  onNavigate 
+}) => {
+  const styles = useStyles();
+
+  // Don't render anything if no pageTitle is provided (for Dashboard)
+  if (!pageTitle) {
+    return null;
+  }
+
+  const handleBreadcrumbClick = (breadcrumb) => {
+    if (breadcrumb.onClick) {
+      breadcrumb.onClick();
+    } else if (onNavigate) {
+      onNavigate(breadcrumb.path || breadcrumb.href);
+    }
+  };
+
+  return (
+    <div className={styles.container}>
+      <h1 className={styles.pageTitle}>{pageTitle}</h1>
+      {breadcrumbs.length > 0 && (
+        <nav className={styles.breadcrumbNav}>
+          {breadcrumbs.map((breadcrumb, index) => (
+            <React.Fragment key={index}>
+              <span
+                className={`${styles.breadcrumbItem} ${
+                  breadcrumb.current ? styles.breadcrumbCurrent : ''
+                }`}
+                onClick={() => !breadcrumb.current && handleBreadcrumbClick(breadcrumb)}
+              >
+                {breadcrumb.icon && (
+                  <span className={styles.breadcrumbIcon}>
+                    {breadcrumb.icon}
+                  </span>
+                )}
+                {breadcrumb.label}
+              </span>
+              {index < breadcrumbs.length - 1 && (
+                <span className={styles.separator}>
+                  <ChevronRightRegular />
+                </span>
+              )}
+            </React.Fragment>
+          ))}
+        </nav>
+      )}
+    </div>
+  );
+};
+
+export default Breadcrumb;

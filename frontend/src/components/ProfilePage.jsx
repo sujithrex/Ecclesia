@@ -13,10 +13,12 @@ import {
   InfoRegular,
   SaveRegular,
   EyeRegular,
-  EyeOffRegular
+  EyeOffRegular,
+  HomeRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import LoadingSpinner from './LoadingSpinner';
+import Breadcrumb from './Breadcrumb';
 import { useLoading } from '../contexts/LoadingContext';
 
 const useStyles = makeStyles({
@@ -27,24 +29,6 @@ const useStyles = makeStyles({
     backgroundColor: '#f8f8f8',
     fontFamily: 'Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
     overflow: 'hidden',
-  },
-  header: {
-    backgroundColor: '#B5316A',
-    color: 'white',
-    padding: '20px 40px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-  },
-  headerTitle: {
-    fontSize: '24px',
-    fontWeight: '600',
-    margin: 0,
-    color: 'white',
-  },
-  headerSubtitle: {
-    fontSize: '14px',
-    opacity: 0.9,
-    margin: '4px 0 0 0',
-    color: 'white',
   },
   content: {
     flex: 1,
@@ -587,10 +571,22 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
         </div>
       )}
 
-      {/* Header */}
-      <div className={styles.header}>
-        <h1 className={styles.headerTitle}>Profile Settings</h1>
-      </div>
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb
+        pageTitle="Profile"
+        breadcrumbs={[
+          {
+            label: 'Dashboard',
+            icon: <HomeRegular />,
+            onClick: () => navigate('/dashboard')
+          },
+          {
+            label: 'Profile',
+            current: true
+          }
+        ]}
+        onNavigate={(path) => navigate(path)}
+      />
 
       {/* Content */}
       <div className={styles.content} style={{ position: 'relative' }}>
