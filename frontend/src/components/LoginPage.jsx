@@ -222,7 +222,7 @@ const useStyles = makeStyles({
   }
 });
 
-const LoginPage = ({ onBack, onForgotPassword }) => {
+const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
   const styles = useStyles();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -241,8 +241,9 @@ const LoginPage = ({ onBack, onForgotPassword }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle login logic here
+    // Handle login logic here - for now just navigate to dashboard
     console.log('Login attempt:', formData);
+    onLoginSuccess();
   };
 
   return (

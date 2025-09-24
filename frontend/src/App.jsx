@@ -7,9 +7,10 @@ import TitleBar from './components/TitleBar';
 import WelcomeScreen from './components/WelcomeScreen';
 import LoginPage from './components/LoginPage';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
+import Dashboard from './components/Dashboard';
 
 function App() {
-  const [currentScreen, setCurrentScreen] = useState('welcome'); // 'welcome' | 'login' | 'forgotPassword'
+  const [currentScreen, setCurrentScreen] = useState('welcome'); // 'welcome' | 'login' | 'forgotPassword' | 'dashboard'
 
   const handleGetStarted = () => {
     setCurrentScreen('login');
@@ -27,6 +28,10 @@ function App() {
     setCurrentScreen('login');
   };
 
+  const handleLoginSuccess = () => {
+    setCurrentScreen('dashboard');
+  };
+
   return (
     <FluentProvider theme={webLightTheme}>
       <TitleBar />
@@ -37,10 +42,14 @@ function App() {
         <LoginPage
           onBack={handleBackToWelcome}
           onForgotPassword={handleForgotPassword}
+          onLoginSuccess={handleLoginSuccess}
         />
       )}
       {currentScreen === 'forgotPassword' && (
         <ForgotPasswordPage onBack={handleBackToLogin} />
+      )}
+      {currentScreen === 'dashboard' && (
+        <Dashboard />
       )}
     </FluentProvider>
   );
