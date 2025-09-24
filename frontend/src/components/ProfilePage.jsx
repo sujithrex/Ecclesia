@@ -269,8 +269,11 @@ const ProfilePage = ({
   onBack,
   onProfileUpdate,
   currentPastorate,
+  userPastorates,
   onPastorateChange,
-  onCreatePastorate
+  onCreatePastorate,
+  onEditPastorate,
+  onDeletePastorate
 }) => {
   const styles = useStyles();
   const navigate = useNavigate();
@@ -906,8 +909,11 @@ const ProfilePage = ({
         }}
         onProfileClick={null}
         currentPastorate={currentPastorate}
+        userPastorates={userPastorates}
         onPastorateChange={onPastorateChange}
         onCreatePastorate={onCreatePastorate}
+        onEditPastorate={onEditPastorate}
+        onDeletePastorate={onDeletePastorate}
       />
     </div>
   );

@@ -88,8 +88,11 @@ const Dashboard = ({
   onLogout,
   onProfileClick,
   currentPastorate,
+  userPastorates,
   onPastorateChange,
-  onCreatePastorate
+  onCreatePastorate,
+  onEditPastorate,
+  onDeletePastorate
 }) => {
   const styles = useStyles();
   const [userImageUrl, setUserImageUrl] = useState(null);
@@ -185,8 +188,11 @@ const Dashboard = ({
         onLogout={onLogout}
         onProfileClick={onProfileClick}
         currentPastorate={currentPastorate}
+        userPastorates={userPastorates}
         onPastorateChange={onPastorateChange}
         onCreatePastorate={onCreatePastorate}
+        onEditPastorate={onEditPastorate}
+        onDeletePastorate={onDeletePastorate}
       />
     </div>
   );

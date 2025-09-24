@@ -167,6 +167,106 @@ class PastorateService {
             return { success: false, error: 'Failed to remove user from pastorate' };
         }
     }
+
+    async updatePastorate(pastorateId, pastorate_name, pastorate_short_name, userId) {
+        try {
+            // Validate input
+            if (!pastorate_name || !pastorate_short_name) {
+                return { success: false, error: 'Pastorate name and short name are required' };
+            }
+
+            // Verify user has access to this pastorate
+            const userPastorates = await this.db.getUserPastorates(userId);
+            const hasAccess = userPastorates.some(p => p.id === pastorateId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this pastorate' };
+            }
+
+            // Check if new names conflict with existing pastorates (excluding current one)
+            const existingPastorates = await this.db.getAllPastorates();
+            const nameExists = existingPastorates.some(p =>
+                p.id !== pastorateId && p.pastorate_name.toLowerCase() === pastorate_name.toLowerCase()
+            );
+            const shortNameExists = existingPastorates.some(p =>
+                p.id !== pastorateId && p.pastorate_short_name.toLowerCase() === pastorate_short_name.toLowerCase()
+            );
+
+            if (nameExists) {
+                return { success: false, error: 'A pastorate with this name already exists' };
+            }
+
+            if (shortNameExists) {
+                return { success: false, error: 'A pastorate with this short name already exists' };
+            }
+
+            // Update the pastorate
+            const result = await this.db.updatePastorate(pastorateId, pastorate_name, pastorate_short_name);
+            
+            if (result.success) {
+                // Return the updated pastorate details
+                const pastorate = await this.db.getPastorateById(pastorateId);
+                return {
+                    success: true,
+                    message: 'Pastorate updated successfully',
+                    pastorate: pastorate
+                };
+            } else {
+                return { success: false, error: result.error || 'Failed to update pastorate' };
+            }
+        } catch (error) {
+            console.error('Update pastorate error:', error);
+            return { success: false, error: 'Failed to update pastorate' };
+        }
+    }
+
+    async deletePastorate(pastorateId, userId) {
+        try {
+            // Verify user has access to this pastorate
+            const userPastorates = await this.db.getUserPastorates(userId);
+            const hasAccess = userPastorates.some(p => p.id === pastorateId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this pastorate' };
+            }
+
+            // Check if this is the user's last pastorate
+            if (userPastorates.length === 1) {
+                return { success: false, error: 'Cannot delete your last pastorate' };
+            }
+
+            // Get pastorate info before deletion for confirmation
+            const pastorate = await this.db.getPastorateById(pastorateId);
+            if (!pastorate) {
+                return { success: false, error: 'Pastorate not found' };
+            }
+
+            // Delete the pastorate
+            const result = await this.db.deletePastorate(pastorateId);
+            
+            if (result.success) {
+                // If this was the selected pastorate, switch to another one
+                const currentPastorate = await this.db.getLastSelectedPastorate(userId);
+                if (currentPastorate && currentPastorate.id === pastorateId) {
+                    const remainingPastorates = await this.db.getUserPastorates(userId);
+                    if (remainingPastorates.length > 0) {
+                        await this.db.updateLastSelectedPastorate(userId, remainingPastorates[0].id);
+                    }
+                }
+
+                return {
+                    success: true,
+                    message: `Pastorate "${pastorate.pastorate_name}" deleted successfully`,
+                    affectedUsers: result.affectedUsers
+                };
+            } else {
+                return { success: false, error: result.error || 'Failed to delete pastorate' };
+            }
+        } catch (error) {
+            console.error('Delete pastorate error:', error);
+            return { success: false, error: 'Failed to delete pastorate' };
+        }
+    }
 }
 
 module.exports = PastorateService;

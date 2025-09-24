@@ -191,7 +191,7 @@ const useStyles = makeStyles({
   },
 });
 
-const CreatePastorateModal = ({ isOpen, onClose, onSuccess, user }) => {
+const CreatePastorateModal = ({ isOpen, onClose, onSuccess, user, editMode = false, initialData = null }) => {
   const styles = useStyles();
   const [formData, setFormData] = useState({
     pastorate_name: '',
@@ -200,6 +200,21 @@ const CreatePastorateModal = ({ isOpen, onClose, onSuccess, user }) => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState(null);
+
+  // Initialize form data when modal opens or editMode/initialData changes
+  React.useEffect(() => {
+    if (isOpen && editMode && initialData) {
+      setFormData({
+        pastorate_name: initialData.pastorate_name || '',
+        pastorate_short_name: initialData.pastorate_short_name || '',
+      });
+    } else if (isOpen && !editMode) {
+      setFormData({
+        pastorate_name: '',
+        pastorate_short_name: '',
+      });
+    }
+  }, [isOpen, editMode, initialData]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -253,19 +268,31 @@ const CreatePastorateModal = ({ isOpen, onClose, onSuccess, user }) => {
     setIsLoading(true);
     
     try {
-      const result = await window.electron.pastorate.create({
-        pastorate_name: formData.pastorate_name.trim(),
-        pastorate_short_name: formData.pastorate_short_name.trim(),
-        userId: user.id
-      });
+      let result;
+      if (editMode && initialData) {
+        result = await window.electron.pastorate.update({
+          pastorateId: initialData.id,
+          pastorate_name: formData.pastorate_name.trim(),
+          pastorate_short_name: formData.pastorate_short_name.trim(),
+          userId: user.id
+        });
+      } else {
+        result = await window.electron.pastorate.create({
+          pastorate_name: formData.pastorate_name.trim(),
+          pastorate_short_name: formData.pastorate_short_name.trim(),
+          userId: user.id
+        });
+      }
 
       if (result.success) {
-        showNotification('Pastorate created successfully!', 'success');
+        const successMessage = editMode ? 'Pastorate updated successfully!' : 'Pastorate created successfully!';
+        showNotification(successMessage, 'success');
         setTimeout(() => {
           onSuccess(result.pastorate);
         }, 1500);
       } else {
-        showNotification(result.error || 'Failed to create pastorate', 'error');
+        const errorMessage = editMode ? 'Failed to update pastorate' : 'Failed to create pastorate';
+        showNotification(result.error || errorMessage, 'error');
       }
     } catch (error) {
       console.error('Create pastorate error:', error);
@@ -298,7 +325,7 @@ const CreatePastorateModal = ({ isOpen, onClose, onSuccess, user }) => {
         <div className={styles.header}>
           <h2 className={styles.title}>
             <BuildingRegular />
-            Create New Pastorate
+            {editMode ? 'Edit Pastorate' : 'Create New Pastorate'}
           </h2>
           <button
             className={styles.closeButton}
@@ -326,7 +353,10 @@ const CreatePastorateModal = ({ isOpen, onClose, onSuccess, user }) => {
         )}
 
         <p className={styles.description}>
-          Create a new pastorate to organize and manage your congregation. You'll be automatically assigned to this pastorate once it's created.
+          {editMode
+            ? 'Update the pastorate information below. Changes will be saved immediately.'
+            : 'Create a new pastorate to organize and manage your congregation. You\'ll be automatically assigned to this pastorate once it\'s created.'
+          }
         </p>
 
         <form className={styles.form} onSubmit={handleSubmit}>
@@ -408,7 +438,7 @@ const CreatePastorateModal = ({ isOpen, onClose, onSuccess, user }) => {
                   Creating...
                 </>
               ) : (
-                'Create Pastorate'
+                editMode ? 'Update Pastorate' : 'Create Pastorate'
               )}
             </button>
           </div>

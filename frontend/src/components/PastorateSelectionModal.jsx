@@ -389,9 +389,6 @@ const PastorateSelectionModal = ({ isOpen, onClose, onSelect, user, pastorates: 
                   <h3 className={styles.pastorateName}>
                     {pastorate.pastorate_name}
                   </h3>
-                  <div className={styles.pastorateShortName}>
-                    {pastorate.pastorate_short_name}
-                  </div>
                   <div className={styles.pastorateMetadata}>
                     Last selected: {formatDate(pastorate.last_selected_at)}
                     {' • '}

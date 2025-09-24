@@ -3,7 +3,10 @@ import { makeStyles } from '@fluentui/react-components';
 import {
   BuildingRegular,
   ChevronUpRegular,
-  CheckmarkCircleRegular
+  CheckmarkCircleRegular,
+  EditRegular,
+  DeleteRegular,
+  WarningRegular
 } from '@fluentui/react-icons';
 
 const useStyles = makeStyles({
@@ -163,6 +166,115 @@ const useStyles = makeStyles({
     textAlign: 'center',
     color: '#605e5c',
   },
+  contextMenu: {
+    position: 'absolute',
+    bottom: '100%',
+    left: '0',
+    backgroundColor: 'white',
+    border: '1px solid #e1dfdd',
+    borderRadius: '6px',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+    minWidth: '160px',
+    zIndex: 1002,
+    marginBottom: '8px',
+    userSelect: 'none',
+  },
+  contextMenuItem: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '12px 16px',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s ease',
+    borderBottom: '1px solid #f3f2f1',
+    gap: '12px',
+    fontSize: '14px',
+    color: '#323130',
+    '&:hover': {
+      backgroundColor: '#f9f9f9',
+    },
+    '&:last-child': {
+      borderBottom: 'none',
+    },
+  },
+  contextMenuItemDanger: {
+    color: '#d13438',
+    '&:hover': {
+      backgroundColor: '#fdf3f4',
+    },
+  },
+  contextMenuIcon: {
+    fontSize: '16px',
+    flexShrink: 0,
+  },
+  confirmationOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2000,
+  },
+  confirmationDialog: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    padding: '24px',
+    width: '100%',
+    maxWidth: '400px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+    position: 'relative',
+  },
+  confirmationTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#323130',
+    margin: '0 0 12px 0',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  confirmationMessage: {
+    fontSize: '14px',
+    color: '#605e5c',
+    marginBottom: '24px',
+    lineHeight: '1.5',
+  },
+  confirmationButtons: {
+    display: 'flex',
+    gap: '12px',
+    justifyContent: 'flex-end',
+  },
+  confirmationButton: {
+    padding: '8px 16px',
+    borderRadius: '4px',
+    border: 'none',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s ease',
+  },
+  confirmationButtonCancel: {
+    backgroundColor: 'transparent',
+    color: '#323130',
+    border: '1px solid #8a8886',
+    '&:hover': {
+      backgroundColor: '#f3f2f1',
+    },
+  },
+  confirmationButtonDelete: {
+    backgroundColor: '#d13438',
+    color: 'white',
+    '&:hover': {
+      backgroundColor: '#b92b2b',
+    },
+    '&:disabled': {
+      backgroundColor: '#a19f9d',
+      cursor: 'not-allowed',
+    },
+  },
 });
 
 const StatusBar = ({
@@ -170,16 +282,21 @@ const StatusBar = ({
   onLogout,
   onProfileClick,
   currentPastorate,
+  userPastorates = [],
   onPastorateChange,
-  onCreatePastorate
+  onCreatePastorate,
+  onEditPastorate,
+  onDeletePastorate
 }) => {
   const styles = useStyles();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showPastorateDropdown, setShowPastorateDropdown] = useState(false);
-  const [userPastorates, setUserPastorates] = useState([]);
-  const [loadingPastorates, setLoadingPastorates] = useState(false);
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const dropdownRef = useRef(null);
   const pastorateButtonRef = useRef(null);
+  const contextMenuRef = useRef(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -189,7 +306,7 @@ const StatusBar = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Handle clicking outside dropdown
+  // Handle clicking outside dropdown and context menu
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -201,39 +318,79 @@ const StatusBar = ({
       ) {
         setShowPastorateDropdown(false);
       }
+
+      if (
+        showContextMenu &&
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(event.target) &&
+        pastorateButtonRef.current &&
+        !pastorateButtonRef.current.contains(event.target)
+      ) {
+        setShowContextMenu(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showPastorateDropdown]);
+  }, [showPastorateDropdown, showContextMenu]);
 
-  // Load user pastorates when dropdown opens
-  useEffect(() => {
-    if (showPastorateDropdown && user && userPastorates.length === 0) {
-      loadUserPastorates();
-    }
-  }, [showPastorateDropdown, user]);
 
-  const loadUserPastorates = async () => {
-    if (!user) return;
-    
-    setLoadingPastorates(true);
-    try {
-      const result = await window.electron.pastorate.getUserPastorates(user.id);
-      if (result.success) {
-        setUserPastorates(result.pastorates);
-      }
-    } catch (error) {
-      console.error('Load pastorates error:', error);
-    } finally {
-      setLoadingPastorates(false);
+  const handlePastorateClick = (e) => {
+    if (currentPastorate) {
+      setShowContextMenu(false);
+      setShowPastorateDropdown(!showPastorateDropdown);
     }
   };
 
-  const handlePastorateClick = () => {
+  const handlePastorateRightClick = (e) => {
     if (currentPastorate) {
-      setShowPastorateDropdown(!showPastorateDropdown);
+      e.preventDefault();
+      e.stopPropagation();
+      setShowPastorateDropdown(false);
+      setShowContextMenu(true);
     }
+  };
+
+  const handleEditPastorate = () => {
+    setShowContextMenu(false);
+    if (onEditPastorate && currentPastorate) {
+      onEditPastorate(currentPastorate);
+    }
+  };
+
+  const handleDeletePastorate = () => {
+    setShowContextMenu(false);
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!currentPastorate || isDeleting) return;
+
+    setIsDeleting(true);
+    try {
+      const result = await window.electron.pastorate.delete({
+        pastorateId: currentPastorate.id,
+        userId: user.id
+      });
+
+      if (result.success) {
+        setShowDeleteConfirmation(false);
+        if (onDeletePastorate) {
+          onDeletePastorate();
+        }
+      } else {
+        // Handle error - you might want to show a notification
+        console.error('Delete error:', result.error);
+      }
+    } catch (error) {
+      console.error('Delete pastorate error:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false);
   };
 
   const handlePastorateSelect = async (pastorate) => {
@@ -305,10 +462,11 @@ const StatusBar = ({
               ref={pastorateButtonRef}
               className={styles.pastorateSelector}
               onClick={handlePastorateClick}
-              title="Click to switch pastorate"
+              onContextMenu={handlePastorateRightClick}
+              title="Click to switch pastorate or right-click for options"
             >
               <BuildingRegular />
-              Pastorate: {currentPastorate.pastorate_name} ({currentPastorate.pastorate_short_name})
+              Pastorate: {currentPastorate.pastorate_name}
               <ChevronUpRegular />
             </button>
             
@@ -319,9 +477,9 @@ const StatusBar = ({
                   Switch Pastorate
                 </div>
                 
-                {loadingPastorates ? (
+                {userPastorates.length === 0 ? (
                   <div className={styles.loadingDropdown}>
-                    Loading pastorates...
+                    No pastorates available
                   </div>
                 ) : (
                   <>
@@ -339,9 +497,6 @@ const StatusBar = ({
                         <div className={styles.dropdownItemContent}>
                           <div className={styles.dropdownItemName}>
                             {pastorate.pastorate_name}
-                          </div>
-                          <div className={styles.dropdownItemShortName}>
-                            {pastorate.pastorate_short_name}
                           </div>
                         </div>
                         {currentPastorate.id === pastorate.id && (
@@ -369,6 +524,22 @@ const StatusBar = ({
                 )}
               </div>
             )}
+
+            {showContextMenu && (
+              <div ref={contextMenuRef} className={styles.contextMenu}>
+                <div className={styles.contextMenuItem} onClick={handleEditPastorate}>
+                  <EditRegular className={styles.contextMenuIcon} />
+                  Edit Pastorate
+                </div>
+                <div
+                  className={`${styles.contextMenuItem} ${styles.contextMenuItemDanger}`}
+                  onClick={handleDeletePastorate}
+                >
+                  <DeleteRegular className={styles.contextMenuIcon} />
+                  Delete Pastorate
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           'rexmi.in'
@@ -390,6 +561,37 @@ const StatusBar = ({
         )}
         <span>{formatDateTime(currentTime)}</span>
       </div>
+
+      {showDeleteConfirmation && (
+        <div className={styles.confirmationOverlay}>
+          <div className={styles.confirmationDialog}>
+            <h3 className={styles.confirmationTitle}>
+              <WarningRegular style={{ color: '#d13438' }} />
+              Confirm Delete
+            </h3>
+            <p className={styles.confirmationMessage}>
+              Are you sure you want to delete the pastorate "{currentPastorate?.pastorate_name}"?
+              This action cannot be undone and will remove all associated data.
+            </p>
+            <div className={styles.confirmationButtons}>
+              <button
+                className={`${styles.confirmationButton} ${styles.confirmationButtonCancel}`}
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                className={`${styles.confirmationButton} ${styles.confirmationButtonDelete}`}
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

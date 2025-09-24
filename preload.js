@@ -37,6 +37,8 @@ contextBridge.exposeInMainWorld('electron', {
     select: (data) => ipcRenderer.invoke('pastorate-select', data),
     getAll: () => ipcRenderer.invoke('pastorate-get-all'),
     assignUser: (data) => ipcRenderer.invoke('pastorate-assign-user', data),
-    removeUser: (data) => ipcRenderer.invoke('pastorate-remove-user', data)
+    removeUser: (data) => ipcRenderer.invoke('pastorate-remove-user', data),
+    update: (data) => ipcRenderer.invoke('pastorate-update', data),
+    delete: (data) => ipcRenderer.invoke('pastorate-delete', data)
   }
 });

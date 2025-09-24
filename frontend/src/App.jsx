@@ -21,6 +21,7 @@ function App() {
   const [showCreatePastorateModal, setShowCreatePastorateModal] = useState(false);
   const [showPastorateSelectionModal, setShowPastorateSelectionModal] = useState(false);
   const [userPastorates, setUserPastorates] = useState([]);
+  const [editingPastorate, setEditingPastorate] = useState(null);
   const navigate = useNavigate();
 
   // Check for existing session ONLY on app startup
@@ -148,9 +149,17 @@ function App() {
   };
 
   const handlePastorateCreated = (pastorate) => {
-    setCurrentPastorate(pastorate);
+    if (editingPastorate) {
+      // Update existing pastorate
+      setCurrentPastorate(pastorate);
+      setUserPastorates(prev => prev.map(p => p.id === pastorate.id ? pastorate : p));
+    } else {
+      // Add new pastorate
+      setCurrentPastorate(pastorate);
+      setUserPastorates(prev => [...prev, pastorate]);
+    }
     setShowCreatePastorateModal(false);
-    setUserPastorates(prev => [...prev, pastorate]);
+    setEditingPastorate(null);
     navigate('/dashboard');
   };
 
@@ -173,7 +182,43 @@ function App() {
   };
 
   const handleCreatePastorateFromStatus = () => {
+    setEditingPastorate(null);
     setShowCreatePastorateModal(true);
+  };
+
+  const handleEditPastorate = (pastorate) => {
+    setEditingPastorate(pastorate);
+    setShowCreatePastorateModal(true);
+  };
+
+  const handleDeletePastorate = async () => {
+    // Refresh the user's pastorates and current selection
+    try {
+      const pastoratesResult = await window.electron.pastorate.getUserPastorates(user.id);
+      
+      if (pastoratesResult.success) {
+        setUserPastorates(pastoratesResult.pastorates);
+        
+        // Check if current pastorate still exists
+        const currentExists = pastoratesResult.pastorates.some(p => p.id === currentPastorate?.id);
+        if (!currentExists) {
+          // Current pastorate was deleted, select the first available or clear
+          if (pastoratesResult.pastorates.length > 0) {
+            const lastSelectedResult = await window.electron.pastorate.getLastSelected(user.id);
+            if (lastSelectedResult.success && lastSelectedResult.pastorate) {
+              setCurrentPastorate(lastSelectedResult.pastorate);
+            } else {
+              setCurrentPastorate(pastoratesResult.pastorates[0]);
+            }
+          } else {
+            setCurrentPastorate(null);
+            setShowCreatePastorateModal(true);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh pastorates after deletion:', error);
+    }
   };
 
   return (
@@ -208,10 +253,13 @@ function App() {
               <Dashboard
                 user={user}
                 currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
                 onLogout={handleLogout}
                 onProfileClick={handleProfileClick}
                 onPastorateChange={handlePastorateChange}
                 onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
               />
             ) : (
               <Navigate to="/login" replace />
@@ -225,10 +273,13 @@ function App() {
               <ProfilePage
                 user={user}
                 currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
                 onBack={handleBackToDashboard}
                 onProfileUpdate={handleProfileUpdate}
                 onPastorateChange={handlePastorateChange}
                 onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
               />
             ) : (
               <Navigate to="/login" replace />
@@ -242,9 +293,14 @@ function App() {
         {/* Pastorate Modals */}
         <CreatePastorateModal
           isOpen={showCreatePastorateModal}
-          onClose={() => setShowCreatePastorateModal(false)}
+          onClose={() => {
+            setShowCreatePastorateModal(false);
+            setEditingPastorate(null);
+          }}
           onSuccess={handlePastorateCreated}
           user={user}
+          editMode={!!editingPastorate}
+          initialData={editingPastorate}
         />
         
         <PastorateSelectionModal

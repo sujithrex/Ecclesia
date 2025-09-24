@@ -145,6 +145,14 @@ ipcMain.handle('pastorate-remove-user', async (event, { userId, pastorateId }) =
   return await pastorateService.removeUserFromPastorate(userId, pastorateId);
 });
 
+ipcMain.handle('pastorate-update', async (event, { pastorateId, pastorate_name, pastorate_short_name, userId }) => {
+  return await pastorateService.updatePastorate(pastorateId, pastorate_name, pastorate_short_name, userId);
+});
+
+ipcMain.handle('pastorate-delete', async (event, { pastorateId, userId }) => {
+  return await pastorateService.deletePastorate(pastorateId, userId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {

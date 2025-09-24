@@ -345,6 +345,53 @@ class DatabaseManager {
         });
     }
 
+    async updatePastorate(id, pastorate_name, pastorate_short_name) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                UPDATE pastorates
+                SET pastorate_name = ?, pastorate_short_name = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [pastorate_name, pastorate_short_name, id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deletePastorate(id) {
+        return new Promise((resolve) => {
+            // First check if pastorate exists and get user assignments
+            this.db.get(`
+                SELECT COUNT(*) as user_count
+                FROM user_pastorates
+                WHERE pastorate_id = ?
+            `, [id], (err, row) => {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                    return;
+                }
+
+                // Delete the pastorate (CASCADE will handle user_pastorates cleanup)
+                this.db.run('DELETE FROM pastorates WHERE id = ?', [id], function(err) {
+                    if (err) {
+                        resolve({ success: false, error: err.message });
+                    } else if (this.changes === 0) {
+                        resolve({ success: false, error: 'Pastorate not found' });
+                    } else {
+                        resolve({
+                            success: true,
+                            changes: this.changes,
+                            affectedUsers: row.user_count
+                        });
+                    }
+                });
+            });
+        });
+    }
+
     async getUserPastorates(userId) {
         return new Promise((resolve, reject) => {
             this.db.all(`
