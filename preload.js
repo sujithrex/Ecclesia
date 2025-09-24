@@ -40,5 +40,20 @@ contextBridge.exposeInMainWorld('electron', {
     removeUser: (data) => ipcRenderer.invoke('pastorate-remove-user', data),
     update: (data) => ipcRenderer.invoke('pastorate-update', data),
     delete: (data) => ipcRenderer.invoke('pastorate-delete', data)
+  },
+
+  // Church management API
+  church: {
+    create: (data) => ipcRenderer.invoke('church-create', data),
+    getUserChurches: (userId) => ipcRenderer.invoke('church-get-user-churches', userId),
+    getUserChurchesByPastorate: (data) => ipcRenderer.invoke('church-get-user-churches-by-pastorate', data),
+    getLastSelected: (userId) => ipcRenderer.invoke('church-get-last-selected', userId),
+    select: (data) => ipcRenderer.invoke('church-select', data),
+    getAll: () => ipcRenderer.invoke('church-get-all'),
+    getByPastorate: (pastorateId) => ipcRenderer.invoke('church-get-by-pastorate', pastorateId),
+    assignUser: (data) => ipcRenderer.invoke('church-assign-user', data),
+    removeUser: (data) => ipcRenderer.invoke('church-remove-user', data),
+    update: (data) => ipcRenderer.invoke('church-update', data),
+    delete: (data) => ipcRenderer.invoke('church-delete', data)
   }
 });

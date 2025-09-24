@@ -92,7 +92,13 @@ const Dashboard = ({
   onPastorateChange,
   onCreatePastorate,
   onEditPastorate,
-  onDeletePastorate
+  onDeletePastorate,
+  currentChurch,
+  userChurches,
+  onChurchChange,
+  onCreateChurch,
+  onEditChurch,
+  onDeleteChurch
 }) => {
   const styles = useStyles();
   const [userImageUrl, setUserImageUrl] = useState(null);
@@ -193,6 +199,12 @@ const Dashboard = ({
         onCreatePastorate={onCreatePastorate}
         onEditPastorate={onEditPastorate}
         onDeletePastorate={onDeletePastorate}
+        currentChurch={currentChurch}
+        userChurches={userChurches}
+        onChurchChange={onChurchChange}
+        onCreateChurch={onCreateChurch}
+        onEditChurch={onEditChurch}
+        onDeleteChurch={onDeleteChurch}
       />
     </div>
   );

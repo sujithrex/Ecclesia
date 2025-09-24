@@ -286,7 +286,13 @@ const StatusBar = ({
   onPastorateChange,
   onCreatePastorate,
   onEditPastorate,
-  onDeletePastorate
+  onDeletePastorate,
+  currentChurch,
+  userChurches = [],
+  onChurchChange,
+  onCreateChurch,
+  onEditChurch,
+  onDeleteChurch
 }) => {
   const styles = useStyles();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -294,9 +300,16 @@ const StatusBar = ({
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showChurchDropdown, setShowChurchDropdown] = useState(false);
+  const [showChurchContextMenu, setShowChurchContextMenu] = useState(false);
+  const [showChurchDeleteConfirmation, setShowChurchDeleteConfirmation] = useState(false);
+  const [isDeletingChurch, setIsDeletingChurch] = useState(false);
   const dropdownRef = useRef(null);
   const pastorateButtonRef = useRef(null);
   const contextMenuRef = useRef(null);
+  const churchDropdownRef = useRef(null);
+  const churchButtonRef = useRef(null);
+  const churchContextMenuRef = useRef(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -328,11 +341,31 @@ const StatusBar = ({
       ) {
         setShowContextMenu(false);
       }
+
+      if (
+        showChurchDropdown &&
+        churchDropdownRef.current &&
+        !churchDropdownRef.current.contains(event.target) &&
+        churchButtonRef.current &&
+        !churchButtonRef.current.contains(event.target)
+      ) {
+        setShowChurchDropdown(false);
+      }
+
+      if (
+        showChurchContextMenu &&
+        churchContextMenuRef.current &&
+        !churchContextMenuRef.current.contains(event.target) &&
+        churchButtonRef.current &&
+        !churchButtonRef.current.contains(event.target)
+      ) {
+        setShowChurchContextMenu(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showPastorateDropdown, showContextMenu]);
+  }, [showPastorateDropdown, showContextMenu, showChurchDropdown, showChurchContextMenu]);
 
 
   const handlePastorateClick = (e) => {
@@ -418,6 +451,90 @@ const StatusBar = ({
     }
   };
 
+  // Church handlers
+  const handleChurchClick = (e) => {
+    if (currentChurch) {
+      setShowChurchContextMenu(false);
+      setShowChurchDropdown(!showChurchDropdown);
+    }
+  };
+
+  const handleChurchRightClick = (e) => {
+    if (currentChurch) {
+      e.preventDefault();
+      e.stopPropagation();
+      setShowChurchDropdown(false);
+      setShowChurchContextMenu(true);
+    }
+  };
+
+  const handleEditChurch = () => {
+    setShowChurchContextMenu(false);
+    if (onEditChurch && currentChurch) {
+      onEditChurch(currentChurch);
+    }
+  };
+
+  const handleDeleteChurch = () => {
+    setShowChurchContextMenu(false);
+    setShowChurchDeleteConfirmation(true);
+  };
+
+  const handleConfirmDeleteChurch = async () => {
+    if (!currentChurch || isDeletingChurch) return;
+
+    setIsDeletingChurch(true);
+    try {
+      const result = await window.electron.church.delete({
+        churchId: currentChurch.id,
+        userId: user.id
+      });
+
+      if (result.success) {
+        setShowChurchDeleteConfirmation(false);
+        if (onDeleteChurch) {
+          onDeleteChurch();
+        }
+      } else {
+        // Handle error - you might want to show a notification
+        console.error('Delete church error:', result.error);
+      }
+    } catch (error) {
+      console.error('Delete church error:', error);
+    } finally {
+      setIsDeletingChurch(false);
+    }
+  };
+
+  const handleCancelDeleteChurch = () => {
+    setShowChurchDeleteConfirmation(false);
+  };
+
+  const handleChurchSelect = async (church) => {
+    if (church.id !== currentChurch?.id && onChurchChange) {
+      try {
+        const result = await window.electron.church.select({
+          userId: user.id,
+          churchId: church.id
+        });
+
+        if (result.success) {
+          onChurchChange(result.church);
+          setShowChurchDropdown(false);
+        }
+      } catch (error) {
+        console.error('Switch church error:', error);
+      }
+    }
+  };
+
+  const handleCreateChurch = () => {
+    setShowChurchDropdown(false);
+    if (onCreateChurch) {
+      onCreateChurch();
+    }
+  };
+
   const formatDateTime = (date) => {
     return date.toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
@@ -454,21 +571,23 @@ const StatusBar = ({
         {user ? user.name || user.username : 'Ready'}
       </span>
       
-      {/* Center section with pastorate info */}
+      {/* Center section with pastorate and church info */}
       <div className={styles.statusCenter}>
         {currentPastorate ? (
-          <div className={styles.pastorateContainer}>
-            <button
-              ref={pastorateButtonRef}
-              className={styles.pastorateSelector}
-              onClick={handlePastorateClick}
-              onContextMenu={handlePastorateRightClick}
-              title="Click to switch pastorate or right-click for options"
-            >
-              <BuildingRegular />
-              Pastorate: {currentPastorate.pastorate_name}
-              <ChevronUpRegular />
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {/* Pastorate Selector */}
+            <div className={styles.pastorateContainer}>
+              <button
+                ref={pastorateButtonRef}
+                className={styles.pastorateSelector}
+                onClick={handlePastorateClick}
+                onContextMenu={handlePastorateRightClick}
+                title="Click to switch pastorate or right-click for options"
+              >
+                <BuildingRegular />
+                Pastorate: {currentPastorate.pastorate_name}
+                <ChevronUpRegular />
+              </button>
             
             {showPastorateDropdown && (
               <div ref={dropdownRef} className={styles.pastorateDropdown}>
@@ -540,6 +659,110 @@ const StatusBar = ({
                 </div>
               </div>
             )}
+            </div>
+
+            {/* Church Selector */}
+            {currentChurch ? (
+              <div className={styles.pastorateContainer}>
+                <button
+                  ref={churchButtonRef}
+                  className={styles.pastorateSelector}
+                  onClick={handleChurchClick}
+                  onContextMenu={handleChurchRightClick}
+                  title="Click to switch church or right-click for options"
+                >
+                  <BuildingRegular />
+                  Church: {currentChurch.church_name}
+                  <ChevronUpRegular />
+                </button>
+                
+                {showChurchDropdown && (
+                  <div ref={churchDropdownRef} className={styles.pastorateDropdown}>
+                    <div className={styles.dropdownHeader}>
+                      <BuildingRegular />
+                      Switch Church
+                    </div>
+                    
+                    {userChurches.length === 0 ? (
+                      <div className={styles.loadingDropdown}>
+                        No churches available
+                      </div>
+                    ) : (
+                      <>
+                        {userChurches.map((church) => (
+                          <div
+                            key={church.id}
+                            className={`${styles.dropdownItem} ${
+                              currentChurch.id === church.id ? styles.dropdownItemSelected : ''
+                            }`}
+                            onClick={() => handleChurchSelect(church)}
+                          >
+                            <div className={styles.dropdownItemIcon}>
+                              <BuildingRegular />
+                            </div>
+                            <div className={styles.dropdownItemContent}>
+                              <div className={styles.dropdownItemName}>
+                                {church.church_name}
+                              </div>
+                              <div className={styles.dropdownItemShortName}>
+                                {church.church_short_name}
+                              </div>
+                            </div>
+                            {currentChurch.id === church.id && (
+                              <div className={styles.dropdownItemCheck}>
+                                <CheckmarkCircleRegular />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        
+                        <div
+                          className={`${styles.dropdownItem} ${styles.createPastorateItem}`}
+                          onClick={handleCreateChurch}
+                        >
+                          <div className={styles.dropdownItemIcon}>
+                            <BuildingRegular />
+                          </div>
+                          <div className={styles.dropdownItemContent}>
+                            <div className={styles.dropdownItemName}>
+                              Create New Church
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {showChurchContextMenu && (
+                  <div ref={churchContextMenuRef} className={styles.contextMenu}>
+                    <div className={styles.contextMenuItem} onClick={handleEditChurch}>
+                      <EditRegular className={styles.contextMenuIcon} />
+                      Edit Church
+                    </div>
+                    <div
+                      className={`${styles.contextMenuItem} ${styles.contextMenuItemDanger}`}
+                      onClick={handleDeleteChurch}
+                    >
+                      <DeleteRegular className={styles.contextMenuIcon} />
+                      Delete Church
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : currentPastorate ? (
+              <div className={styles.pastorateContainer}>
+                <button
+                  ref={churchButtonRef}
+                  className={styles.pastorateSelector}
+                  onClick={handleCreateChurch}
+                  title="Click to create your first church"
+                >
+                  <BuildingRegular />
+                  No Church - Click to Create
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : user ? (
           <div className={styles.pastorateContainer}>
@@ -599,6 +822,37 @@ const StatusBar = ({
                 disabled={isDeleting}
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showChurchDeleteConfirmation && (
+        <div className={styles.confirmationOverlay}>
+          <div className={styles.confirmationDialog}>
+            <h3 className={styles.confirmationTitle}>
+              <WarningRegular style={{ color: '#d13438' }} />
+              Confirm Delete
+            </h3>
+            <p className={styles.confirmationMessage}>
+              Are you sure you want to delete the church "{currentChurch?.church_name}"?
+              This action cannot be undone and will remove all associated data.
+            </p>
+            <div className={styles.confirmationButtons}>
+              <button
+                className={`${styles.confirmationButton} ${styles.confirmationButtonCancel}`}
+                onClick={handleCancelDeleteChurch}
+                disabled={isDeletingChurch}
+              >
+                Cancel
+              </button>
+              <button
+                className={`${styles.confirmationButton} ${styles.confirmationButtonDelete}`}
+                onClick={handleConfirmDeleteChurch}
+                disabled={isDeletingChurch}
+              >
+                {isDeletingChurch ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>

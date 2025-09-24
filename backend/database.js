@@ -69,6 +69,35 @@ class DatabaseManager {
                     )
                 `);
 
+                // Churches table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS churches (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        church_name TEXT NOT NULL,
+                        church_short_name TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(pastorate_id, church_name),
+                        UNIQUE(pastorate_id, church_short_name)
+                    )
+                `);
+
+                // User-Churches junction table (many-to-many relationship)
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS user_churches (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        last_selected_at DATETIME,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        UNIQUE(user_id, church_id)
+                    )
+                `);
+
                 // Settings table for app configurations
                 this.db.run(`
                     CREATE TABLE IF NOT EXISTS settings (
@@ -476,6 +505,237 @@ class DatabaseManager {
                 DELETE FROM user_pastorates
                 WHERE user_id = ? AND pastorate_id = ?
             `, [userId, pastorateId], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // Church management methods
+    async createChurch(pastorateId, church_name, church_short_name) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                INSERT INTO churches (pastorate_id, church_name, church_short_name)
+                VALUES (?, ?, ?)
+            `, [pastorateId, church_name, church_short_name], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getChurchById(id) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM churches WHERE id = ?', [id], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getAllChurches() {
+        return new Promise((resolve, reject) => {
+            this.db.all('SELECT * FROM churches ORDER BY church_name', (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getChurchesByPastorate(pastorateId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT * FROM churches
+                WHERE pastorate_id = ?
+                ORDER BY church_name
+            `, [pastorateId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async updateChurch(id, church_name, church_short_name) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                UPDATE churches
+                SET church_name = ?, church_short_name = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [church_name, church_short_name, id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deleteChurch(id) {
+        return new Promise((resolve) => {
+            // First check if church exists and get user assignments
+            this.db.get(`
+                SELECT COUNT(*) as user_count
+                FROM user_churches
+                WHERE church_id = ?
+            `, [id], (err, row) => {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                    return;
+                }
+
+                // Delete the church (CASCADE will handle user_churches cleanup)
+                this.db.run('DELETE FROM churches WHERE id = ?', [id], function(err) {
+                    if (err) {
+                        resolve({ success: false, error: err.message });
+                    } else if (this.changes === 0) {
+                        resolve({ success: false, error: 'Church not found' });
+                    } else {
+                        resolve({
+                            success: true,
+                            changes: this.changes,
+                            affectedUsers: row.user_count
+                        });
+                    }
+                });
+            });
+        });
+    }
+
+    async getUserChurches(userId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT c.*, uc.last_selected_at, uc.created_at as assigned_at,
+                       p.pastorate_name, p.pastorate_short_name
+                FROM churches c
+                JOIN user_churches uc ON c.id = uc.church_id
+                JOIN pastorates p ON c.pastorate_id = p.id
+                WHERE uc.user_id = ?
+                ORDER BY uc.last_selected_at DESC NULLS LAST, c.church_name
+            `, [userId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getUserChurchesByPastorate(userId, pastorateId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT c.*, uc.last_selected_at, uc.created_at as assigned_at
+                FROM churches c
+                JOIN user_churches uc ON c.id = uc.church_id
+                WHERE uc.user_id = ? AND c.pastorate_id = ?
+                ORDER BY uc.last_selected_at DESC NULLS LAST, c.church_name
+            `, [userId, pastorateId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async assignUserToChurch(userId, churchId) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                INSERT OR IGNORE INTO user_churches (user_id, church_id)
+                VALUES (?, ?)
+            `, [userId, churchId], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async updateLastSelectedChurch(userId, churchId) {
+        return new Promise((resolve) => {
+            this.db.serialize(() => {
+                // Clear previous last_selected_at for this user
+                this.db.run(`
+                    UPDATE user_churches
+                    SET last_selected_at = NULL
+                    WHERE user_id = ?
+                `, [userId]);
+
+                // If churchId is null, just clear all selections
+                if (churchId === null) {
+                    resolve({ success: true, changes: 1 });
+                    return;
+                }
+
+                // Set the new last selected church
+                this.db.run(`
+                    UPDATE user_churches
+                    SET last_selected_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND church_id = ?
+                `, [userId, churchId], function(err) {
+                    if (err) {
+                        resolve({ success: false, error: err.message });
+                    } else {
+                        resolve({ success: true, changes: this.changes });
+                    }
+                });
+            });
+        });
+    }
+
+    async getLastSelectedChurch(userId, pastorateId = null) {
+        return new Promise((resolve, reject) => {
+            let query = `
+                SELECT c.*, uc.last_selected_at, p.pastorate_name, p.pastorate_short_name
+                FROM churches c
+                JOIN user_churches uc ON c.id = uc.church_id
+                JOIN pastorates p ON c.pastorate_id = p.id
+                WHERE uc.user_id = ? AND uc.last_selected_at IS NOT NULL
+            `;
+            let params = [userId];
+            
+            if (pastorateId) {
+                query += ` AND c.pastorate_id = ?`;
+                params.push(pastorateId);
+            }
+            
+            query += ` ORDER BY uc.last_selected_at DESC LIMIT 1`;
+            
+            this.db.get(query, params, (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async removeUserFromChurch(userId, churchId) {
+        return new Promise((resolve) => {
+            this.db.run(`
+                DELETE FROM user_churches
+                WHERE user_id = ? AND church_id = ?
+            `, [userId, churchId], function(err) {
                 if (err) {
                     resolve({ success: false, error: err.message });
                 } else {

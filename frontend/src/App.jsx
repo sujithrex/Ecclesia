@@ -12,6 +12,8 @@ import Dashboard from './components/Dashboard';
 import ProfilePage from './components/ProfilePage';
 import CreatePastorateModal from './components/CreatePastorateModal';
 import PastorateSelectionModal from './components/PastorateSelectionModal';
+import CreateChurchModal from './components/CreateChurchModal';
+import ChurchSelectionModal from './components/ChurchSelectionModal';
 import { LoadingProvider } from './contexts/LoadingContext';
 
 function App() {
@@ -22,6 +24,15 @@ function App() {
   const [showPastorateSelectionModal, setShowPastorateSelectionModal] = useState(false);
   const [userPastorates, setUserPastorates] = useState([]);
   const [editingPastorate, setEditingPastorate] = useState(null);
+  
+  // Church state
+  const [currentChurch, setCurrentChurch] = useState(null);
+  const [showCreateChurchModal, setShowCreateChurchModal] = useState(false);
+  const [showChurchSelectionModal, setShowChurchSelectionModal] = useState(false);
+  const [userChurches, setUserChurches] = useState([]);
+  const [editingChurch, setEditingChurch] = useState(null);
+  const [isChurchCreationMandatory, setIsChurchCreationMandatory] = useState(false);
+  
   const navigate = useNavigate();
 
   // Check for existing session ONLY on app startup
@@ -71,6 +82,56 @@ function App() {
     navigate('/login');
   };
 
+  const handleChurchCheck = async (userData, pastorate) => {
+    try {
+      // Get user's churches for this pastorate
+      const churchesResult = await window.electron.church.getUserChurchesByPastorate({
+        userId: userData.id,
+        pastorateId: pastorate.id
+      });
+      
+      if (churchesResult.success) {
+        const churches = churchesResult.churches;
+        setUserChurches(churches);
+        
+        if (churches.length === 0) {
+          // No churches - show mandatory create church modal
+          setIsChurchCreationMandatory(true);
+          setShowCreateChurchModal(true);
+        } else {
+          setIsChurchCreationMandatory(false);
+          // Check for last selected church in this pastorate
+          const lastSelectedResult = await window.electron.church.getLastSelected(userData.id);
+          
+          if (lastSelectedResult.success && lastSelectedResult.church &&
+              lastSelectedResult.church.pastorate_id === pastorate.id) {
+            // Has last selected church in current pastorate - auto-select it
+            setCurrentChurch(lastSelectedResult.church);
+            navigate('/dashboard');
+          } else {
+            // Has churches but no last selected in this pastorate - auto-select first church
+            setCurrentChurch(churches[0]);
+            // Update last selected
+            await window.electron.church.select({
+              userId: userData.id,
+              churchId: churches[0].id
+            });
+            navigate('/dashboard');
+          }
+        }
+      } else {
+        console.error('Failed to get user churches:', churchesResult.error);
+        // If we can't get churches, show mandatory create modal
+        setIsChurchCreationMandatory(true);
+        setShowCreateChurchModal(true);
+      }
+    } catch (error) {
+      console.error('Church check error:', error);
+      setIsChurchCreationMandatory(true);
+      setShowCreateChurchModal(true);
+    }
+  };
+
   const handlePastorateCheck = async (userData) => {
     try {
       // Get user's pastorates
@@ -88,9 +149,9 @@ function App() {
           const lastSelectedResult = await window.electron.pastorate.getLastSelected(userData.id);
           
           if (lastSelectedResult.success && lastSelectedResult.pastorate) {
-            // Has last selected pastorate - auto-select it
+            // Has last selected pastorate - auto-select it and check churches
             setCurrentPastorate(lastSelectedResult.pastorate);
-            navigate('/dashboard');
+            await handleChurchCheck(userData, lastSelectedResult.pastorate);
           } else {
             // Has pastorates but no last selected - show selection modal
             setShowPastorateSelectionModal(true);
@@ -124,6 +185,8 @@ function App() {
       setSessionId(null);
       setCurrentPastorate(null);
       setUserPastorates([]);
+      setCurrentChurch(null);
+      setUserChurches([]);
       navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
@@ -132,6 +195,8 @@ function App() {
       setSessionId(null);
       setCurrentPastorate(null);
       setUserPastorates([]);
+      setCurrentChurch(null);
+      setUserChurches([]);
       navigate('/login');
     }
   };
@@ -148,7 +213,7 @@ function App() {
     setUser(updatedUser);
   };
 
-  const handlePastorateCreated = (pastorate) => {
+  const handlePastorateCreated = async (pastorate) => {
     if (editingPastorate) {
       // Update existing pastorate
       setCurrentPastorate(pastorate);
@@ -160,16 +225,20 @@ function App() {
     }
     setShowCreatePastorateModal(false);
     setEditingPastorate(null);
-    navigate('/dashboard');
+    
+    // After creating/updating pastorate, check for churches
+    await handleChurchCheck(user, pastorate);
   };
 
-  const handlePastorateSelected = (pastorate) => {
+  const handlePastorateSelected = async (pastorate) => {
     setCurrentPastorate(pastorate);
     setShowPastorateSelectionModal(false);
-    navigate('/dashboard');
+    
+    // After selecting pastorate, check for churches
+    await handleChurchCheck(user, pastorate);
   };
 
-  const handlePastorateChange = (pastorate) => {
+  const handlePastorateChange = async (pastorate) => {
     setCurrentPastorate(pastorate);
     // Update the pastorates list with new last_selected_at
     setUserPastorates(prev =>
@@ -179,6 +248,12 @@ function App() {
           : { ...p, last_selected_at: null }
       )
     );
+    
+    // Clear current church and check for churches in new pastorate
+    setCurrentChurch(null);
+    setUserChurches([]);
+    setIsChurchCreationMandatory(false);
+    await handleChurchCheck(user, pastorate);
   };
 
   const handleCreatePastorateFromStatus = () => {
@@ -202,16 +277,21 @@ function App() {
         // Check if current pastorate still exists
         const currentExists = pastoratesResult.pastorates.some(p => p.id === currentPastorate?.id);
         if (!currentExists) {
-          // Current pastorate was deleted
+          // Current pastorate was deleted - clear church data
           setCurrentPastorate(null);
+          setCurrentChurch(null);
+          setUserChurches([]);
           
           if (pastoratesResult.pastorates.length > 0) {
             // Still have pastorates, select the best one
             const lastSelectedResult = await window.electron.pastorate.getLastSelected(user.id);
             if (lastSelectedResult.success && lastSelectedResult.pastorate) {
               setCurrentPastorate(lastSelectedResult.pastorate);
+              await handleChurchCheck(user, lastSelectedResult.pastorate);
             } else {
-              setCurrentPastorate(pastoratesResult.pastorates[0]);
+              const firstPastorate = pastoratesResult.pastorates[0];
+              setCurrentPastorate(firstPastorate);
+              await handleChurchCheck(user, firstPastorate);
             }
           } else {
             // No pastorates left - close selection modal and show create modal
@@ -222,6 +302,97 @@ function App() {
       }
     } catch (error) {
       console.error('Failed to refresh pastorates after deletion:', error);
+    }
+  };
+
+  // Church handlers
+  const handleChurchCreated = (church) => {
+    if (editingChurch) {
+      // Update existing church
+      setCurrentChurch(church);
+      setUserChurches(prev => prev.map(c => c.id === church.id ? church : c));
+    } else {
+      // Add new church
+      setCurrentChurch(church);
+      setUserChurches(prev => [...prev, church]);
+    }
+    setShowCreateChurchModal(false);
+    setEditingChurch(null);
+    setIsChurchCreationMandatory(false);
+    navigate('/dashboard');
+  };
+
+  const handleChurchSelected = (church) => {
+    setCurrentChurch(church);
+    setShowChurchSelectionModal(false);
+    navigate('/dashboard');
+  };
+
+  const handleChurchChange = (church) => {
+    setCurrentChurch(church);
+    // Update the churches list with new last_selected_at
+    setUserChurches(prev =>
+      prev.map(c =>
+        c.id === church.id
+          ? { ...c, last_selected_at: new Date().toISOString() }
+          : { ...c, last_selected_at: null }
+      )
+    );
+  };
+
+  const handleCreateChurchFromStatus = () => {
+    setEditingChurch(null);
+    setIsChurchCreationMandatory(false);
+    setShowCreateChurchModal(true);
+  };
+
+  const handleEditChurch = (church) => {
+    setEditingChurch(church);
+    setShowCreateChurchModal(true);
+  };
+
+  const handleDeleteChurch = async () => {
+    // Refresh the user's churches and current selection
+    try {
+      if (!currentPastorate) return;
+      
+      const churchesResult = await window.electron.church.getUserChurchesByPastorate({
+        userId: user.id,
+        pastorateId: currentPastorate.id
+      });
+      
+      if (churchesResult.success) {
+        setUserChurches(churchesResult.churches);
+        
+        // Check if current church still exists
+        const currentExists = churchesResult.churches.some(c => c.id === currentChurch?.id);
+        if (!currentExists) {
+          // Current church was deleted
+          setCurrentChurch(null);
+          
+          if (churchesResult.churches.length > 0) {
+            // Still have churches, select the best one from current pastorate
+            const lastSelectedResult = await window.electron.church.getLastSelected(user.id);
+            if (lastSelectedResult.success && lastSelectedResult.church &&
+                churchesResult.churches.some(c => c.id === lastSelectedResult.church.id)) {
+              setCurrentChurch(lastSelectedResult.church);
+            } else {
+              // Auto-select first church and update selection
+              setCurrentChurch(churchesResult.churches[0]);
+              await window.electron.church.select({
+                userId: user.id,
+                churchId: churchesResult.churches[0].id
+              });
+            }
+          } else {
+            // No churches left - show mandatory create modal
+            setIsChurchCreationMandatory(true);
+            setShowCreateChurchModal(true);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh churches after deletion:', error);
     }
   };
 
@@ -264,6 +435,12 @@ function App() {
                 onCreatePastorate={handleCreatePastorateFromStatus}
                 onEditPastorate={handleEditPastorate}
                 onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
               />
             ) : (
               <Navigate to="/login" replace />
@@ -284,6 +461,12 @@ function App() {
                 onCreatePastorate={handleCreatePastorateFromStatus}
                 onEditPastorate={handleEditPastorate}
                 onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
               />
             ) : (
               <Navigate to="/login" replace />
@@ -314,6 +497,33 @@ function App() {
           user={user}
           pastorates={userPastorates}
           onCreatePastorate={handleCreatePastorateFromStatus}
+        />
+
+        {/* Church Modals */}
+        <CreateChurchModal
+          isOpen={showCreateChurchModal}
+          onClose={() => {
+            if (!isChurchCreationMandatory) {
+              setShowCreateChurchModal(false);
+              setEditingChurch(null);
+            }
+          }}
+          onSuccess={handleChurchCreated}
+          user={user}
+          currentPastorate={currentPastorate}
+          editMode={!!editingChurch}
+          initialData={editingChurch}
+          mandatory={isChurchCreationMandatory}
+        />
+        
+        <ChurchSelectionModal
+          isOpen={showChurchSelectionModal}
+          onClose={() => setShowChurchSelectionModal(false)}
+          onSelect={handleChurchSelected}
+          user={user}
+          currentPastorate={currentPastorate}
+          churches={userChurches}
+          onCreateChurch={handleCreateChurchFromStatus}
         />
       </LoadingProvider>
     </FluentProvider>

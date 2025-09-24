@@ -5,12 +5,14 @@ const DatabaseManager = require('./backend/database.js');
 const AuthService = require('./backend/authService.js');
 const UserService = require('./backend/userService.js');
 const PastorateService = require('./backend/pastorateService.js');
+const ChurchService = require('./backend/churchService.js');
 
 let mainWindow;
 let db;
 let authService;
 let userService;
 let pastorateService;
+let churchService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -153,6 +155,51 @@ ipcMain.handle('pastorate-delete', async (event, { pastorateId, userId }) => {
   return await pastorateService.deletePastorate(pastorateId, userId);
 });
 
+// Church management IPC handlers
+ipcMain.handle('church-create', async (event, { pastorateId, church_name, church_short_name, userId }) => {
+  return await churchService.createChurch(pastorateId, church_name, church_short_name, userId);
+});
+
+ipcMain.handle('church-get-user-churches', async (event, userId) => {
+  return await churchService.getUserChurches(userId);
+});
+
+ipcMain.handle('church-get-user-churches-by-pastorate', async (event, { userId, pastorateId }) => {
+  return await churchService.getUserChurchesByPastorate(userId, pastorateId);
+});
+
+ipcMain.handle('church-get-last-selected', async (event, userId) => {
+  return await churchService.getLastSelectedChurch(userId);
+});
+
+ipcMain.handle('church-select', async (event, { userId, churchId }) => {
+  return await churchService.selectChurch(userId, churchId);
+});
+
+ipcMain.handle('church-get-all', async (event) => {
+  return await churchService.getAllChurches();
+});
+
+ipcMain.handle('church-get-by-pastorate', async (event, pastorateId) => {
+  return await churchService.getChurchesByPastorate(pastorateId);
+});
+
+ipcMain.handle('church-assign-user', async (event, { userId, churchId }) => {
+  return await churchService.assignUserToChurch(userId, churchId);
+});
+
+ipcMain.handle('church-remove-user', async (event, { userId, churchId }) => {
+  return await churchService.removeUserFromChurch(userId, churchId);
+});
+
+ipcMain.handle('church-update', async (event, { churchId, church_name, church_short_name, userId }) => {
+  return await churchService.updateChurch(churchId, church_name, church_short_name, userId);
+});
+
+ipcMain.handle('church-delete', async (event, { churchId, userId }) => {
+  return await churchService.deleteChurch(churchId, userId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -271,6 +318,7 @@ app.on('ready', async () => {
   authService = new AuthService(db);
   userService = new UserService(db);
   pastorateService = new PastorateService(db);
+  churchService = new ChurchService(db);
   
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {
