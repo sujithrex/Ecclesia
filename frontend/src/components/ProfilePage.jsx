@@ -255,7 +255,8 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
-    resetPin: ''
+    resetPin: '',
+    confirmPin: ''
   });
 
   // Load user data on mount
@@ -268,7 +269,8 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
         email: user.email || '',
         phone: user.phone || '',
         image: user.image || '',
-        resetPin: user.reset_pin || '1919'
+        resetPin: user.reset_pin || '1919',
+        confirmPin: user.reset_pin || '1919'
       }));
     }
   }, [user]);
@@ -312,6 +314,18 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
       }
       if (formData.newPassword.length < 6) {
         showNotification('New password must be at least 6 characters', 'error');
+        return;
+      }
+    }
+
+    // Validate PIN confirmation if PIN is changed
+    if (formData.resetPin !== (user.reset_pin || '1919')) {
+      if (formData.resetPin !== formData.confirmPin) {
+        showNotification('PIN confirmation does not match', 'error');
+        return;
+      }
+      if (formData.resetPin.length < 4) {
+        showNotification('PIN must be at least 4 characters', 'error');
         return;
       }
     }
@@ -383,7 +397,8 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
         ...prev,
         currentPassword: '',
         newPassword: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        confirmPin: formData.resetPin
       }));
 
       // Update parent component with new user data
@@ -562,11 +577,32 @@ const ProfilePage = ({ user, onBack, onProfileUpdate }) => {
               <div className={styles.inputContainer}>
                 <KeyRegular className={styles.inputIcon} />
                 <input
-                  type="text"
+                  type="password"
                   name="resetPin"
                   className={styles.input}
                   placeholder="Enter reset PIN"
                   value={formData.resetPin}
+                  onChange={handleInputChange}
+                  disabled={isLoading}
+                  maxLength="6"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.formRow}>
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>
+                <KeyRegular /> Confirm PIN
+              </label>
+              <div className={styles.inputContainer}>
+                <KeyRegular className={styles.inputIcon} />
+                <input
+                  type="password"
+                  name="confirmPin"
+                  className={styles.input}
+                  placeholder="Confirm reset PIN"
+                  value={formData.confirmPin}
                   onChange={handleInputChange}
                   disabled={isLoading}
                   maxLength="6"

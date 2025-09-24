@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import {
   FluentProvider,
   webLightTheme,
@@ -11,9 +12,9 @@ import Dashboard from './components/Dashboard';
 import ProfilePage from './components/ProfilePage';
 
 function App() {
-  const [currentScreen, setCurrentScreen] = useState('welcome'); // 'welcome' | 'login' | 'forgotPassword' | 'dashboard' | 'profile'
   const [user, setUser] = useState(null);
   const [sessionId, setSessionId] = useState(null);
+  const navigate = useNavigate();
 
   // Check for existing session on app startup
   useEffect(() => {
@@ -25,7 +26,7 @@ function App() {
           if (result.success) {
             setUser(result.user);
             setSessionId(savedSessionId);
-            setCurrentScreen('dashboard');
+            navigate('/dashboard');
           } else {
             localStorage.removeItem('ecclesia_session');
           }
@@ -40,32 +41,32 @@ function App() {
     if (window.electron && window.electron.auth) {
       checkExistingSession();
     }
-  }, []);
+  }, [navigate]);
 
   const handleGetStarted = () => {
-    setCurrentScreen('login');
+    navigate('/login');
   };
 
   const handleBackToWelcome = () => {
-    setCurrentScreen('welcome');
+    navigate('/');
   };
 
   const handleForgotPassword = () => {
-    setCurrentScreen('forgotPassword');
+    navigate('/forgot-password');
   };
 
   const handleBackToLogin = () => {
-    setCurrentScreen('login');
+    navigate('/login');
   };
 
   const handlePasswordReset = () => {
-    setCurrentScreen('login');
+    navigate('/login');
   };
 
   const handleLoginSuccess = (userData, userSessionId) => {
     setUser(userData);
     setSessionId(userSessionId);
-    setCurrentScreen('dashboard');
+    navigate('/dashboard');
   };
 
   const handleLogout = async () => {
@@ -81,23 +82,23 @@ function App() {
       // Reset state
       setUser(null);
       setSessionId(null);
-      setCurrentScreen('welcome');
+      navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
       // Still logout locally even if backend call fails
       localStorage.removeItem('ecclesia_session');
       setUser(null);
       setSessionId(null);
-      setCurrentScreen('welcome');
+      navigate('/login');
     }
   };
 
   const handleProfileClick = () => {
-    setCurrentScreen('profile');
+    navigate('/profile');
   };
 
   const handleBackToDashboard = () => {
-    setCurrentScreen('dashboard');
+    navigate('/dashboard');
   };
 
   const handleProfileUpdate = (updatedUser) => {
@@ -107,36 +108,58 @@ function App() {
   return (
     <FluentProvider theme={webLightTheme}>
       <TitleBar />
-      {currentScreen === 'welcome' && (
-        <WelcomeScreen onGetStarted={handleGetStarted} />
-      )}
-      {currentScreen === 'login' && (
-        <LoginPage
-          onBack={handleBackToWelcome}
-          onForgotPassword={handleForgotPassword}
-          onLoginSuccess={handleLoginSuccess}
+      <Routes>
+        <Route path="/" element={<WelcomeScreen onGetStarted={handleGetStarted} />} />
+        <Route
+          path="/login"
+          element={
+            <LoginPage
+              onBack={handleBackToWelcome}
+              onForgotPassword={handleForgotPassword}
+              onLoginSuccess={handleLoginSuccess}
+            />
+          }
         />
-      )}
-      {currentScreen === 'forgotPassword' && (
-        <ForgotPasswordPage
-          onBack={handleBackToLogin}
-          onPasswordReset={handlePasswordReset}
+        <Route
+          path="/forgot-password"
+          element={
+            <ForgotPasswordPage
+              onBack={handleBackToLogin}
+              onPasswordReset={handlePasswordReset}
+            />
+          }
         />
-      )}
-      {currentScreen === 'dashboard' && (
-        <Dashboard
-          user={user}
-          onLogout={handleLogout}
-          onProfileClick={handleProfileClick}
+        <Route
+          path="/dashboard"
+          element={
+            user ? (
+              <Dashboard
+                user={user}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
-      )}
-      {currentScreen === 'profile' && (
-        <ProfilePage
-          user={user}
-          onBack={handleBackToDashboard}
-          onProfileUpdate={handleProfileUpdate}
+        <Route
+          path="/profile"
+          element={
+            user ? (
+              <ProfilePage
+                user={user}
+                onBack={handleBackToDashboard}
+                onProfileUpdate={handleProfileUpdate}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
-      )}
+        {/* Redirect any unknown routes to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </FluentProvider>
   );
 }

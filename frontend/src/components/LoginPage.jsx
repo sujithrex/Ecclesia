@@ -533,7 +533,7 @@ const LoginPage = ({ onBack, onForgotPassword, onLoginSuccess }) => {
               disabled={isLoading}
             />
             <label htmlFor="rememberMe" className={styles.checkboxLabel}>
-              Keep me signed in for 7 days
+              Keep me signed in
             </label>
           </div>
 

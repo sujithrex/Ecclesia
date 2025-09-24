@@ -447,11 +447,11 @@ const ForgotPasswordPage = ({ onBack, onPasswordReset }) => {
 
           {/* PIN Input */}
           <div className={styles.inputGroup}>
-            <label htmlFor="pin" className={styles.label}>PIN (Default: 1919)</label>
+            <label htmlFor="pin" className={styles.label}>PIN</label>
             <div className={styles.inputContainer}>
               <KeyRegular className={styles.inputIcon} />
               <input
-                type="text"
+                type="password"
                 id="pin"
                 name="pin"
                 className={styles.input}
