@@ -264,6 +264,71 @@ class PastorateService {
             return { success: false, error: 'Failed to delete pastorate' };
         }
     }
+
+    async getStatistics(pastorateId, userId) {
+        try {
+            // Verify user has access to this pastorate
+            const userPastorates = await this.db.getUserPastorates(userId);
+            const hasAccess = userPastorates.some(p => p.id === pastorateId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this pastorate' };
+            }
+
+            // Get all churches in this pastorate
+            const churches = await this.db.getUserChurchesByPastorate(userId, pastorateId);
+            const totalChurches = churches.length;
+
+            let totalFamilies = 0;
+            let totalMembers = 0;
+            let totalBaptised = 0;
+            let totalConfirmed = 0;
+
+            // Get statistics for each church in the pastorate
+            for (const church of churches) {
+                try {
+                    // Get families for this church
+                    const areas = await this.db.getAreasByChurch(church.id, userId);
+                    for (const area of areas) {
+                        const families = await this.db.getFamiliesByArea(area.id, userId);
+                        totalFamilies += families.length;
+
+                        for (const family of families) {
+                            const members = await this.db.getMembersByFamily(family.id, userId);
+                            totalMembers += members.length;
+                            
+                            // Count baptised and confirmed members
+                            for (const member of members) {
+                                if (member.baptism_status === 'Baptised') {
+                                    totalBaptised += 1;
+                                }
+                                if (member.confirmation_status === 'Confirmed') {
+                                    totalConfirmed += 1;
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error getting statistics for church ${church.id}:`, error);
+                    // Continue with other churches even if one fails
+                }
+            }
+
+            return {
+                success: true,
+                statistics: {
+                    totalChurches,
+                    totalFamilies,
+                    totalMembers,
+                    totalBaptised,
+                    totalConfirmed
+                }
+            };
+        } catch (error) {
+            console.error('Get pastorate statistics error:', error);
+            return { success: false, error: 'Failed to get pastorate statistics' };
+        }
+    }
 }
 
 module.exports = PastorateService;

@@ -164,7 +164,9 @@ const ChurchDashboard = ({
   onChurchChange,
   onCreateChurch,
   onEditChurch,
-  onDeleteChurch
+  onDeleteChurch,
+  currentView = "church",
+  onPastorateDashboard
 }) => {
   const styles = useStyles();
   const navigate = useNavigate();
@@ -481,6 +483,8 @@ const ChurchDashboard = ({
         onCreateChurch={onCreateChurch}
         onEditChurch={onEditChurch}
         onDeleteChurch={onDeleteChurch}
+        currentView={currentView}
+        onPastorateDashboard={onPastorateDashboard}
       />
 
       {/* Modals */}

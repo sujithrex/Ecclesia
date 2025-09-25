@@ -6,7 +6,8 @@ import {
   CheckmarkCircleRegular,
   EditRegular,
   DeleteRegular,
-  WarningRegular
+  WarningRegular,
+  HomeRegular
 } from '@fluentui/react-icons';
 
 const useStyles = makeStyles({
@@ -293,7 +294,9 @@ const StatusBar = ({
   onCreateChurch,
   onEditChurch,
   onDeleteChurch,
-  disablePastorateChurchChange = false
+  disablePastorateChurchChange = false,
+  currentView = "church",
+  onPastorateDashboard
 }) => {
   const styles = useStyles();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -536,6 +539,13 @@ const StatusBar = ({
     }
   };
 
+  const handlePastorateDashboard = () => {
+    setShowChurchDropdown(false);
+    if (onPastorateDashboard) {
+      onPastorateDashboard();
+    }
+  };
+
   const formatDateTime = (date) => {
     return date.toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
@@ -681,7 +691,7 @@ const StatusBar = ({
                   }}
                 >
                   <BuildingRegular />
-                  Church: {currentChurch.church_name}
+                  {currentView === "pastorate" ? "Pastorate Dashboard" : `Church: ${currentChurch.church_name}`}
                   {!disablePastorateChurchChange && <ChevronUpRegular />}
                 </button>
                 
@@ -689,7 +699,7 @@ const StatusBar = ({
                   <div ref={churchDropdownRef} className={styles.pastorateDropdown}>
                     <div className={styles.dropdownHeader}>
                       <BuildingRegular />
-                      Switch Church
+                      Switch View
                     </div>
                     
                     {userChurches.length === 0 ? (
@@ -698,11 +708,34 @@ const StatusBar = ({
                       </div>
                     ) : (
                       <>
+                        {/* Pastorate Dashboard Option */}
+                        <div
+                          className={`${styles.dropdownItem} ${
+                            currentView === "pastorate" ? styles.dropdownItemSelected : ''
+                          }`}
+                          onClick={handlePastorateDashboard}
+                        >
+                          <div className={styles.dropdownItemIcon}>
+                            <HomeRegular />
+                          </div>
+                          <div className={styles.dropdownItemContent}>
+                            <div className={styles.dropdownItemName}>
+                              Pastorate Dashboard
+                            </div>
+                          </div>
+                          {currentView === "pastorate" && (
+                            <div className={styles.dropdownItemCheck}>
+                              <CheckmarkCircleRegular />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Church Options */}
                         {userChurches.map((church) => (
                           <div
                             key={church.id}
                             className={`${styles.dropdownItem} ${
-                              currentChurch.id === church.id ? styles.dropdownItemSelected : ''
+                              currentChurch.id === church.id && currentView === "church" ? styles.dropdownItemSelected : ''
                             }`}
                             onClick={() => handleChurchSelect(church)}
                           >
@@ -713,11 +746,8 @@ const StatusBar = ({
                               <div className={styles.dropdownItemName}>
                                 {church.church_name}
                               </div>
-                              <div className={styles.dropdownItemShortName}>
-                                {church.church_short_name}
-                              </div>
                             </div>
-                            {currentChurch.id === church.id && (
+                            {currentChurch.id === church.id && currentView === "church" && (
                               <div className={styles.dropdownItemCheck}>
                                 <CheckmarkCircleRegular />
                               </div>

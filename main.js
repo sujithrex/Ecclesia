@@ -213,6 +213,11 @@ ipcMain.handle('church-get-statistics', async (event, { churchId, userId }) => {
   return await churchService.getChurchStatistics(churchId, userId);
 });
 
+// Pastorate statistics IPC handler
+ipcMain.handle('pastorate-get-statistics', async (event, { pastorateId, userId }) => {
+  return await pastorateService.getStatistics(pastorateId, userId);
+});
+
 // Area management IPC handlers
 ipcMain.handle('area-create', async (event, { churchId, area_name, area_identity, userId }) => {
   return await areaService.createArea(churchId, area_name, area_identity, userId);

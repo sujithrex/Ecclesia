@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { makeStyles } from '@fluentui/react-components';
 import StatusBar from './StatusBar';
 import ChurchDashboard from './ChurchDashboard';
+import PastorateDashboard from './PastorateDashboard';
 
 const useStyles = makeStyles({
   container: {
@@ -103,6 +104,7 @@ const Dashboard = ({
 }) => {
   const styles = useStyles();
   const [userImageUrl, setUserImageUrl] = useState(null);
+  const [currentView, setCurrentView] = useState('pastorate'); // 'church' or 'pastorate' - default to pastorate
 
   // Load user image when user or user.image changes
   useEffect(() => {
@@ -152,6 +154,42 @@ const Dashboard = ({
     return 'User';
   };
 
+  // Handler for switching to pastorate dashboard
+  const handlePastorateDashboard = () => {
+    setCurrentView('pastorate');
+  };
+
+  // Handler for switching back to church dashboard
+  const handleChurchSelect = (church) => {
+    setCurrentView('church');
+    onChurchChange(church);
+  };
+
+  // If pastorate view is selected, show Pastorate Dashboard
+  if (currentView === 'pastorate' && currentPastorate) {
+    return (
+      <PastorateDashboard
+        user={user}
+        onLogout={onLogout}
+        onProfileClick={onProfileClick}
+        currentPastorate={currentPastorate}
+        userPastorates={userPastorates}
+        onPastorateChange={onPastorateChange}
+        onCreatePastorate={onCreatePastorate}
+        onEditPastorate={onEditPastorate}
+        onDeletePastorate={onDeletePastorate}
+        currentChurch={currentChurch}
+        userChurches={userChurches}
+        onChurchChange={handleChurchSelect}
+        onCreateChurch={onCreateChurch}
+        onEditChurch={onEditChurch}
+        onDeleteChurch={onDeleteChurch}
+        currentView={currentView}
+        onPastorateDashboard={handlePastorateDashboard}
+      />
+    );
+  }
+
   // If a church is selected, show the Church Dashboard
   if (currentChurch && currentPastorate) {
     return (
@@ -167,10 +205,12 @@ const Dashboard = ({
         onDeletePastorate={onDeletePastorate}
         currentChurch={currentChurch}
         userChurches={userChurches}
-        onChurchChange={onChurchChange}
+        onChurchChange={handleChurchSelect}
         onCreateChurch={onCreateChurch}
         onEditChurch={onEditChurch}
         onDeleteChurch={onDeleteChurch}
+        currentView={currentView}
+        onPastorateDashboard={handlePastorateDashboard}
       />
     );
   }
@@ -226,10 +266,12 @@ const Dashboard = ({
         onDeletePastorate={onDeletePastorate}
         currentChurch={currentChurch}
         userChurches={userChurches}
-        onChurchChange={onChurchChange}
+        onChurchChange={handleChurchSelect}
         onCreateChurch={onCreateChurch}
         onEditChurch={onEditChurch}
         onDeleteChurch={onDeleteChurch}
+        currentView={currentView}
+        onPastorateDashboard={handlePastorateDashboard}
       />
     </div>
   );
