@@ -39,7 +39,12 @@ contextBridge.exposeInMainWorld('electron', {
     assignUser: (data) => ipcRenderer.invoke('pastorate-assign-user', data),
     removeUser: (data) => ipcRenderer.invoke('pastorate-remove-user', data),
     update: (data) => ipcRenderer.invoke('pastorate-update', data),
-    delete: (data) => ipcRenderer.invoke('pastorate-delete', data)
+    delete: (data) => ipcRenderer.invoke('pastorate-delete', data),
+    getStatistics: (data) => ipcRenderer.invoke('pastorate-get-statistics', data),
+    // Settings
+    getSettings: (data) => ipcRenderer.invoke('pastorate-settings-get', data),
+    saveSettings: (data) => ipcRenderer.invoke('pastorate-settings-save', data),
+    getDefaultSettings: (data) => ipcRenderer.invoke('pastorate-settings-get-default', data)
   },
 
   // Church management API
@@ -55,7 +60,11 @@ contextBridge.exposeInMainWorld('electron', {
     removeUser: (data) => ipcRenderer.invoke('church-remove-user', data),
     update: (data) => ipcRenderer.invoke('church-update', data),
     delete: (data) => ipcRenderer.invoke('church-delete', data),
-    getStatistics: (data) => ipcRenderer.invoke('church-get-statistics', data)
+    getStatistics: (data) => ipcRenderer.invoke('church-get-statistics', data),
+    // Settings
+    getSettings: (data) => ipcRenderer.invoke('church-settings-get', data),
+    saveSettings: (data) => ipcRenderer.invoke('church-settings-save', data),
+    getDefaultSettings: (data) => ipcRenderer.invoke('church-settings-get-default', data)
   },
 
   // Area management API

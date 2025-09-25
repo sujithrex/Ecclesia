@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { makeStyles } from '@fluentui/react-components';
 import {
   HomeRegular,
   PeopleRegular,
   BuildingRegular,
   AddRegular,
-  SearchRegular
+  SearchRegular,
+  SettingsRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
@@ -95,9 +97,32 @@ const useStyles = makeStyles({
   },
   statsContainer: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gridTemplateColumns: 'repeat(5, 1fr)',
     gap: '20px',
     marginBottom: '24px',
+  },
+  statsHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+  },
+  settingsButton: {
+    padding: '8px 16px',
+    backgroundColor: '#B5316A',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'background-color 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#8E2654',
+    }
   },
   statCard: {
     backgroundColor: 'white',
@@ -161,6 +186,7 @@ const PastorateDashboard = ({
     totalConfirmed: 0
   });
   const [statsLoading, setStatsLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Build stats array from dynamic data
   const stats = [
@@ -235,6 +261,10 @@ const PastorateDashboard = ({
     }
   };
 
+  const handlePastorateSettings = () => {
+    navigate('/pastorate-settings');
+  };
+
   if (!currentPastorate) {
     return null;
   }
@@ -256,23 +286,17 @@ const PastorateDashboard = ({
 
       {/* Content */}
       <div className={styles.content}>
-        {/* Welcome Section */}
-        <div className={styles.welcomeContainer}>
-          <h1 className={styles.welcomeTitle}>Pastorate Dashboard</h1>
-          <h2 className={styles.welcomeSubtitle}>Welcome to {currentPastorate.pastorate_name}</h2>
-          <p className={styles.welcomeMessage}>
-            Overview of all churches, families, and members within this pastorate.
-            Manage your entire pastorate from this centralized dashboard.
-          </p>
-          <div className={styles.pastorateInfo}>
-            <div className={styles.pastorateIcon}>
-              <BuildingRegular />
-            </div>
-            <div className={styles.pastorateDetails}>
-              <div className={styles.pastorateName}>{currentPastorate.pastorate_name}</div>
-              <div className={styles.pastorateShortName}>{currentPastorate.pastorate_short_name}</div>
-            </div>
-          </div>
+        {/* Stats Header with Settings Button */}
+        <div className={styles.statsHeader}>
+          <div></div>
+          <button
+            className={styles.settingsButton}
+            onClick={handlePastorateSettings}
+            title="Pastorate Settings"
+          >
+            <SettingsRegular fontSize={16} />
+            Pastorate Settings
+          </button>
         </div>
 
         {/* Statistics Cards */}
@@ -312,6 +336,7 @@ const PastorateDashboard = ({
         onDeleteChurch={onDeleteChurch}
         currentView="pastorate"
       />
+
     </div>
   );
 };

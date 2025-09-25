@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { makeStyles } from '@fluentui/react-components';
 import StatusBar from './StatusBar';
 import ChurchDashboard from './ChurchDashboard';
@@ -104,7 +105,18 @@ const Dashboard = ({
 }) => {
   const styles = useStyles();
   const [userImageUrl, setUserImageUrl] = useState(null);
-  const [currentView, setCurrentView] = useState('pastorate'); // 'church' or 'pastorate' - default to pastorate
+  const [searchParams] = useSearchParams();
+  const viewParam = searchParams.get('view');
+  const [currentView, setCurrentView] = useState(() => {
+    // Check URL parameter first, otherwise default to pastorate
+    if (viewParam === 'church') {
+      return 'church';
+    } else if (viewParam === 'pastorate') {
+      return 'pastorate';
+    }
+    // Default behavior - pastorate dashboard
+    return 'pastorate';
+  });
 
   // Load user image when user or user.image changes
   useEffect(() => {

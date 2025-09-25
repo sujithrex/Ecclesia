@@ -96,7 +96,8 @@ const useStyles = makeStyles({
     backgroundColor: 'white',
     transition: 'border-color 0.2s ease',
     '&:focus': {
-      outline: 'none',
+      outline: '2px solid #B5316A',
+      outlineOffset: '1px',
       borderColor: '#B5316A',
     },
     '&::placeholder': {
@@ -338,7 +339,9 @@ const CreateAreaModal = ({
   };
 
   const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
+    // Only close if clicking directly on overlay, not on modal content or inputs
+    if (e.target === e.currentTarget && !e.defaultPrevented) {
+      e.stopPropagation();
       handleClose();
     }
   };

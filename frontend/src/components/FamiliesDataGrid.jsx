@@ -188,11 +188,11 @@ const FamiliesDataGrid = ({ families, onEdit, onDelete, user, currentArea, searc
         if (result.success) {
           onDelete(family.id);
         } else {
-          alert(result.error || 'Failed to delete family');
+          console.error('Delete family error:', result.error);
         }
       } catch (error) {
         console.error('Error deleting family:', error);
-        alert('Failed to delete family');
+        console.error('Error deleting family');
       }
     }
   };

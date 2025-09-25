@@ -193,6 +193,54 @@ class DatabaseManager {
                         value TEXT NOT NULL,
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     )
+                `);
+
+                // Pastorate settings table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS pastorate_settings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        pastorate_name_tamil TEXT,
+                        pastorate_name_english TEXT,
+                        diocese_name_tamil TEXT DEFAULT 'திருநெல்வேலி திருமண்டலம்',
+                        diocese_name_english TEXT DEFAULT 'Tirunelveli Diocese',
+                        church_name_tamil TEXT DEFAULT 'தென்னிந்திய திருச்சபை',
+                        church_name_english TEXT DEFAULT 'Church of South India',
+                        chairman_name_tamil TEXT,
+                        chairman_name_english TEXT,
+                        presbyter_name_tamil TEXT,
+                        presbyter_name_english TEXT,
+                        office_address_tamil TEXT,
+                        office_address_english TEXT,
+                        phone_number TEXT,
+                        email_address TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(pastorate_id)
+                    )
+                `);
+
+                // Church settings table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_settings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        church_id INTEGER NOT NULL,
+                        church_name_tamil TEXT,
+                        church_name_english TEXT,
+                        village_name_tamil TEXT,
+                        village_name_english TEXT,
+                        catechist_name_tamil TEXT,
+                        catechist_name_english TEXT,
+                        church_address_tamil TEXT,
+                        church_address_english TEXT,
+                        phone_number TEXT,
+                        email_address TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        UNIQUE(church_id)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);
@@ -1279,6 +1327,278 @@ class DatabaseManager {
                     const nextId = row?.next_id || 1;
                     const formattedId = `M${String(nextId).padStart(3, '0')}`;
                     resolve(formattedId);
+                }
+            });
+        });
+    }
+
+    // Pastorate Settings management methods
+    async getPastorateSettings(pastorateId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT ps.*, p.pastorate_name, p.pastorate_short_name
+                FROM pastorate_settings ps
+                JOIN pastorates p ON ps.pastorate_id = p.id
+                WHERE ps.pastorate_id = ?
+            `, [pastorateId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async createPastorateSettings(pastorateId, settingsData) {
+        return new Promise((resolve) => {
+            const {
+                pastorate_name_tamil,
+                pastorate_name_english,
+                diocese_name_tamil,
+                diocese_name_english,
+                church_name_tamil,
+                church_name_english,
+                chairman_name_tamil,
+                chairman_name_english,
+                presbyter_name_tamil,
+                presbyter_name_english,
+                office_address_tamil,
+                office_address_english,
+                phone_number,
+                email_address
+            } = settingsData;
+
+            this.db.run(`
+                INSERT INTO pastorate_settings (
+                    pastorate_id, pastorate_name_tamil, pastorate_name_english,
+                    diocese_name_tamil, diocese_name_english,
+                    church_name_tamil, church_name_english,
+                    chairman_name_tamil, chairman_name_english,
+                    presbyter_name_tamil, presbyter_name_english,
+                    office_address_tamil, office_address_english,
+                    phone_number, email_address
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                pastorateId, pastorate_name_tamil, pastorate_name_english,
+                diocese_name_tamil, diocese_name_english,
+                church_name_tamil, church_name_english,
+                chairman_name_tamil, chairman_name_english,
+                presbyter_name_tamil, presbyter_name_english,
+                office_address_tamil, office_address_english,
+                phone_number, email_address
+            ], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async updatePastorateSettings(pastorateId, settingsData) {
+        return new Promise((resolve) => {
+            const {
+                pastorate_name_tamil,
+                pastorate_name_english,
+                diocese_name_tamil,
+                diocese_name_english,
+                church_name_tamil,
+                church_name_english,
+                chairman_name_tamil,
+                chairman_name_english,
+                presbyter_name_tamil,
+                presbyter_name_english,
+                office_address_tamil,
+                office_address_english,
+                phone_number,
+                email_address
+            } = settingsData;
+
+            this.db.run(`
+                UPDATE pastorate_settings
+                SET pastorate_name_tamil = ?, pastorate_name_english = ?,
+                    diocese_name_tamil = ?, diocese_name_english = ?,
+                    church_name_tamil = ?, church_name_english = ?,
+                    chairman_name_tamil = ?, chairman_name_english = ?,
+                    presbyter_name_tamil = ?, presbyter_name_english = ?,
+                    office_address_tamil = ?, office_address_english = ?,
+                    phone_number = ?, email_address = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE pastorate_id = ?
+            `, [
+                pastorate_name_tamil, pastorate_name_english,
+                diocese_name_tamil, diocese_name_english,
+                church_name_tamil, church_name_english,
+                chairman_name_tamil, chairman_name_english,
+                presbyter_name_tamil, presbyter_name_english,
+                office_address_tamil, office_address_english,
+                phone_number, email_address, pastorateId
+            ], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async getDefaultPastorateSettings(pastorateId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT pastorate_name, pastorate_short_name
+                FROM pastorates
+                WHERE id = ?
+            `, [pastorateId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else if (!row) {
+                    resolve(null);
+                } else {
+                    resolve({
+                        pastorate_name_tamil: row.pastorate_name,
+                        pastorate_name_english: row.pastorate_name,
+                        diocese_name_tamil: 'திருநெல்வேலி திருமண்டலம்',
+                        diocese_name_english: 'Tirunelveli Diocese',
+                        church_name_tamil: 'தென்னிந்திய திருச்சபை',
+                        church_name_english: 'Church of South India',
+                        chairman_name_tamil: '',
+                        chairman_name_english: '',
+                        presbyter_name_tamil: '',
+                        presbyter_name_english: '',
+                        office_address_tamil: '',
+                        office_address_english: '',
+                        phone_number: '',
+                        email_address: ''
+                    });
+                }
+            });
+        });
+    }
+
+    // Church Settings management methods
+    async getChurchSettings(churchId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT cs.*, c.church_name, c.church_short_name
+                FROM church_settings cs
+                JOIN churches c ON cs.church_id = c.id
+                WHERE cs.church_id = ?
+            `, [churchId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async createChurchSettings(churchId, settingsData) {
+        return new Promise((resolve) => {
+            const {
+                church_name_tamil,
+                church_name_english,
+                village_name_tamil,
+                village_name_english,
+                catechist_name_tamil,
+                catechist_name_english,
+                church_address_tamil,
+                church_address_english,
+                phone_number,
+                email_address
+            } = settingsData;
+
+            this.db.run(`
+                INSERT INTO church_settings (
+                    church_id, church_name_tamil, church_name_english,
+                    village_name_tamil, village_name_english,
+                    catechist_name_tamil, catechist_name_english,
+                    church_address_tamil, church_address_english,
+                    phone_number, email_address
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                churchId, church_name_tamil, church_name_english,
+                village_name_tamil, village_name_english,
+                catechist_name_tamil, catechist_name_english,
+                church_address_tamil, church_address_english,
+                phone_number, email_address
+            ], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async updateChurchSettings(churchId, settingsData) {
+        return new Promise((resolve) => {
+            const {
+                church_name_tamil,
+                church_name_english,
+                village_name_tamil,
+                village_name_english,
+                catechist_name_tamil,
+                catechist_name_english,
+                church_address_tamil,
+                church_address_english,
+                phone_number,
+                email_address
+            } = settingsData;
+
+            this.db.run(`
+                UPDATE church_settings
+                SET church_name_tamil = ?, church_name_english = ?,
+                    village_name_tamil = ?, village_name_english = ?,
+                    catechist_name_tamil = ?, catechist_name_english = ?,
+                    church_address_tamil = ?, church_address_english = ?,
+                    phone_number = ?, email_address = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE church_id = ?
+            `, [
+                church_name_tamil, church_name_english,
+                village_name_tamil, village_name_english,
+                catechist_name_tamil, catechist_name_english,
+                church_address_tamil, church_address_english,
+                phone_number, email_address, churchId
+            ], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async getDefaultChurchSettings(churchId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT church_name, church_short_name
+                FROM churches
+                WHERE id = ?
+            `, [churchId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else if (!row) {
+                    resolve(null);
+                } else {
+                    resolve({
+                        church_name_tamil: row.church_name,
+                        church_name_english: row.church_name,
+                        village_name_tamil: '',
+                        village_name_english: '',
+                        catechist_name_tamil: '',
+                        catechist_name_english: '',
+                        church_address_tamil: '',
+                        church_address_english: '',
+                        phone_number: '',
+                        email_address: ''
+                    });
                 }
             });
         });

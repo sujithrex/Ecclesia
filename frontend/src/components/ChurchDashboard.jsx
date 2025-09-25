@@ -6,7 +6,8 @@ import {
   PeopleRegular,
   BuildingRegular,
   AddRegular,
-  SearchRegular
+  SearchRegular,
+  SettingsRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
@@ -354,6 +355,10 @@ const ChurchDashboard = ({
     return null;
   }
 
+  const handleChurchSettings = () => {
+    navigate('/church-settings');
+  };
+
   return (
     <div className={styles.container}>
       {/* Breadcrumb Navigation */}
@@ -370,6 +375,11 @@ const ChurchDashboard = ({
             current: true
           }
         ]}
+        actionButton={{
+          label: 'Church Settings',
+          icon: <SettingsRegular />,
+          onClick: handleChurchSettings
+        }}
         onNavigate={(path) => navigate(path)}
       />
 

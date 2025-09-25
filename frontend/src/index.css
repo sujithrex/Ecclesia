@@ -126,13 +126,28 @@ a:hover {
   background: #A19F9D;
 }
 
-/* Focus styles for accessibility */
-*:focus-visible {
+/* Focus styles for accessibility - exclude inputs and textareas */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible {
   outline: 2px solid var(--teams-primary);
   outline-offset: 2px;
 }
 
-/* Remove focus outline for mouse users */
-*:focus:not(:focus-visible) {
+/* Ensure inputs always show focus */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--teams-primary);
+  outline-offset: 1px;
+  border-color: var(--teams-primary);
+}
+
+/* Remove focus outline for mouse users on non-input elements */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible),
+[role="link"]:focus:not(:focus-visible) {
   outline: none;
 }

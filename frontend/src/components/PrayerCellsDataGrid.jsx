@@ -201,11 +201,11 @@ const PrayerCellsDataGrid = ({ prayerCells, onEdit, onDelete, user, currentChurc
         if (result.success) {
           onDelete(prayerCell.id);
         } else {
-          alert(result.error || 'Failed to delete prayer cell');
+          console.error('Delete prayer cell error:', result.error);
         }
       } catch (error) {
         console.error('Error deleting prayer cell:', error);
-        alert('Failed to delete prayer cell');
+        console.error('Error deleting prayer cell');
       }
     }
   };

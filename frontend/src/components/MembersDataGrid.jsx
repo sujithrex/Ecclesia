@@ -231,11 +231,11 @@ const MembersDataGrid = ({ members, onView, onEdit, onDelete, user, currentFamil
         if (result.success) {
           onDelete(member.id);
         } else {
-          alert(result.error || 'Failed to delete member');
+          console.error('Delete member error:', result.error);
         }
       } catch (error) {
         console.error('Error deleting member:', error);
-        alert('Failed to delete member');
+        console.error('Error deleting member');
       }
     }
   };

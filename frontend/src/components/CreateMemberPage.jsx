@@ -496,7 +496,7 @@ const CreateMemberPage = ({
       }
     } catch (error) {
       console.error('Error selecting image:', error);
-      alert('Failed to select image');
+      console.error('Failed to select image');
     }
   };
 

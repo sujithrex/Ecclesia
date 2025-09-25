@@ -228,11 +228,11 @@ const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTer
         if (result.success) {
           onDelete(area.id);
         } else {
-          alert(result.error || 'Failed to delete area');
+          console.error('Delete area error:', result.error);
         }
       } catch (error) {
         console.error('Error deleting area:', error);
-        alert('Failed to delete area');
+        console.error('Error deleting area');
       }
     }
   };

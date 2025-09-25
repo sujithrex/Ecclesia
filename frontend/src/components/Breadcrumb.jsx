@@ -15,10 +15,12 @@ const useStyles = makeStyles({
     color: 'white',
     margin: '20px 0 12px 0',
     lineHeight: '1.2',
+    textAlign: 'center',
   },
   breadcrumbNav: {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: '8px',
     paddingBottom: '16px',
     fontSize: '14px',
@@ -27,6 +29,11 @@ const useStyles = makeStyles({
     padding: '12px 20px',
     margin: '0 -40px -16px -40px',
     borderRadius: '0',
+  },
+  breadcrumbItems: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   },
   breadcrumbItem: {
     display: 'flex',
@@ -59,13 +66,31 @@ const useStyles = makeStyles({
     fontSize: '12px',
     display: 'flex',
     alignItems: 'center',
+  },
+  actionButton: {
+    backgroundColor: '#B5316A',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    transition: 'background-color 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#A12B5E',
+    },
   }
 });
 
-const Breadcrumb = ({ 
-  pageTitle, 
-  breadcrumbs = [], 
-  onNavigate 
+const Breadcrumb = ({
+  pageTitle,
+  breadcrumbs = [],
+  actionButton,
+  onNavigate
 }) => {
   const styles = useStyles();
 
@@ -85,30 +110,42 @@ const Breadcrumb = ({
   return (
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>{pageTitle}</h1>
-      {breadcrumbs.length > 0 && (
+      {(breadcrumbs.length > 0 || actionButton) && (
         <nav className={styles.breadcrumbNav}>
-          {breadcrumbs.map((breadcrumb, index) => (
-            <React.Fragment key={index}>
-              <span
-                className={`${styles.breadcrumbItem} ${
-                  breadcrumb.current ? styles.breadcrumbCurrent : ''
-                }`}
-                onClick={() => !breadcrumb.current && handleBreadcrumbClick(breadcrumb)}
-              >
-                {breadcrumb.icon && (
-                  <span className={styles.breadcrumbIcon}>
-                    {breadcrumb.icon}
+          <div className={styles.breadcrumbItems}>
+            {breadcrumbs.map((breadcrumb, index) => (
+              <React.Fragment key={index}>
+                <span
+                  className={`${styles.breadcrumbItem} ${
+                    breadcrumb.current ? styles.breadcrumbCurrent : ''
+                  }`}
+                  onClick={() => !breadcrumb.current && handleBreadcrumbClick(breadcrumb)}
+                >
+                  {breadcrumb.icon && (
+                    <span className={styles.breadcrumbIcon}>
+                      {breadcrumb.icon}
+                    </span>
+                  )}
+                  {breadcrumb.label}
+                </span>
+                {index < breadcrumbs.length - 1 && (
+                  <span className={styles.separator}>
+                    <ChevronRightRegular />
                   </span>
                 )}
-                {breadcrumb.label}
-              </span>
-              {index < breadcrumbs.length - 1 && (
-                <span className={styles.separator}>
-                  <ChevronRightRegular />
-                </span>
-              )}
-            </React.Fragment>
-          ))}
+              </React.Fragment>
+            ))}
+          </div>
+          {actionButton && (
+            <button
+              className={styles.actionButton}
+              onClick={actionButton.onClick}
+              type="button"
+            >
+              {actionButton.icon && actionButton.icon}
+              {actionButton.label}
+            </button>
+          )}
         </nav>
       )}
     </div>

@@ -5,7 +5,9 @@ const DatabaseManager = require('./backend/database.js');
 const AuthService = require('./backend/authService.js');
 const UserService = require('./backend/userService.js');
 const PastorateService = require('./backend/pastorateService.js');
+const PastorateSettingsService = require('./backend/pastorateSettingsService.js');
 const ChurchService = require('./backend/churchService.js');
+const ChurchSettingsService = require('./backend/churchSettingsService.js');
 const AreaService = require('./backend/areaService.js');
 const PrayerCellService = require('./backend/prayerCellService.js');
 const FamilyService = require('./backend/familyService.js');
@@ -16,7 +18,9 @@ let db;
 let authService;
 let userService;
 let pastorateService;
+let pastorateSettingsService;
 let churchService;
+let churchSettingsService;
 let areaService;
 let prayerCellService;
 let familyService;
@@ -216,6 +220,32 @@ ipcMain.handle('church-get-statistics', async (event, { churchId, userId }) => {
 // Pastorate statistics IPC handler
 ipcMain.handle('pastorate-get-statistics', async (event, { pastorateId, userId }) => {
   return await pastorateService.getStatistics(pastorateId, userId);
+});
+
+// Pastorate Settings IPC handlers
+ipcMain.handle('pastorate-settings-get', async (event, { pastorateId, userId }) => {
+  return await pastorateSettingsService.getPastorateSettings(pastorateId, userId);
+});
+
+ipcMain.handle('pastorate-settings-save', async (event, { pastorateId, settingsData, userId }) => {
+  return await pastorateSettingsService.savePastorateSettings(pastorateId, settingsData, userId);
+});
+
+ipcMain.handle('pastorate-settings-get-default', async (event, { pastorateId, userId }) => {
+  return await pastorateSettingsService.getDefaultSettings(pastorateId, userId);
+});
+
+// Church Settings IPC handlers
+ipcMain.handle('church-settings-get', async (event, { churchId, userId }) => {
+  return await churchSettingsService.getChurchSettings(churchId, userId);
+});
+
+ipcMain.handle('church-settings-save', async (event, { churchId, settingsData, userId }) => {
+  return await churchSettingsService.saveChurchSettings(churchId, settingsData, userId);
+});
+
+ipcMain.handle('church-settings-get-default', async (event, { churchId, userId }) => {
+  return await churchSettingsService.getDefaultSettings(churchId, userId);
 });
 
 // Area management IPC handlers
@@ -420,7 +450,9 @@ app.on('ready', async () => {
   authService = new AuthService(db);
   userService = new UserService(db);
   pastorateService = new PastorateService(db);
+  pastorateSettingsService = new PastorateSettingsService(db);
   churchService = new ChurchService(db);
+  churchSettingsService = new ChurchSettingsService(db);
   areaService = new AreaService(db);
   prayerCellService = new PrayerCellService(db);
   familyService = new FamilyService(db);
