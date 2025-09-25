@@ -185,6 +185,7 @@ const CreateFamilyPage = ({
   const [prayerCells, setPrayerCells] = useState([]);
   const [loadingPrayerCells, setLoadingPrayerCells] = useState(false);
   const [loadingArea, setLoadingArea] = useState(true);
+  const [savedFamilyId, setSavedFamilyId] = useState(null);
 
   const respectOptions = [
     { value: 'mr', label: 'Mr.' },
@@ -397,6 +398,7 @@ const CreateFamilyPage = ({
 
       if (result.success) {
         // Store the family ID for new families
+        const currentFamilyId = editMode ? parseInt(familyId) : result.family.id;
         if (!editMode && result.family && result.family.id) {
           setSavedFamilyId(result.family.id);
         }
@@ -430,6 +432,53 @@ const CreateFamilyPage = ({
               prayer_cell_id: null
             });
             loadAutoNumbers();
+            break;
+          case 'save-and-edit-family-head':
+            // Create family head member and navigate to edit member page
+            if (!editMode && currentFamilyId) {
+              try {
+                // Create family head member with basic info from family
+                const familyHeadData = {
+                  member_number: '01',
+                  respect: formData.respect,
+                  name: formData.family_name.trim(),
+                  relation: 'Family Head',
+                  sex: formData.respect === 'mrs' || formData.respect === 'ms' || formData.respect === 'sis' ? 'female' : 'male',
+                  mobile: formData.family_phone,
+                  dob: '',
+                  age: '',
+                  is_married: 'no',
+                  date_of_marriage: '',
+                  occupation: '',
+                  working_place: '',
+                  is_baptised: 'no',
+                  date_of_baptism: '',
+                  is_confirmed: 'no',
+                  date_of_confirmation: '',
+                  is_alive: 'alive',
+                  aadhar_number: ''
+                };
+
+                const memberResult = await window.electron.member.create({
+                  familyId: currentFamilyId,
+                  memberData: familyHeadData,
+                  userId: user.id
+                });
+
+                if (memberResult.success) {
+                  // Navigate to edit the created member
+                  navigate(`/area/${areaId}/family/${currentFamilyId}/member/edit/${memberResult.member.id}`, {
+                    state: { memberData: memberResult.member }
+                  });
+                } else {
+                  console.error('Failed to create family head member:', memberResult.error);
+                  setErrors({ general: 'Family created successfully, but failed to create family head member' });
+                }
+              } catch (memberError) {
+                console.error('Error creating family head member:', memberError);
+                setErrors({ general: 'Family created successfully, but failed to create family head member' });
+              }
+            }
             break;
         }
       } else {
@@ -737,13 +786,23 @@ const CreateFamilyPage = ({
               </Button>
               
               {!editMode && (
-                <Button
-                  className={styles.saveContinueButton}
-                  disabled={loading}
-                  onClick={() => handleSave('save-and-go-to-family')}
-                >
-                  {loading ? <Spinner size="tiny" /> : 'Save & Go to Family'}
-                </Button>
+                <>
+                  <Button
+                    className={styles.saveContinueButton}
+                    disabled={loading}
+                    onClick={() => handleSave('save-and-continue')}
+                  >
+                    {loading ? <Spinner size="tiny" /> : 'Save & Continue'}
+                  </Button>
+                  
+                  <Button
+                    className={styles.saveContinueButton}
+                    disabled={loading}
+                    onClick={() => handleSave('save-and-edit-family-head')}
+                  >
+                    {loading ? <Spinner size="tiny" /> : 'Save & Edit Family Head'}
+                  </Button>
+                </>
               )}
             </div>
           </div>
