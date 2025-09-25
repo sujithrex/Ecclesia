@@ -1,11 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { makeStyles } from '@fluentui/react-components';
 import {
   EyeRegular,
   EditRegular,
   DeleteRegular,
-  SearchRegular,
   ChevronLeftRegular,
   ChevronRightRegular
 } from '@fluentui/react-icons';
@@ -14,31 +12,6 @@ const useStyles = makeStyles({
   container: {
     display: 'flex',
     flexDirection: 'column',
-  },
-  searchInputContainer: {
-    position: 'relative',
-    width: '200px',
-  },
-  searchInput: {
-    width: '100%',
-    padding: '8px 12px 8px 32px',
-    border: '1px solid #8a8886',
-    borderRadius: '4px',
-    fontSize: '14px',
-    backgroundColor: 'white',
-    '&:focus': {
-      outline: 'none',
-      borderColor: '#B5316A',
-      boxShadow: '0 0 0 2px rgba(181, 49, 106, 0.2)',
-    },
-  },
-  searchIcon: {
-    position: 'absolute',
-    left: '8px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    color: '#605e5c',
-    fontSize: '16px',
   },
   tableContainer: {
     flex: 1,
@@ -76,44 +49,20 @@ const useStyles = makeStyles({
     color: '#323130',
     verticalAlign: 'middle',
   },
-  actionButtons: {
-    display: 'flex',
-    gap: '8px',
+  familyName: {
+    fontWeight: '600',
   },
-  actionButton: {
-    border: 'none',
-    borderRadius: '4px',
-    padding: '6px 8px',
-    fontSize: '14px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    transition: 'background-color 0.2s ease',
+  notes: {
+    maxWidth: '200px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
-  viewButton: {
-    backgroundColor: 'transparent',
-    color: '#B5316A',
-    border: '1px solid #B5316A',
-    '&:hover': {
-      backgroundColor: 'rgba(181, 49, 106, 0.1)',
-    },
-  },
-  editButton: {
-    backgroundColor: 'transparent',
-    color: '#B5316A',
-    border: '1px solid #B5316A',
-    '&:hover': {
-      backgroundColor: 'rgba(181, 49, 106, 0.1)',
-    },
-  },
-  deleteButton: {
-    backgroundColor: 'transparent',
-    color: '#B5316A',
-    border: '1px solid #B5316A',
-    '&:hover': {
-      backgroundColor: 'rgba(181, 49, 106, 0.1)',
-    },
+  prayerPoints: {
+    maxWidth: '200px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   contextMenu: {
     position: 'absolute',
@@ -188,80 +137,90 @@ const useStyles = makeStyles({
   },
 });
 
-const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTerm = '' }) => {
+const FamiliesDataGrid = ({ families, onEdit, onDelete, user, currentArea, searchTerm = '' }) => {
   const styles = useStyles();
-  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
-  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, area: null });
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, family: null });
   const itemsPerPage = 7;
 
   // Filter and paginate data
-  const filteredAreas = useMemo(() => {
-    return areas.filter(area =>
-      area.area_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      area.area_identity.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [areas, searchTerm]);
+  const filteredFamilies = useMemo(() => {
+    return families.filter(family => {
+      const fullName = `${family.respect}. ${family.family_name}`.toLowerCase();
+      const searchLower = searchTerm.toLowerCase();
+      return fullName.includes(searchLower) ||
+             family.family_number.includes(searchTerm) ||
+             family.layout_number.includes(searchTerm) ||
+             (family.family_phone && family.family_phone.toLowerCase().includes(searchLower)) ||
+             (family.notes && family.notes.toLowerCase().includes(searchLower)) ||
+             (family.prayer_points && family.prayer_points.toLowerCase().includes(searchLower));
+    });
+  }, [families, searchTerm]);
 
-  const totalPages = Math.ceil(filteredAreas.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredFamilies.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentAreas = filteredAreas.slice(startIndex, startIndex + itemsPerPage);
+  const currentFamilies = filteredFamilies.slice(startIndex, startIndex + itemsPerPage);
 
   // Reset to first page when search term changes
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
-
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
 
-  const handleDelete = async (area) => {
-    if (window.confirm(`Are you sure you want to delete the area "${area.area_name}"?`)) {
+  const formatFamilyName = (family) => {
+    const respect = family.respect.charAt(0).toUpperCase() + family.respect.slice(1);
+    return `${respect}. ${family.family_name}`;
+  };
+
+  const handleDelete = async (family) => {
+    if (window.confirm(`Are you sure you want to delete the family "${formatFamilyName(family)}"?`)) {
       try {
-        const result = await window.electron.area.delete({
-          areaId: area.id,
+        const result = await window.electron.family.delete({
+          familyId: family.id,
           userId: user.id
         });
         
         if (result.success) {
-          onDelete(area.id);
+          onDelete(family.id);
         } else {
-          alert(result.error || 'Failed to delete area');
+          alert(result.error || 'Failed to delete family');
         }
       } catch (error) {
-        console.error('Error deleting area:', error);
-        alert('Failed to delete area');
+        console.error('Error deleting family:', error);
+        alert('Failed to delete family');
       }
     }
   };
 
-  const handleRightClick = (e, area) => {
+  const handleRightClick = (e, family) => {
     e.preventDefault();
     setContextMenu({
       visible: true,
       x: e.clientX,
       y: e.clientY,
-      area: area
+      family: family
     });
   };
 
   const handleCloseContextMenu = () => {
-    setContextMenu({ visible: false, x: 0, y: 0, area: null });
+    setContextMenu({ visible: false, x: 0, y: 0, family: null });
   };
 
-  const handleContextMenuAction = (action, area) => {
+  const handleContextMenuAction = (action, family) => {
     handleCloseContextMenu();
     switch (action) {
       case 'view':
-        navigate(`/area/${area.id}`);
+        // TODO: Implement view functionality
+        console.log('View family:', formatFamilyName(family));
         break;
       case 'edit':
-        onEdit(area);
+        onEdit(family);
         break;
       case 'delete':
-        handleDelete(area);
+        handleDelete(family);
         break;
     }
   };
@@ -280,12 +239,12 @@ const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTer
     }
   }, [contextMenu.visible]);
 
-  if (areas.length === 0) {
+  if (families.length === 0) {
     return (
       <div className={styles.container}>
         <div className={styles.emptyState}>
           <div className={styles.emptyStateText}>
-            No areas created yet. Click "Create Area" to add your first area.
+            No families created yet. Click "Create Family" to add your first family.
           </div>
         </div>
       </div>
@@ -296,29 +255,43 @@ const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTer
     <div className={styles.container}>
       {/* Table */}
       <div className={styles.tableContainer}>
-        {filteredAreas.length === 0 ? (
+        {filteredFamilies.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyStateText}>
-              No areas match your search criteria.
+              No families match your search criteria.
             </div>
           </div>
         ) : (
           <table className={styles.table}>
             <thead className={styles.tableHeader}>
               <tr>
-                <th className={styles.headerCell}>Area Identity</th>
-                <th className={styles.headerCell}>Area Name</th>
+                <th className={styles.headerCell}>Family Number</th>
+                <th className={styles.headerCell}>Name</th>
+                <th className={styles.headerCell}>Phone Number</th>
+                <th className={styles.headerCell}>Layout Number</th>
+                <th className={styles.headerCell}>Notes</th>
+                <th className={styles.headerCell}>Prayer Points</th>
               </tr>
             </thead>
             <tbody>
-              {currentAreas.map((area) => (
+              {currentFamilies.map((family) => (
                 <tr
-                  key={area.id}
+                  key={family.id}
                   className={styles.tableRow}
-                  onContextMenu={(e) => handleRightClick(e, area)}
+                  onContextMenu={(e) => handleRightClick(e, family)}
                 >
-                  <td className={styles.tableCell}>{area.area_identity}</td>
-                  <td className={styles.tableCell}>{area.area_name}</td>
+                  <td className={styles.tableCell}>{family.family_number}</td>
+                  <td className={`${styles.tableCell} ${styles.familyName}`}>
+                    {formatFamilyName(family)}
+                  </td>
+                  <td className={styles.tableCell}>{family.family_phone || '-'}</td>
+                  <td className={styles.tableCell}>{family.layout_number}</td>
+                  <td className={`${styles.tableCell} ${styles.notes}`} title={family.notes}>
+                    {family.notes || '-'}
+                  </td>
+                  <td className={`${styles.tableCell} ${styles.prayerPoints}`} title={family.prayer_points}>
+                    {family.prayer_points || '-'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -327,10 +300,10 @@ const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTer
       </div>
 
       {/* Pagination */}
-      {filteredAreas.length > 0 && (
+      {filteredFamilies.length > 0 && (
         <div className={styles.pagination}>
           <div className={styles.paginationInfo}>
-            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAreas.length)} of {filteredAreas.length} areas
+            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredFamilies.length)} of {filteredFamilies.length} families
           </div>
           <div className={styles.paginationControls}>
             <button
@@ -365,21 +338,21 @@ const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTer
         >
           <div
             className={styles.contextMenuItem}
-            onClick={() => handleContextMenuAction('view', contextMenu.area)}
+            onClick={() => handleContextMenuAction('view', contextMenu.family)}
           >
             <EyeRegular />
-            View {contextMenu.area?.area_name}
+            View {contextMenu.family && formatFamilyName(contextMenu.family)}
           </div>
           <div
             className={styles.contextMenuItem}
-            onClick={() => handleContextMenuAction('edit', contextMenu.area)}
+            onClick={() => handleContextMenuAction('edit', contextMenu.family)}
           >
             <EditRegular />
             Edit
           </div>
           <div
             className={styles.contextMenuItem}
-            onClick={() => handleContextMenuAction('delete', contextMenu.area)}
+            onClick={() => handleContextMenuAction('delete', contextMenu.family)}
           >
             <DeleteRegular />
             Delete
@@ -390,4 +363,4 @@ const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTer
   );
 };
 
-export default AreasDataGrid;
+export default FamiliesDataGrid;

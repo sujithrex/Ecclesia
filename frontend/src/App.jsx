@@ -14,6 +14,8 @@ import CreatePastorateModal from './components/CreatePastorateModal';
 import PastorateSelectionModal from './components/PastorateSelectionModal';
 import CreateChurchModal from './components/CreateChurchModal';
 import ChurchSelectionModal from './components/ChurchSelectionModal';
+import AreaPage from './components/AreaPage';
+import CreateFamilyPage from './components/CreateFamilyPage';
 import { LoadingProvider } from './contexts/LoadingContext';
 
 function App() {
@@ -457,6 +459,84 @@ function App() {
                 userPastorates={userPastorates}
                 onBack={handleBackToDashboard}
                 onProfileUpdate={handleProfileUpdate}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/area/:areaId"
+          element={
+            user ? (
+              <AreaPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/area/:areaId/family/create"
+          element={
+            user ? (
+              <CreateFamilyPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/area/:areaId/family/edit/:familyId"
+          element={
+            user ? (
+              <CreateFamilyPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
                 onPastorateChange={handlePastorateChange}
                 onCreatePastorate={handleCreatePastorateFromStatus}
                 onEditPastorate={handleEditPastorate}

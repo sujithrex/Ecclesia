@@ -71,5 +71,14 @@ contextBridge.exposeInMainWorld('electron', {
     getByChurch: (data) => ipcRenderer.invoke('prayer-cell-get-by-church', data),
     update: (data) => ipcRenderer.invoke('prayer-cell-update', data),
     delete: (data) => ipcRenderer.invoke('prayer-cell-delete', data)
+  },
+
+  // Family management API
+  family: {
+    create: (data) => ipcRenderer.invoke('family-create', data),
+    getByArea: (data) => ipcRenderer.invoke('family-get-by-area', data),
+    update: (data) => ipcRenderer.invoke('family-update', data),
+    delete: (data) => ipcRenderer.invoke('family-delete', data),
+    getAutoNumbers: (data) => ipcRenderer.invoke('family-get-auto-numbers', data)
   }
 });

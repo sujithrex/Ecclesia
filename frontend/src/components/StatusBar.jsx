@@ -292,7 +292,8 @@ const StatusBar = ({
   onChurchChange,
   onCreateChurch,
   onEditChurch,
-  onDeleteChurch
+  onDeleteChurch,
+  disablePastorateChurchChange = false
 }) => {
   const styles = useStyles();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -369,14 +370,14 @@ const StatusBar = ({
 
 
   const handlePastorateClick = (e) => {
-    if (currentPastorate) {
+    if (currentPastorate && !disablePastorateChurchChange) {
       setShowContextMenu(false);
       setShowPastorateDropdown(!showPastorateDropdown);
     }
   };
 
   const handlePastorateRightClick = (e) => {
-    if (currentPastorate) {
+    if (currentPastorate && !disablePastorateChurchChange) {
       e.preventDefault();
       e.stopPropagation();
       setShowPastorateDropdown(false);
@@ -453,14 +454,14 @@ const StatusBar = ({
 
   // Church handlers
   const handleChurchClick = (e) => {
-    if (currentChurch) {
+    if (currentChurch && !disablePastorateChurchChange) {
       setShowChurchContextMenu(false);
       setShowChurchDropdown(!showChurchDropdown);
     }
   };
 
   const handleChurchRightClick = (e) => {
-    if (currentChurch) {
+    if (currentChurch && !disablePastorateChurchChange) {
       e.preventDefault();
       e.stopPropagation();
       setShowChurchDropdown(false);
@@ -582,11 +583,15 @@ const StatusBar = ({
                 className={styles.pastorateSelector}
                 onClick={handlePastorateClick}
                 onContextMenu={handlePastorateRightClick}
-                title="Click to switch pastorate or right-click for options"
+                title={disablePastorateChurchChange ? currentPastorate.pastorate_name : "Click to switch pastorate or right-click for options"}
+                style={{
+                  cursor: disablePastorateChurchChange ? 'default' : 'pointer',
+                  opacity: disablePastorateChurchChange ? 0.7 : 1
+                }}
               >
                 <BuildingRegular />
                 Pastorate: {currentPastorate.pastorate_name}
-                <ChevronUpRegular />
+                {!disablePastorateChurchChange && <ChevronUpRegular />}
               </button>
             
             {showPastorateDropdown && (
@@ -669,11 +674,15 @@ const StatusBar = ({
                   className={styles.pastorateSelector}
                   onClick={handleChurchClick}
                   onContextMenu={handleChurchRightClick}
-                  title="Click to switch church or right-click for options"
+                  title={disablePastorateChurchChange ? currentChurch.church_name : "Click to switch church or right-click for options"}
+                  style={{
+                    cursor: disablePastorateChurchChange ? 'default' : 'pointer',
+                    opacity: disablePastorateChurchChange ? 0.7 : 1
+                  }}
                 >
                   <BuildingRegular />
                   Church: {currentChurch.church_name}
-                  <ChevronUpRegular />
+                  {!disablePastorateChurchChange && <ChevronUpRegular />}
                 </button>
                 
                 {showChurchDropdown && (

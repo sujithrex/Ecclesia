@@ -128,6 +128,30 @@ class DatabaseManager {
                     )
                 `);
 
+                // Families table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS families (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        area_id INTEGER NOT NULL,
+                        family_number TEXT NOT NULL,
+                        respect TEXT NOT NULL CHECK (respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')),
+                        family_name TEXT NOT NULL,
+                        family_address TEXT,
+                        family_phone TEXT,
+                        family_email TEXT,
+                        layout_number TEXT NOT NULL,
+                        notes TEXT,
+                        prayer_points TEXT,
+                        prayer_cell_id INTEGER,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (area_id) REFERENCES areas (id) ON DELETE CASCADE,
+                        FOREIGN KEY (prayer_cell_id) REFERENCES prayer_cells (id) ON DELETE SET NULL,
+                        UNIQUE(area_id, family_number),
+                        UNIQUE(area_id, layout_number)
+                    )
+                `);
+
                 // Settings table for app configurations
                 this.db.run(`
                     CREATE TABLE IF NOT EXISTS settings (
@@ -918,6 +942,144 @@ class DatabaseManager {
                     resolve({ success: false, error: 'Prayer Cell not found' });
                 } else {
                     resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // Families management methods
+    async createFamily(areaId, familyData) {
+        return new Promise((resolve) => {
+            const { family_number, respect, family_name, family_address, family_phone, family_email, layout_number, notes, prayer_points, prayer_cell_id } = familyData;
+            this.db.run(`
+                INSERT INTO families (area_id, family_number, respect, family_name, family_address, family_phone, family_email, layout_number, notes, prayer_points, prayer_cell_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [areaId, family_number, respect, family_name, family_address, family_phone, family_email, layout_number, notes, prayer_points, prayer_cell_id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getFamilyById(id) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM families WHERE id = ?', [id], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getFamiliesByArea(areaId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT f.*, pc.prayer_cell_name
+                FROM families f
+                LEFT JOIN prayer_cells pc ON f.prayer_cell_id = pc.id
+                WHERE f.area_id = ?
+                ORDER BY CAST(f.family_number AS INTEGER)
+            `, [areaId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async updateFamily(id, familyData) {
+        return new Promise((resolve) => {
+            const { family_number, respect, family_name, family_address, family_phone, family_email, layout_number, notes, prayer_points, prayer_cell_id } = familyData;
+            this.db.run(`
+                UPDATE families
+                SET family_number = ?, respect = ?, family_name = ?, family_address = ?, family_phone = ?, family_email = ?, layout_number = ?, notes = ?, prayer_points = ?, prayer_cell_id = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [family_number, respect, family_name, family_address, family_phone, family_email, layout_number, notes, prayer_points, prayer_cell_id, id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deleteFamily(id) {
+        return new Promise((resolve) => {
+            this.db.run('DELETE FROM families WHERE id = ?', [id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else if (this.changes === 0) {
+                    resolve({ success: false, error: 'Family not found' });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async getFamilyByAreaAndNumber(areaId, familyNumber) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM families WHERE area_id = ? AND family_number = ?', [areaId, familyNumber], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getFamilyByAreaAndLayoutNumber(areaId, layoutNumber) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM families WHERE area_id = ? AND layout_number = ?', [areaId, layoutNumber], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getNextFamilyNumber(areaId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT MAX(CAST(family_number AS INTEGER)) as max_number
+                FROM families
+                WHERE area_id = ?
+            `, [areaId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    const nextNumber = (row?.max_number || 0) + 1;
+                    const formattedNumber = String(nextNumber).padStart(3, '0');
+                    resolve(formattedNumber);
+                }
+            });
+        });
+    }
+
+    async getNextLayoutNumber(areaId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT MAX(CAST(layout_number AS INTEGER)) as max_number
+                FROM families
+                WHERE area_id = ?
+            `, [areaId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    const nextNumber = (row?.max_number || 0) + 1;
+                    const formattedNumber = String(nextNumber).padStart(3, '0');
+                    resolve(formattedNumber);
                 }
             });
         });

@@ -8,6 +8,7 @@ const PastorateService = require('./backend/pastorateService.js');
 const ChurchService = require('./backend/churchService.js');
 const AreaService = require('./backend/areaService.js');
 const PrayerCellService = require('./backend/prayerCellService.js');
+const FamilyService = require('./backend/familyService.js');
 
 let mainWindow;
 let db;
@@ -17,6 +18,7 @@ let pastorateService;
 let churchService;
 let areaService;
 let prayerCellService;
+let familyService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -238,6 +240,27 @@ ipcMain.handle('prayer-cell-delete', async (event, { prayerCellId, userId }) => 
   return await prayerCellService.deletePrayerCell(prayerCellId, userId);
 });
 
+// Family management IPC handlers
+ipcMain.handle('family-create', async (event, { areaId, familyData, userId }) => {
+  return await familyService.createFamily(areaId, familyData, userId);
+});
+
+ipcMain.handle('family-get-by-area', async (event, { areaId, userId }) => {
+  return await familyService.getFamiliesByArea(areaId, userId);
+});
+
+ipcMain.handle('family-update', async (event, { familyId, familyData, userId }) => {
+  return await familyService.updateFamily(familyId, familyData, userId);
+});
+
+ipcMain.handle('family-delete', async (event, { familyId, userId }) => {
+  return await familyService.deleteFamily(familyId, userId);
+});
+
+ipcMain.handle('family-get-auto-numbers', async (event, { areaId, userId }) => {
+  return await familyService.getAutoNumbers(areaId, userId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -359,6 +382,7 @@ app.on('ready', async () => {
   churchService = new ChurchService(db);
   areaService = new AreaService(db);
   prayerCellService = new PrayerCellService(db);
+  familyService = new FamilyService(db);
   
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {
