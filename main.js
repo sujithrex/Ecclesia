@@ -208,6 +208,11 @@ ipcMain.handle('church-delete', async (event, { churchId, userId }) => {
   return await churchService.deleteChurch(churchId, userId);
 });
 
+// Church statistics IPC handler
+ipcMain.handle('church-get-statistics', async (event, { churchId, userId }) => {
+  return await churchService.getChurchStatistics(churchId, userId);
+});
+
 // Area management IPC handlers
 ipcMain.handle('area-create', async (event, { churchId, area_name, area_identity, userId }) => {
   return await areaService.createArea(churchId, area_name, area_identity, userId);

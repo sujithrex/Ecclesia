@@ -302,6 +302,117 @@ class ChurchService {
             return { success: false, error: 'Failed to delete church' };
         }
     }
+
+    async getChurchStatistics(churchId, userId) {
+        try {
+            // Verify user has access to this church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            // Get all statistics for the church
+            const baptisedCount = await this.getBaptisedCount(churchId);
+            const confirmedCount = await this.getConfirmedCount(churchId);
+            const familiesCount = await this.getFamiliesCount(churchId);
+            const christiansCount = await this.getChristiansCount(churchId);
+
+            return {
+                success: true,
+                statistics: {
+                    baptised: baptisedCount,
+                    confirmed: confirmedCount,
+                    families: familiesCount,
+                    christians: christiansCount
+                }
+            };
+        } catch (error) {
+            console.error('Get church statistics error:', error);
+            return { success: false, error: 'Failed to get church statistics' };
+        }
+    }
+
+    async getBaptisedCount(churchId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.get(`
+                SELECT COUNT(*) as count
+                FROM members m
+                JOIN families f ON m.family_id = f.id
+                JOIN areas a ON f.area_id = a.id
+                WHERE a.church_id = ?
+                AND m.is_baptised = 'yes'
+                AND m.is_alive = 'alive'
+            `, [churchId], (err, row) => {
+                if (err) {
+                    console.error('Error getting baptised count:', err);
+                    resolve(0);
+                } else {
+                    resolve(row?.count || 0);
+                }
+            });
+        });
+    }
+
+    async getConfirmedCount(churchId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.get(`
+                SELECT COUNT(*) as count
+                FROM members m
+                JOIN families f ON m.family_id = f.id
+                JOIN areas a ON f.area_id = a.id
+                WHERE a.church_id = ?
+                AND m.is_confirmed = 'yes'
+                AND m.is_alive = 'alive'
+            `, [churchId], (err, row) => {
+                if (err) {
+                    console.error('Error getting confirmed count:', err);
+                    resolve(0);
+                } else {
+                    resolve(row?.count || 0);
+                }
+            });
+        });
+    }
+
+    async getFamiliesCount(churchId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.get(`
+                SELECT COUNT(*) as count
+                FROM families f
+                JOIN areas a ON f.area_id = a.id
+                WHERE a.church_id = ?
+            `, [churchId], (err, row) => {
+                if (err) {
+                    console.error('Error getting families count:', err);
+                    resolve(0);
+                } else {
+                    resolve(row?.count || 0);
+                }
+            });
+        });
+    }
+
+    async getChristiansCount(churchId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.get(`
+                SELECT COUNT(*) as count
+                FROM members m
+                JOIN families f ON m.family_id = f.id
+                JOIN areas a ON f.area_id = a.id
+                WHERE a.church_id = ?
+                AND m.is_alive = 'alive'
+            `, [churchId], (err, row) => {
+                if (err) {
+                    console.error('Error getting christians count:', err);
+                    resolve(0);
+                } else {
+                    resolve(row?.count || 0);
+                }
+            });
+        });
+    }
 }
 
 module.exports = ChurchService;

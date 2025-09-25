@@ -177,30 +177,44 @@ const ChurchDashboard = ({
   const [areasSearchTerm, setAreasSearchTerm] = useState('');
   const [prayerCellsSearchTerm, setPrayerCellsSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [statistics, setStatistics] = useState({
+    baptised: 0,
+    confirmed: 0,
+    families: 0,
+    christians: 0
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
 
-  // Statistics - dummy data for now
+  // Build stats array from dynamic data
   const stats = [
     {
       icon: <PeopleRegular />,
       label: 'ஞானஸ்நானகாரர்கள்',
-      value: 342,
+      value: statistics.baptised,
     },
     {
       icon: <PeopleRegular />,
       label: 'நற்கருணைதாரர்கள்',
-      value: 298,
+      value: statistics.confirmed,
     },
     {
       icon: <HomeRegular />,
       label: 'குடும்பங்கள்',
-      value: 128,
+      value: statistics.families,
     },
     {
       icon: <PeopleRegular />,
       label: 'கிறிஸ்தவர்கள்',
-      value: 456,
+      value: statistics.christians,
     },
   ];
+
+  // Load statistics when church changes
+  useEffect(() => {
+    if (currentChurch && user) {
+      loadStatistics();
+    }
+  }, [currentChurch?.id, user?.id]);
 
   // Load areas and prayer cells when church changes
   useEffect(() => {
@@ -208,6 +222,40 @@ const ChurchDashboard = ({
       loadAreasAndPrayerCells();
     }
   }, [currentChurch?.id, user?.id]);
+
+  const loadStatistics = async () => {
+    if (!currentChurch || !user) return;
+    
+    setStatsLoading(true);
+    try {
+      const result = await window.electron.church.getStatistics({
+        churchId: currentChurch.id,
+        userId: user.id
+      });
+      
+      if (result.success) {
+        setStatistics(result.statistics);
+      } else {
+        console.error('Failed to load statistics:', result.error);
+        setStatistics({
+          baptised: 0,
+          confirmed: 0,
+          families: 0,
+          christians: 0
+        });
+      }
+    } catch (error) {
+      console.error('Error loading statistics:', error);
+      setStatistics({
+        baptised: 0,
+        confirmed: 0,
+        families: 0,
+        christians: 0
+      });
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const loadAreasAndPrayerCells = async () => {
     if (!currentChurch || !user) return;
@@ -266,10 +314,14 @@ const ChurchDashboard = ({
     }
     setShowCreateAreaModal(false);
     setEditingArea(null);
+    // Refresh statistics as areas might affect family/member counts
+    loadStatistics();
   };
 
   const handleAreaDeleted = (areaId) => {
     setAreas(prev => prev.filter(a => a.id !== areaId));
+    // Refresh statistics as deleting area affects family/member counts
+    loadStatistics();
   };
 
   const handleCreatePrayerCell = () => {
@@ -332,7 +384,7 @@ const ChurchDashboard = ({
                 {stat.label}
               </div>
               <div className={styles.statValue}>
-                {stat.value.toLocaleString()}
+                {statsLoading ? '...' : stat.value.toLocaleString()}
               </div>
             </div>
           ))}

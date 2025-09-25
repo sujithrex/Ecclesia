@@ -54,7 +54,8 @@ contextBridge.exposeInMainWorld('electron', {
     assignUser: (data) => ipcRenderer.invoke('church-assign-user', data),
     removeUser: (data) => ipcRenderer.invoke('church-remove-user', data),
     update: (data) => ipcRenderer.invoke('church-update', data),
-    delete: (data) => ipcRenderer.invoke('church-delete', data)
+    delete: (data) => ipcRenderer.invoke('church-delete', data),
+    getStatistics: (data) => ipcRenderer.invoke('church-get-statistics', data)
   },
 
   // Area management API
