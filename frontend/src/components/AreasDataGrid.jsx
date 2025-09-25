@@ -114,6 +114,28 @@ const useStyles = makeStyles({
       backgroundColor: 'rgba(181, 49, 106, 0.1)',
     },
   },
+  contextMenu: {
+    position: 'absolute',
+    backgroundColor: 'white',
+    border: '1px solid #e1dfdd',
+    borderRadius: '4px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    padding: '4px 0',
+    zIndex: 1000,
+    minWidth: '150px',
+  },
+  contextMenuItem: {
+    padding: '8px 16px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    color: '#323130',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    '&:hover': {
+      backgroundColor: '#f3f2f1',
+    },
+  },
   pagination: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -168,6 +190,7 @@ const useStyles = makeStyles({
 const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTerm = '' }) => {
   const styles = useStyles();
   const [currentPage, setCurrentPage] = useState(1);
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, area: null });
   const itemsPerPage = 7;
 
   // Filter and paginate data
@@ -212,6 +235,50 @@ const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTer
     }
   };
 
+  const handleRightClick = (e, area) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      area: area
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu({ visible: false, x: 0, y: 0, area: null });
+  };
+
+  const handleContextMenuAction = (action, area) => {
+    handleCloseContextMenu();
+    switch (action) {
+      case 'view':
+        // TODO: Implement view functionality
+        console.log('View area:', area.area_name);
+        break;
+      case 'edit':
+        onEdit(area);
+        break;
+      case 'delete':
+        handleDelete(area);
+        break;
+    }
+  };
+
+  // Close context menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu.visible) {
+        handleCloseContextMenu();
+      }
+    };
+    
+    if (contextMenu.visible) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu.visible]);
+
   if (areas.length === 0) {
     return (
       <div className={styles.container}>
@@ -240,39 +307,17 @@ const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTer
               <tr>
                 <th className={styles.headerCell}>Area Identity</th>
                 <th className={styles.headerCell}>Area Name</th>
-                <th className={styles.headerCell}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {currentAreas.map((area) => (
-                <tr key={area.id} className={styles.tableRow}>
+                <tr
+                  key={area.id}
+                  className={styles.tableRow}
+                  onContextMenu={(e) => handleRightClick(e, area)}
+                >
                   <td className={styles.tableCell}>{area.area_identity}</td>
                   <td className={styles.tableCell}>{area.area_name}</td>
-                  <td className={styles.tableCell}>
-                    <div className={styles.actionButtons}>
-                      <button
-                        className={`${styles.actionButton} ${styles.viewButton}`}
-                        onClick={() => {/* TODO: Implement view functionality */}}
-                        title="View Area"
-                      >
-                        <EyeRegular />
-                      </button>
-                      <button
-                        className={`${styles.actionButton} ${styles.editButton}`}
-                        onClick={() => onEdit(area)}
-                        title="Edit Area"
-                      >
-                        <EditRegular />
-                      </button>
-                      <button
-                        className={`${styles.actionButton} ${styles.deleteButton}`}
-                        onClick={() => handleDelete(area)}
-                        title="Delete Area"
-                      >
-                        <DeleteRegular />
-                      </button>
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -306,6 +351,37 @@ const AreasDataGrid = ({ areas, onEdit, onDelete, user, currentChurch, searchTer
               Next
               <ChevronRightRegular />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu.visible && (
+        <div
+          className={styles.contextMenu}
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className={styles.contextMenuItem}
+            onClick={() => handleContextMenuAction('view', contextMenu.area)}
+          >
+            <EyeRegular />
+            View {contextMenu.area?.area_name}
+          </div>
+          <div
+            className={styles.contextMenuItem}
+            onClick={() => handleContextMenuAction('edit', contextMenu.area)}
+          >
+            <EditRegular />
+            Edit
+          </div>
+          <div
+            className={styles.contextMenuItem}
+            onClick={() => handleContextMenuAction('delete', contextMenu.area)}
+          >
+            <DeleteRegular />
+            Delete
           </div>
         </div>
       )}

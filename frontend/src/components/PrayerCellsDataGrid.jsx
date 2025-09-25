@@ -89,6 +89,28 @@ const useStyles = makeStyles({
       backgroundColor: 'rgba(181, 49, 106, 0.1)',
     },
   },
+  contextMenu: {
+    position: 'absolute',
+    backgroundColor: 'white',
+    border: '1px solid #e1dfdd',
+    borderRadius: '4px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    padding: '4px 0',
+    zIndex: 1000,
+    minWidth: '150px',
+  },
+  contextMenuItem: {
+    padding: '8px 16px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    color: '#323130',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    '&:hover': {
+      backgroundColor: '#f3f2f1',
+    },
+  },
   pagination: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -143,6 +165,7 @@ const useStyles = makeStyles({
 const PrayerCellsDataGrid = ({ prayerCells, onEdit, onDelete, user, currentChurch, searchTerm = '' }) => {
   const styles = useStyles();
   const [currentPage, setCurrentPage] = useState(1);
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, prayerCell: null });
   const itemsPerPage = 7;
 
   // Filter and paginate data
@@ -187,6 +210,50 @@ const PrayerCellsDataGrid = ({ prayerCells, onEdit, onDelete, user, currentChurc
     }
   };
 
+  const handleRightClick = (e, prayerCell) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      prayerCell: prayerCell
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu({ visible: false, x: 0, y: 0, prayerCell: null });
+  };
+
+  const handleContextMenuAction = (action, prayerCell) => {
+    handleCloseContextMenu();
+    switch (action) {
+      case 'view':
+        // TODO: Implement view functionality
+        console.log('View prayer cell:', prayerCell.prayer_cell_name);
+        break;
+      case 'edit':
+        onEdit(prayerCell);
+        break;
+      case 'delete':
+        handleDelete(prayerCell);
+        break;
+    }
+  };
+
+  // Close context menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu.visible) {
+        handleCloseContextMenu();
+      }
+    };
+    
+    if (contextMenu.visible) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu.visible]);
+
   if (prayerCells.length === 0) {
     return (
       <div className={styles.container}>
@@ -215,39 +282,17 @@ const PrayerCellsDataGrid = ({ prayerCells, onEdit, onDelete, user, currentChurc
               <tr>
                 <th className={styles.headerCell}>Prayer Cell Identity</th>
                 <th className={styles.headerCell}>Prayer Cell Name</th>
-                <th className={styles.headerCell}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {currentPrayerCells.map((prayerCell) => (
-                <tr key={prayerCell.id} className={styles.tableRow}>
+                <tr
+                  key={prayerCell.id}
+                  className={styles.tableRow}
+                  onContextMenu={(e) => handleRightClick(e, prayerCell)}
+                >
                   <td className={styles.tableCell}>{prayerCell.prayer_cell_identity}</td>
                   <td className={styles.tableCell}>{prayerCell.prayer_cell_name}</td>
-                  <td className={styles.tableCell}>
-                    <div className={styles.actionButtons}>
-                      <button
-                        className={`${styles.actionButton} ${styles.viewButton}`}
-                        onClick={() => {/* TODO: Implement view functionality */}}
-                        title="View Prayer Cell"
-                      >
-                        <EyeRegular />
-                      </button>
-                      <button
-                        className={`${styles.actionButton} ${styles.editButton}`}
-                        onClick={() => onEdit(prayerCell)}
-                        title="Edit Prayer Cell"
-                      >
-                        <EditRegular />
-                      </button>
-                      <button
-                        className={`${styles.actionButton} ${styles.deleteButton}`}
-                        onClick={() => handleDelete(prayerCell)}
-                        title="Delete Prayer Cell"
-                      >
-                        <DeleteRegular />
-                      </button>
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -281,6 +326,37 @@ const PrayerCellsDataGrid = ({ prayerCells, onEdit, onDelete, user, currentChurc
               Next
               <ChevronRightRegular />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu.visible && (
+        <div
+          className={styles.contextMenu}
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className={styles.contextMenuItem}
+            onClick={() => handleContextMenuAction('view', contextMenu.prayerCell)}
+          >
+            <EyeRegular />
+            View {contextMenu.prayerCell?.prayer_cell_name}
+          </div>
+          <div
+            className={styles.contextMenuItem}
+            onClick={() => handleContextMenuAction('edit', contextMenu.prayerCell)}
+          >
+            <EditRegular />
+            Edit
+          </div>
+          <div
+            className={styles.contextMenuItem}
+            onClick={() => handleContextMenuAction('delete', contextMenu.prayerCell)}
+          >
+            <DeleteRegular />
+            Delete
           </div>
         </div>
       )}
