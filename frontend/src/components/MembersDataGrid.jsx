@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { makeStyles } from '@fluentui/react-components';
 import {
   EyeRegular,
@@ -50,20 +49,35 @@ const useStyles = makeStyles({
     color: '#323130',
     verticalAlign: 'middle',
   },
-  familyName: {
+  memberName: {
     fontWeight: '600',
   },
-  notes: {
-    maxWidth: '200px',
+  relation: {
+    maxWidth: '150px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  prayerPoints: {
-    maxWidth: '200px',
+  occupation: {
+    maxWidth: '150px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+  },
+  about: {
+    maxWidth: '120px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  aboutBadge: {
+    display: 'inline-block',
+    padding: '2px 8px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '500',
+    backgroundColor: '#e1f5fe',
+    color: '#0288d1',
   },
   contextMenu: {
     position: 'absolute',
@@ -138,30 +152,28 @@ const useStyles = makeStyles({
   },
 });
 
-const FamiliesDataGrid = ({ families, onEdit, onDelete, user, currentArea, searchTerm = '' }) => {
+const MembersDataGrid = ({ members, onView, onEdit, onDelete, user, currentFamily, searchTerm = '' }) => {
   const styles = useStyles();
-  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
-  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, family: null });
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, member: null });
   const itemsPerPage = 7;
 
   // Filter and paginate data
-  const filteredFamilies = useMemo(() => {
-    return families.filter(family => {
-      const fullName = `${family.respect}. ${family.family_name}`.toLowerCase();
+  const filteredMembers = useMemo(() => {
+    return members.filter(member => {
+      const fullName = `${member.respect}. ${member.name}`.toLowerCase();
       const searchLower = searchTerm.toLowerCase();
       return fullName.includes(searchLower) ||
-             family.family_number.includes(searchTerm) ||
-             family.layout_number.includes(searchTerm) ||
-             (family.family_phone && family.family_phone.toLowerCase().includes(searchLower)) ||
-             (family.notes && family.notes.toLowerCase().includes(searchLower)) ||
-             (family.prayer_points && family.prayer_points.toLowerCase().includes(searchLower));
+             member.member_number.includes(searchTerm) ||
+             member.relation.toLowerCase().includes(searchLower) ||
+             (member.occupation && member.occupation.toLowerCase().includes(searchLower)) ||
+             (member.mobile && member.mobile.toLowerCase().includes(searchLower));
     });
-  }, [families, searchTerm]);
+  }, [members, searchTerm]);
 
-  const totalPages = Math.ceil(filteredFamilies.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentFamilies = filteredFamilies.slice(startIndex, startIndex + itemsPerPage);
+  const currentMembers = filteredMembers.slice(startIndex, startIndex + itemsPerPage);
 
   // Reset to first page when search term changes
   React.useEffect(() => {
@@ -172,56 +184,67 @@ const FamiliesDataGrid = ({ families, onEdit, onDelete, user, currentArea, searc
     setCurrentPage(page);
   };
 
-  const formatFamilyName = (family) => {
-    const respect = family.respect.charAt(0).toUpperCase() + family.respect.slice(1);
-    return `${respect}. ${family.family_name}`;
+  const formatMemberName = (member) => {
+    const respect = member.respect.charAt(0).toUpperCase() + member.respect.slice(1);
+    return `${respect}. ${member.name}`;
   };
 
-  const handleDelete = async (family) => {
-    if (window.confirm(`Are you sure you want to delete the family "${formatFamilyName(family)}"?`)) {
+  const getAboutStatus = (member) => {
+    const statuses = [];
+    if (member.is_baptised === 'yes') {
+      statuses.push('Baptised');
+    }
+    if (member.is_confirmed === 'yes') {
+      statuses.push('Confirmed');
+    }
+    return statuses.length > 0 ? statuses.join(', ') : '-';
+  };
+
+  const handleDelete = async (member) => {
+    if (window.confirm(`Are you sure you want to delete the member "${formatMemberName(member)}"?`)) {
       try {
-        const result = await window.electron.family.delete({
-          familyId: family.id,
+        const result = await window.electron.member.delete({
+          memberId: member.id,
           userId: user.id
         });
         
         if (result.success) {
-          onDelete(family.id);
+          onDelete(member.id);
         } else {
-          alert(result.error || 'Failed to delete family');
+          alert(result.error || 'Failed to delete member');
         }
       } catch (error) {
-        console.error('Error deleting family:', error);
-        alert('Failed to delete family');
+        console.error('Error deleting member:', error);
+        alert('Failed to delete member');
       }
     }
   };
 
-  const handleRightClick = (e, family) => {
+  const handleRightClick = (e, member) => {
     e.preventDefault();
     setContextMenu({
       visible: true,
       x: e.clientX,
       y: e.clientY,
-      family: family
+      member: member
     });
   };
 
   const handleCloseContextMenu = () => {
-    setContextMenu({ visible: false, x: 0, y: 0, family: null });
+    setContextMenu({ visible: false, x: 0, y: 0, member: null });
   };
 
-  const handleContextMenuAction = (action, family) => {
+  const handleContextMenuAction = (action, member) => {
     handleCloseContextMenu();
     switch (action) {
       case 'view':
-        navigate(`/area/${currentArea.id}/family/${family.id}`);
+        onView(member);
         break;
       case 'edit':
-        onEdit(family);
+        onEdit(member);
         break;
       case 'delete':
-        handleDelete(family);
+        handleDelete(member);
         break;
     }
   };
@@ -240,12 +263,12 @@ const FamiliesDataGrid = ({ families, onEdit, onDelete, user, currentArea, searc
     }
   }, [contextMenu.visible]);
 
-  if (families.length === 0) {
+  if (members.length === 0) {
     return (
       <div className={styles.container}>
         <div className={styles.emptyState}>
           <div className={styles.emptyStateText}>
-            No families created yet. Click "Create Family" to add your first family.
+            No family members added yet. Click "Create Member" to add the first member.
           </div>
         </div>
       </div>
@@ -256,42 +279,50 @@ const FamiliesDataGrid = ({ families, onEdit, onDelete, user, currentArea, searc
     <div className={styles.container}>
       {/* Table */}
       <div className={styles.tableContainer}>
-        {filteredFamilies.length === 0 ? (
+        {filteredMembers.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyStateText}>
-              No families match your search criteria.
+              No members match your search criteria.
             </div>
           </div>
         ) : (
           <table className={styles.table}>
             <thead className={styles.tableHeader}>
               <tr>
-                <th className={styles.headerCell}>Family Number</th>
+                <th className={styles.headerCell}>Member Number</th>
                 <th className={styles.headerCell}>Name</th>
-                <th className={styles.headerCell}>Phone Number</th>
-                <th className={styles.headerCell}>Layout Number</th>
-                <th className={styles.headerCell}>Notes</th>
-                <th className={styles.headerCell}>Prayer Points</th>
+                <th className={styles.headerCell}>Age</th>
+                <th className={styles.headerCell}>Relation</th>
+                <th className={styles.headerCell}>Occupation</th>
+                <th className={styles.headerCell}>About</th>
               </tr>
             </thead>
             <tbody>
-              {currentFamilies.map((family) => (
+              {currentMembers.map((member) => (
                 <tr
-                  key={family.id}
+                  key={member.id}
                   className={styles.tableRow}
-                  onContextMenu={(e) => handleRightClick(e, family)}
+                  onContextMenu={(e) => handleRightClick(e, member)}
                 >
-                  <td className={styles.tableCell}>{family.family_number}</td>
-                  <td className={`${styles.tableCell} ${styles.familyName}`}>
-                    {formatFamilyName(family)}
+                  <td className={styles.tableCell}>{member.member_number}</td>
+                  <td className={`${styles.tableCell} ${styles.memberName}`}>
+                    {formatMemberName(member)}
                   </td>
-                  <td className={styles.tableCell}>{family.family_phone || '-'}</td>
-                  <td className={styles.tableCell}>{family.layout_number}</td>
-                  <td className={`${styles.tableCell} ${styles.notes}`} title={family.notes}>
-                    {family.notes || '-'}
+                  <td className={styles.tableCell}>{member.age || '-'}</td>
+                  <td className={`${styles.tableCell} ${styles.relation}`} title={member.relation}>
+                    {member.relation}
                   </td>
-                  <td className={`${styles.tableCell} ${styles.prayerPoints}`} title={family.prayer_points}>
-                    {family.prayer_points || '-'}
+                  <td className={`${styles.tableCell} ${styles.occupation}`} title={member.occupation}>
+                    {member.occupation || '-'}
+                  </td>
+                  <td className={`${styles.tableCell} ${styles.about}`} title={getAboutStatus(member)}>
+                    {getAboutStatus(member) !== '-' ? (
+                      <span className={styles.aboutBadge}>
+                        {getAboutStatus(member)}
+                      </span>
+                    ) : (
+                      '-'
+                    )}
                   </td>
                 </tr>
               ))}
@@ -301,10 +332,10 @@ const FamiliesDataGrid = ({ families, onEdit, onDelete, user, currentArea, searc
       </div>
 
       {/* Pagination */}
-      {filteredFamilies.length > 0 && (
+      {filteredMembers.length > 0 && (
         <div className={styles.pagination}>
           <div className={styles.paginationInfo}>
-            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredFamilies.length)} of {filteredFamilies.length} families
+            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
           </div>
           <div className={styles.paginationControls}>
             <button
@@ -339,21 +370,21 @@ const FamiliesDataGrid = ({ families, onEdit, onDelete, user, currentArea, searc
         >
           <div
             className={styles.contextMenuItem}
-            onClick={() => handleContextMenuAction('view', contextMenu.family)}
+            onClick={() => handleContextMenuAction('view', contextMenu.member)}
           >
             <EyeRegular />
-            View {contextMenu.family && formatFamilyName(contextMenu.family)}
+            View {contextMenu.member && formatMemberName(contextMenu.member)}
           </div>
           <div
             className={styles.contextMenuItem}
-            onClick={() => handleContextMenuAction('edit', contextMenu.family)}
+            onClick={() => handleContextMenuAction('edit', contextMenu.member)}
           >
             <EditRegular />
             Edit
           </div>
           <div
             className={styles.contextMenuItem}
-            onClick={() => handleContextMenuAction('delete', contextMenu.family)}
+            onClick={() => handleContextMenuAction('delete', contextMenu.member)}
           >
             <DeleteRegular />
             Delete
@@ -364,4 +395,4 @@ const FamiliesDataGrid = ({ families, onEdit, onDelete, user, currentArea, searc
   );
 };
 
-export default FamiliesDataGrid;
+export default MembersDataGrid;

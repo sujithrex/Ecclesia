@@ -9,6 +9,7 @@ const ChurchService = require('./backend/churchService.js');
 const AreaService = require('./backend/areaService.js');
 const PrayerCellService = require('./backend/prayerCellService.js');
 const FamilyService = require('./backend/familyService.js');
+const MemberService = require('./backend/memberService.js');
 
 let mainWindow;
 let db;
@@ -19,6 +20,7 @@ let churchService;
 let areaService;
 let prayerCellService;
 let familyService;
+let memberService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -261,6 +263,31 @@ ipcMain.handle('family-get-auto-numbers', async (event, { areaId, userId }) => {
   return await familyService.getAutoNumbers(areaId, userId);
 });
 
+// Member management IPC handlers
+ipcMain.handle('member-create', async (event, { familyId, memberData, userId }) => {
+  return await memberService.createMember(familyId, memberData, userId);
+});
+
+ipcMain.handle('member-get-by-family', async (event, { familyId, userId }) => {
+  return await memberService.getMembersByFamily(familyId, userId);
+});
+
+ipcMain.handle('member-get-by-id', async (event, { memberId, userId }) => {
+  return await memberService.getMemberById(memberId, userId);
+});
+
+ipcMain.handle('member-update', async (event, { memberId, memberData, userId }) => {
+  return await memberService.updateMember(memberId, memberData, userId);
+});
+
+ipcMain.handle('member-delete', async (event, { memberId, userId }) => {
+  return await memberService.deleteMember(memberId, userId);
+});
+
+ipcMain.handle('member-get-auto-numbers', async (event, { familyId, userId }) => {
+  return await memberService.getAutoNumbers(familyId, userId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -383,6 +410,7 @@ app.on('ready', async () => {
   areaService = new AreaService(db);
   prayerCellService = new PrayerCellService(db);
   familyService = new FamilyService(db);
+  memberService = new MemberService(db);
   
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

@@ -80,5 +80,15 @@ contextBridge.exposeInMainWorld('electron', {
     update: (data) => ipcRenderer.invoke('family-update', data),
     delete: (data) => ipcRenderer.invoke('family-delete', data),
     getAutoNumbers: (data) => ipcRenderer.invoke('family-get-auto-numbers', data)
+  },
+
+  // Member management API
+  member: {
+    create: (data) => ipcRenderer.invoke('member-create', data),
+    getByFamily: (data) => ipcRenderer.invoke('member-get-by-family', data),
+    getById: (data) => ipcRenderer.invoke('member-get-by-id', data),
+    update: (data) => ipcRenderer.invoke('member-update', data),
+    delete: (data) => ipcRenderer.invoke('member-delete', data),
+    getAutoNumbers: (data) => ipcRenderer.invoke('member-get-auto-numbers', data)
   }
 });

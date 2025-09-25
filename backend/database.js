@@ -152,6 +152,38 @@ class DatabaseManager {
                     )
                 `);
 
+                // Members table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS members (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        member_id TEXT UNIQUE NOT NULL,
+                        member_number TEXT NOT NULL,
+                        family_id INTEGER NOT NULL,
+                        respect TEXT NOT NULL CHECK (respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')),
+                        name TEXT NOT NULL,
+                        relation TEXT NOT NULL,
+                        sex TEXT NOT NULL CHECK (sex IN ('male', 'female')),
+                        mobile TEXT,
+                        dob DATE,
+                        age INTEGER,
+                        is_married TEXT CHECK (is_married IN ('yes', 'no')) DEFAULT 'no',
+                        date_of_marriage DATE,
+                        occupation TEXT,
+                        working_place TEXT,
+                        is_baptised TEXT CHECK (is_baptised IN ('yes', 'no')) DEFAULT 'no',
+                        date_of_baptism DATE,
+                        is_confirmed TEXT CHECK (is_confirmed IN ('yes', 'no')) DEFAULT 'no',
+                        date_of_confirmation DATE,
+                        is_alive TEXT CHECK (is_alive IN ('alive', 'death')) DEFAULT 'alive',
+                        image TEXT,
+                        aadhar_number TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE CASCADE,
+                        UNIQUE(family_id, member_number)
+                    )
+                `);
+
                 // Settings table for app configurations
                 this.db.run(`
                     CREATE TABLE IF NOT EXISTS settings (
@@ -1080,6 +1112,128 @@ class DatabaseManager {
                     const nextNumber = (row?.max_number || 0) + 1;
                     const formattedNumber = String(nextNumber).padStart(3, '0');
                     resolve(formattedNumber);
+                }
+            });
+        });
+    }
+
+    // Members management methods
+    async createMember(familyId, memberData) {
+        return new Promise((resolve) => {
+            const { member_id, member_number, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number } = memberData;
+            this.db.run(`
+                INSERT INTO members (member_id, member_number, family_id, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [member_id, member_number, familyId, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getMemberById(id) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM members WHERE id = ?', [id], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getMembersByFamily(familyId) {
+        return new Promise((resolve, reject) => {
+            this.db.all(`
+                SELECT * FROM members
+                WHERE family_id = ?
+                ORDER BY CAST(member_number AS INTEGER)
+            `, [familyId], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async updateMember(id, memberData) {
+        return new Promise((resolve) => {
+            const { member_number, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number } = memberData;
+            this.db.run(`
+                UPDATE members
+                SET member_number = ?, respect = ?, name = ?, relation = ?, sex = ?, mobile = ?, dob = ?, age = ?, is_married = ?, date_of_marriage = ?, occupation = ?, working_place = ?, is_baptised = ?, date_of_baptism = ?, is_confirmed = ?, date_of_confirmation = ?, is_alive = ?, image = ?, aadhar_number = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [member_number, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number, id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deleteMember(id) {
+        return new Promise((resolve) => {
+            this.db.run('DELETE FROM members WHERE id = ?', [id], function(err) {
+                if (err) {
+                    resolve({ success: false, error: err.message });
+                } else if (this.changes === 0) {
+                    resolve({ success: false, error: 'Member not found' });
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async getMemberByFamilyAndNumber(familyId, memberNumber) {
+        return new Promise((resolve, reject) => {
+            this.db.get('SELECT * FROM members WHERE family_id = ? AND member_number = ?', [familyId, memberNumber], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getNextMemberNumber(familyId) {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT MAX(CAST(member_number AS INTEGER)) as max_number
+                FROM members
+                WHERE family_id = ?
+            `, [familyId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    const nextNumber = (row?.max_number || 0) + 1;
+                    const formattedNumber = String(nextNumber).padStart(3, '0');
+                    resolve(formattedNumber);
+                }
+            });
+        });
+    }
+
+    async getNextMemberId() {
+        return new Promise((resolve, reject) => {
+            this.db.get(`
+                SELECT COUNT(*) + 1 as next_id FROM members
+            `, (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    const nextId = row?.next_id || 1;
+                    const formattedId = `M${String(nextId).padStart(3, '0')}`;
+                    resolve(formattedId);
                 }
             });
         });

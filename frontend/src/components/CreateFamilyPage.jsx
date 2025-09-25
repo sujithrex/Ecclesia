@@ -396,13 +396,22 @@ const CreateFamilyPage = ({
       }
 
       if (result.success) {
+        // Store the family ID for new families
+        if (!editMode && result.family && result.family.id) {
+          setSavedFamilyId(result.family.id);
+        }
+
         switch (action) {
           case 'save':
             // Just save and stay on page
             setErrors({ success: `Family ${editMode ? 'updated' : 'created'} successfully` });
             break;
           case 'save-and-back':
-            navigate(`/area/${areaId}`);
+            if (editMode) {
+              navigate(`/area/${areaId}/family/${familyId}`);
+            } else {
+              navigate(`/area/${areaId}`);
+            }
             break;
           case 'save-and-continue':
             // Save and clear form for new entry
@@ -435,8 +444,13 @@ const CreateFamilyPage = ({
   };
 
   const handleCancel = () => {
-    navigate(`/area/${areaId}`);
+    if (editMode) {
+      navigate(`/area/${areaId}/family/${familyId}`);
+    } else {
+      navigate(`/area/${areaId}`);
+    }
   };
+
 
   const getPrayerCellDisplayName = (prayerCell) => {
     return `${prayerCell.prayer_cell_identity} - ${prayerCell.prayer_cell_name}`;
@@ -719,16 +733,16 @@ const CreateFamilyPage = ({
                 disabled={loading}
                 onClick={() => handleSave('save-and-back')}
               >
-                {loading ? <Spinner size="tiny" /> : 'Save & Back to Area'}
+                {loading ? <Spinner size="tiny" /> : editMode ? 'Save & Back to Family' : 'Save & Back to Area'}
               </Button>
               
               {!editMode && (
                 <Button
                   className={styles.saveContinueButton}
                   disabled={loading}
-                  onClick={() => handleSave('save-and-continue')}
+                  onClick={() => handleSave('save-and-go-to-family')}
                 >
-                  {loading ? <Spinner size="tiny" /> : 'Save & Continue'}
+                  {loading ? <Spinner size="tiny" /> : 'Save & Go to Family'}
                 </Button>
               )}
             </div>
