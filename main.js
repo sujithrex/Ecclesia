@@ -288,6 +288,10 @@ ipcMain.handle('member-get-auto-numbers', async (event, { familyId, userId }) =>
   return await memberService.getAutoNumbers(familyId, userId);
 });
 
+ipcMain.handle('member-get-family-members', async (event, { familyId, userId, excludeMemberId }) => {
+  return await memberService.getFamilyMembers(familyId, userId, excludeMemberId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {

@@ -158,16 +158,36 @@ const MembersDataGrid = ({ members, onView, onEdit, onDelete, user, currentFamil
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, member: null });
   const itemsPerPage = 7;
 
+  // Helper functions
+  const getSpouseName = (member) => {
+    if (!member.spouse_id || member.is_married !== 'yes') {
+      return null;
+    }
+    
+    const spouse = members.find(m => m.id === member.spouse_id);
+    return spouse ? `${spouse.respect.charAt(0).toUpperCase() + spouse.respect.slice(1)}. ${spouse.name}` : null;
+  };
+
+  const getMaritalStatus = (member) => {
+    if (member.is_married === 'yes') {
+      const spouseName = getSpouseName(member);
+      return spouseName ? `Married to ${spouseName}` : 'Married';
+    }
+    return 'Single';
+  };
+
   // Filter and paginate data
   const filteredMembers = useMemo(() => {
     return members.filter(member => {
       const fullName = `${member.respect}. ${member.name}`.toLowerCase();
       const searchLower = searchTerm.toLowerCase();
+      const spouseName = getSpouseName(member);
       return fullName.includes(searchLower) ||
              member.member_number.includes(searchTerm) ||
              member.relation.toLowerCase().includes(searchLower) ||
              (member.occupation && member.occupation.toLowerCase().includes(searchLower)) ||
-             (member.mobile && member.mobile.toLowerCase().includes(searchLower));
+             (member.mobile && member.mobile.toLowerCase().includes(searchLower)) ||
+             (spouseName && spouseName.toLowerCase().includes(searchLower));
     });
   }, [members, searchTerm]);
 
@@ -293,6 +313,7 @@ const MembersDataGrid = ({ members, onView, onEdit, onDelete, user, currentFamil
                 <th className={styles.headerCell}>Name</th>
                 <th className={styles.headerCell}>Age</th>
                 <th className={styles.headerCell}>Relation</th>
+                <th className={styles.headerCell}>Marital Status</th>
                 <th className={styles.headerCell}>Occupation</th>
                 <th className={styles.headerCell}>About</th>
               </tr>
@@ -311,6 +332,9 @@ const MembersDataGrid = ({ members, onView, onEdit, onDelete, user, currentFamil
                   <td className={styles.tableCell}>{member.age || '-'}</td>
                   <td className={`${styles.tableCell} ${styles.relation}`} title={member.relation}>
                     {member.relation}
+                  </td>
+                  <td className={`${styles.tableCell} ${styles.relation}`} title={getMaritalStatus(member)}>
+                    {getMaritalStatus(member)}
                   </td>
                   <td className={`${styles.tableCell} ${styles.occupation}`} title={member.occupation}>
                     {member.occupation || '-'}

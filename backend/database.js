@@ -168,6 +168,7 @@ class DatabaseManager {
                         age INTEGER,
                         is_married TEXT CHECK (is_married IN ('yes', 'no')) DEFAULT 'no',
                         date_of_marriage DATE,
+                        spouse_id INTEGER,
                         occupation TEXT,
                         working_place TEXT,
                         is_baptised TEXT CHECK (is_baptised IN ('yes', 'no')) DEFAULT 'no',
@@ -180,6 +181,7 @@ class DatabaseManager {
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE CASCADE,
+                        FOREIGN KEY (spouse_id) REFERENCES members (id) ON DELETE SET NULL,
                         UNIQUE(family_id, member_number)
                     )
                 `);
@@ -197,7 +199,50 @@ class DatabaseManager {
                         reject(err);
                     } else {
                         console.log('Database tables initialized successfully');
+                        this.runMigrations();
                         this.createDefaultUser();
+                        resolve();
+                    }
+                });
+            });
+        });
+    }
+
+    async runMigrations() {
+        // Migration 1: Add spouse_id column to members table if it doesn't exist
+        return new Promise((resolve) => {
+            this.db.get("PRAGMA table_info(members)", (err, rows) => {
+                if (err) {
+                    console.error('Error checking table info:', err);
+                    resolve();
+                    return;
+                }
+
+                // Check if spouse_id column exists by getting all columns
+                this.db.all("PRAGMA table_info(members)", (err, columns) => {
+                    if (err) {
+                        console.error('Error checking columns:', err);
+                        resolve();
+                        return;
+                    }
+
+                    const hasSpouseId = columns.some(col => col.name === 'spouse_id');
+                    
+                    if (!hasSpouseId) {
+                        console.log('Adding spouse_id column to members table...');
+                        this.db.run(`
+                            ALTER TABLE members
+                            ADD COLUMN spouse_id INTEGER REFERENCES members(id) ON DELETE SET NULL
+                        `, (alterErr) => {
+                            if (alterErr) {
+                                console.error('Error adding spouse_id column:', alterErr);
+                            } else {
+                                console.log('spouse_id column added successfully');
+                            }
+                            resolve();
+                        });
+                    } else {
+                        console.log('spouse_id column already exists');
                         resolve();
                     }
                 });
@@ -1120,11 +1165,11 @@ class DatabaseManager {
     // Members management methods
     async createMember(familyId, memberData) {
         return new Promise((resolve) => {
-            const { member_id, member_number, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number } = memberData;
+            const { member_id, member_number, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, spouse_id, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number } = memberData;
             this.db.run(`
-                INSERT INTO members (member_id, member_number, family_id, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [member_id, member_number, familyId, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number], function(err) {
+                INSERT INTO members (member_id, member_number, family_id, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, spouse_id, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [member_id, member_number, familyId, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, spouse_id, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number], function(err) {
                 if (err) {
                     resolve({ success: false, error: err.message });
                 } else {
@@ -1164,12 +1209,12 @@ class DatabaseManager {
 
     async updateMember(id, memberData) {
         return new Promise((resolve) => {
-            const { member_number, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number } = memberData;
+            const { member_number, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, spouse_id, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number } = memberData;
             this.db.run(`
                 UPDATE members
-                SET member_number = ?, respect = ?, name = ?, relation = ?, sex = ?, mobile = ?, dob = ?, age = ?, is_married = ?, date_of_marriage = ?, occupation = ?, working_place = ?, is_baptised = ?, date_of_baptism = ?, is_confirmed = ?, date_of_confirmation = ?, is_alive = ?, image = ?, aadhar_number = ?, updated_at = CURRENT_TIMESTAMP
+                SET member_number = ?, respect = ?, name = ?, relation = ?, sex = ?, mobile = ?, dob = ?, age = ?, is_married = ?, date_of_marriage = ?, spouse_id = ?, occupation = ?, working_place = ?, is_baptised = ?, date_of_baptism = ?, is_confirmed = ?, date_of_confirmation = ?, is_alive = ?, image = ?, aadhar_number = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
-            `, [member_number, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number, id], function(err) {
+            `, [member_number, respect, name, relation, sex, mobile, dob, age, is_married, date_of_marriage, spouse_id, occupation, working_place, is_baptised, date_of_baptism, is_confirmed, date_of_confirmation, is_alive, image, aadhar_number, id], function(err) {
                 if (err) {
                     resolve({ success: false, error: err.message });
                 } else {
@@ -1216,7 +1261,7 @@ class DatabaseManager {
                     reject(err);
                 } else {
                     const nextNumber = (row?.max_number || 0) + 1;
-                    const formattedNumber = String(nextNumber).padStart(3, '0');
+                    const formattedNumber = String(nextNumber).padStart(2, '0');
                     resolve(formattedNumber);
                 }
             });

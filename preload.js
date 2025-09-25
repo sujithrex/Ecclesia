@@ -89,6 +89,7 @@ contextBridge.exposeInMainWorld('electron', {
     getById: (data) => ipcRenderer.invoke('member-get-by-id', data),
     update: (data) => ipcRenderer.invoke('member-update', data),
     delete: (data) => ipcRenderer.invoke('member-delete', data),
-    getAutoNumbers: (data) => ipcRenderer.invoke('member-get-auto-numbers', data)
+    getAutoNumbers: (data) => ipcRenderer.invoke('member-get-auto-numbers', data),
+    getFamilyMembers: (data) => ipcRenderer.invoke('member-get-family-members', data)
   }
 });

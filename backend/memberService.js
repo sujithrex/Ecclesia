@@ -92,8 +92,15 @@ class MemberService {
             });
             
             if (result.success) {
+                const memberId = result.id;
+                
+                // Handle spouse synchronization if spouse is selected
+                if (memberData.spouse_id && memberData.is_married === 'yes') {
+                    await this.syncSpouseConnection(memberId, memberData.spouse_id, memberData.date_of_marriage);
+                }
+                
                 // Return the created member details
-                const member = await this.db.getMemberById(result.id);
+                const member = await this.db.getMemberById(memberId);
                 return {
                     success: true,
                     message: 'Member created successfully',
@@ -257,6 +264,14 @@ class MemberService {
             });
             
             if (result.success) {
+                // Handle spouse synchronization if spouse is selected and married
+                if (memberData.spouse_id && memberData.is_married === 'yes') {
+                    await this.syncSpouseConnection(memberId, memberData.spouse_id, memberData.date_of_marriage);
+                } else if (memberData.is_married === 'no') {
+                    // If unmarried, clear any existing spouse connections
+                    await this.clearSpouseConnection(memberId);
+                }
+                
                 // Return the updated member details
                 const updatedMember = await this.db.getMemberById(memberId);
                 return {
@@ -351,6 +366,117 @@ class MemberService {
         } catch (error) {
             console.error('Get auto numbers error:', error);
             return { success: false, error: 'Failed to get auto numbers' };
+        }
+    }
+
+    async getFamilyMembers(familyId, userId, excludeMemberId = null) {
+        try {
+            // Get family info and verify user access
+            const family = await this.db.getFamilyById(familyId);
+            if (!family) {
+                return { success: false, error: 'Family not found' };
+            }
+
+            // Get area info to verify church access
+            const area = await this.db.getAreaById(family.area_id);
+            if (!area) {
+                return { success: false, error: 'Area not found' };
+            }
+
+            // Verify user has access to the church that owns this family
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === area.church_id);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this family' };
+            }
+
+            let members = await this.db.getMembersByFamily(familyId);
+            
+            // Filter out the current member if excludeMemberId is provided
+            if (excludeMemberId) {
+                members = members.filter(member => member.id !== excludeMemberId);
+            }
+
+            // Filter to only alive members (potential spouses)
+            members = members.filter(member => member.is_alive === 'alive');
+
+            return {
+                success: true,
+                members: members
+            };
+        } catch (error) {
+            console.error('Get family members error:', error);
+            return { success: false, error: 'Failed to get family members' };
+        }
+    }
+
+    async syncSpouseConnection(memberId, spouseId, marriageDate) {
+        try {
+            // Get both members
+            const member = await this.db.getMemberById(memberId);
+            const spouse = await this.db.getMemberById(spouseId);
+
+            if (!member || !spouse) {
+                throw new Error('Member or spouse not found');
+            }
+
+            // Update both members to point to each other as spouses
+            await this.db.updateMember(memberId, {
+                ...member,
+                is_married: 'yes',
+                date_of_marriage: marriageDate,
+                spouse_id: spouseId
+            });
+
+            await this.db.updateMember(spouseId, {
+                ...spouse,
+                is_married: 'yes',
+                date_of_marriage: marriageDate,
+                spouse_id: memberId
+            });
+
+            return { success: true };
+        } catch (error) {
+            console.error('Sync spouse connection error:', error);
+            return { success: false, error: 'Failed to sync spouse connection' };
+        }
+    }
+
+    async clearSpouseConnection(memberId) {
+        try {
+            // Get the member
+            const member = await this.db.getMemberById(memberId);
+            if (!member) {
+                throw new Error('Member not found');
+            }
+
+            // If member has a spouse, clear both connections
+            if (member.spouse_id) {
+                const spouse = await this.db.getMemberById(member.spouse_id);
+                if (spouse) {
+                    // Clear spouse's connection to this member
+                    await this.db.updateMember(member.spouse_id, {
+                        ...spouse,
+                        is_married: 'no',
+                        date_of_marriage: null,
+                        spouse_id: null
+                    });
+                }
+            }
+
+            // Clear this member's spouse connection
+            await this.db.updateMember(memberId, {
+                ...member,
+                is_married: 'no',
+                date_of_marriage: null,
+                spouse_id: null
+            });
+
+            return { success: true };
+        } catch (error) {
+            console.error('Clear spouse connection error:', error);
+            return { success: false, error: 'Failed to clear spouse connection' };
         }
     }
 }

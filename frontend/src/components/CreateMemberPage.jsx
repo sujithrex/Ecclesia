@@ -272,6 +272,8 @@ const CreateMemberPage = ({
   const [error, setError] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [familyMembers, setFamilyMembers] = useState([]);
+  const [loadingFamilyMembers, setLoadingFamilyMembers] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -286,6 +288,7 @@ const CreateMemberPage = ({
     age: '',
     is_married: 'no',
     date_of_marriage: '',
+    spouse_id: '',
     occupation: '',
     working_place: '',
     is_baptised: 'no',
@@ -318,6 +321,7 @@ const CreateMemberPage = ({
         age: initialData.age || '',
         is_married: initialData.is_married || 'no',
         date_of_marriage: initialData.date_of_marriage || '',
+        spouse_id: initialData.spouse_id || '',
         occupation: initialData.occupation || '',
         working_place: initialData.working_place || '',
         is_baptised: initialData.is_baptised || 'no',
@@ -335,6 +339,13 @@ const CreateMemberPage = ({
       }
     }
   }, [isEditMode, initialData]);
+
+  // Load family members when the component loads and member is married (edit mode)
+  useEffect(() => {
+    if (currentFamily && formData.is_married === 'yes' && (isEditMode || familyMembers.length === 0)) {
+      loadFamilyMembers();
+    }
+  }, [currentFamily, formData.is_married, isEditMode]);
 
   const loadInitialData = async () => {
     setLoading(true);
@@ -398,6 +409,31 @@ const CreateMemberPage = ({
     }
   };
 
+  const loadFamilyMembers = async () => {
+    if (!currentFamily || !user) return;
+
+    setLoadingFamilyMembers(true);
+    try {
+      const result = await window.electron.member.getFamilyMembers({
+        familyId: currentFamily.id,
+        userId: user.id,
+        excludeMemberId: isEditMode ? parseInt(memberId) : null
+      });
+
+      if (result.success) {
+        setFamilyMembers(result.members || []);
+      } else {
+        console.error('Failed to load family members:', result.error);
+        setFamilyMembers([]);
+      }
+    } catch (error) {
+      console.error('Error loading family members:', error);
+      setFamilyMembers([]);
+    } finally {
+      setLoadingFamilyMembers(false);
+    }
+  };
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
@@ -419,13 +455,22 @@ const CreateMemberPage = ({
       }));
     }
 
-    // Clear conditional fields when main field changes
-    if (field === 'is_married' && value === 'no') {
-      setFormData(prev => ({
-        ...prev,
-        date_of_marriage: ''
-      }));
+    // Handle marriage status change
+    if (field === 'is_married') {
+      if (value === 'no') {
+        setFormData(prev => ({
+          ...prev,
+          date_of_marriage: '',
+          spouse_id: ''
+        }));
+        setFamilyMembers([]);
+      } else if (value === 'yes') {
+        // Load family members for spouse selection
+        loadFamilyMembers();
+      }
     }
+
+    // Clear conditional fields when main field changes
     if (field === 'is_baptised' && value === 'no') {
       setFormData(prev => ({
         ...prev,
@@ -474,6 +519,17 @@ const CreateMemberPage = ({
     if (!RELATION_OPTIONS.includes(formData.relation)) {
       setError('Please select a valid relation from the dropdown');
       return false;
+    }
+
+    // Note: Date of marriage is optional even when married
+
+    // Note: spouse_id is optional - members can be married without selecting a family spouse
+    if (formData.is_married === 'yes' && formData.spouse_id) {
+      // Additional validation: ensure spouse is not the same person (in edit mode)
+      if (isEditMode && parseInt(formData.spouse_id) === parseInt(memberId)) {
+        setError('A member cannot be their own spouse');
+        return false;
+      }
     }
 
     return true;
@@ -854,6 +910,29 @@ const CreateMemberPage = ({
                     onChange={(e) => handleInputChange('date_of_marriage', e.target.value)}
                     className={styles.input}
                   />
+                  
+                  <label className={styles.label} style={{ marginTop: '16px' }}>
+                    Spouse {loadingFamilyMembers && <span style={{ color: '#605e5c', fontSize: '12px' }}>(Loading...)</span>}
+                  </label>
+                  <select
+                    value={formData.spouse_id}
+                    onChange={(e) => handleInputChange('spouse_id', e.target.value)}
+                    className={styles.select}
+                    disabled={loadingFamilyMembers}
+                  >
+                    <option value="">Select spouse from family members</option>
+                    {familyMembers.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.respect.charAt(0).toUpperCase() + member.respect.slice(1)}. {member.name}
+                        {member.relation && ` (${member.relation})`}
+                      </option>
+                    ))}
+                  </select>
+                  {familyMembers.length === 0 && !loadingFamilyMembers && (
+                    <div style={{ fontSize: '12px', color: '#605e5c', marginTop: '4px' }}>
+                      No other family members available for spouse selection
+                    </div>
+                  )}
                 </div>
               )}
             </div>
