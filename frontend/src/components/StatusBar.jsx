@@ -515,7 +515,8 @@ const StatusBar = ({
   };
 
   const handleChurchSelect = async (church) => {
-    if (church.id !== currentChurch?.id && onChurchChange) {
+    // Switch church if it's different OR if we're currently in pastorate view
+    if ((church.id !== currentChurch?.id || currentView === "pastorate") && onChurchChange) {
       try {
         const result = await window.electron.church.select({
           userId: user.id,
@@ -529,6 +530,9 @@ const StatusBar = ({
       } catch (error) {
         console.error('Switch church error:', error);
       }
+    } else {
+      // Just close dropdown if same church is selected and we're already in church view
+      setShowChurchDropdown(false);
     }
   };
 
