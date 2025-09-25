@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { makeStyles } from '@fluentui/react-components';
 import StatusBar from './StatusBar';
 import ChurchDashboard from './ChurchDashboard';
@@ -107,16 +107,36 @@ const Dashboard = ({
   const [userImageUrl, setUserImageUrl] = useState(null);
   const [searchParams] = useSearchParams();
   const viewParam = searchParams.get('view');
-  const [currentView, setCurrentView] = useState(() => {
-    // Check URL parameter first, otherwise default to pastorate
+  const navigate = useNavigate();
+  
+  // Auto-redirect to appropriate dashboard on component mount
+  useEffect(() => {
+    if (!user || !currentPastorate) return;
+    
+    console.log('🔍 Dashboard redirecting - currentChurch:', currentChurch, 'currentPastorate:', currentPastorate);
+    
+    // Check URL parameter first
     if (viewParam === 'church') {
-      return 'church';
+      console.log('📊 Redirecting to church dashboard from URL param');
+      navigate('/church-dashboard', { replace: true });
+      return;
     } else if (viewParam === 'pastorate') {
-      return 'pastorate';
+      console.log('🏛️ Redirecting to pastorate dashboard from URL param');
+      navigate('/pastorate-dashboard', { replace: true });
+      return;
     }
+    
+    // If we have a church selected, redirect to church dashboard
+    if (currentChurch) {
+      console.log('⛪ Redirecting to church dashboard since church is selected');
+      navigate('/church-dashboard', { replace: true });
+      return;
+    }
+    
     // Default behavior - pastorate dashboard
-    return 'pastorate';
-  });
+    console.log('🏛️ Redirecting to pastorate dashboard');
+    navigate('/pastorate-dashboard', { replace: true });
+  }, [user, currentPastorate, currentChurch, viewParam, navigate]);
 
   // Load user image when user or user.image changes
   useEffect(() => {
@@ -166,66 +186,11 @@ const Dashboard = ({
     return 'User';
   };
 
-  // Handler for switching to pastorate dashboard
-  const handlePastorateDashboard = () => {
-    setCurrentView('pastorate');
-  };
-
   // Handler for switching back to church dashboard
   const handleChurchSelect = (church) => {
-    setCurrentView('church');
     onChurchChange(church);
+    navigate('/church-dashboard');
   };
-
-  // If pastorate view is selected, show Pastorate Dashboard
-  if (currentView === 'pastorate' && currentPastorate) {
-    return (
-      <PastorateDashboard
-        user={user}
-        onLogout={onLogout}
-        onProfileClick={onProfileClick}
-        currentPastorate={currentPastorate}
-        userPastorates={userPastorates}
-        onPastorateChange={onPastorateChange}
-        onCreatePastorate={onCreatePastorate}
-        onEditPastorate={onEditPastorate}
-        onDeletePastorate={onDeletePastorate}
-        currentChurch={currentChurch}
-        userChurches={userChurches}
-        onChurchChange={handleChurchSelect}
-        onCreateChurch={onCreateChurch}
-        onEditChurch={onEditChurch}
-        onDeleteChurch={onDeleteChurch}
-        currentView={currentView}
-        onPastorateDashboard={handlePastorateDashboard}
-      />
-    );
-  }
-
-  // If a church is selected, show the Church Dashboard
-  if (currentChurch && currentPastorate) {
-    return (
-      <ChurchDashboard
-        user={user}
-        onLogout={onLogout}
-        onProfileClick={onProfileClick}
-        currentPastorate={currentPastorate}
-        userPastorates={userPastorates}
-        onPastorateChange={onPastorateChange}
-        onCreatePastorate={onCreatePastorate}
-        onEditPastorate={onEditPastorate}
-        onDeletePastorate={onDeletePastorate}
-        currentChurch={currentChurch}
-        userChurches={userChurches}
-        onChurchChange={handleChurchSelect}
-        onCreateChurch={onCreateChurch}
-        onEditChurch={onEditChurch}
-        onDeleteChurch={onDeleteChurch}
-        currentView={currentView}
-        onPastorateDashboard={handlePastorateDashboard}
-      />
-    );
-  }
 
   // Otherwise, show the General Dashboard
   return (
@@ -282,8 +247,7 @@ const Dashboard = ({
         onCreateChurch={onCreateChurch}
         onEditChurch={onEditChurch}
         onDeleteChurch={onDeleteChurch}
-        currentView={currentView}
-        onPastorateDashboard={handlePastorateDashboard}
+        currentView="dashboard"
       />
     </div>
   );

@@ -264,7 +264,7 @@ const AreaPage = ({
   };
 
   const handleBackToDashboard = () => {
-    navigate('/dashboard');
+    navigate('/church-dashboard');
   };
 
   // Statistics - calculate from families data

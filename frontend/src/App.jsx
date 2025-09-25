@@ -22,6 +22,8 @@ import MemberDetailsPage from './components/MemberDetailsPage';
 import { LoadingProvider } from './contexts/LoadingContext';
 import PastorateSettingsPage from './components/PastorateSettingsPage';
 import ChurchSettingsPage from './components/ChurchSettingsPage';
+import PastorateDashboardPage from './components/PastorateDashboardPage';
+import ChurchDashboardPage from './components/ChurchDashboardPage';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -112,9 +114,9 @@ function App() {
           
           if (lastSelectedResult.success && lastSelectedResult.church &&
               lastSelectedResult.church.pastorate_id === pastorate.id) {
-            // Has last selected church in current pastorate - auto-select it
+            // Has last selected church in current pastorate - set it but navigate to pastorate dashboard
             setCurrentChurch(lastSelectedResult.church);
-            navigate('/dashboard');
+            navigate('/pastorate-dashboard');
           } else {
             // Has churches but no last selected in this pastorate - auto-select first church
             setCurrentChurch(churches[0]);
@@ -123,7 +125,7 @@ function App() {
               userId: userData.id,
               churchId: churches[0].id
             });
-            navigate('/dashboard');
+            navigate('/pastorate-dashboard');
           }
         }
       } else {
@@ -213,7 +215,14 @@ function App() {
   };
 
   const handleBackToDashboard = () => {
-    navigate('/dashboard');
+    // Navigate to the appropriate dashboard based on current context
+    if (currentChurch) {
+      navigate('/church-dashboard');
+    } else if (currentPastorate) {
+      navigate('/pastorate-dashboard');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const handleProfileUpdate = (updatedUser) => {
@@ -326,13 +335,13 @@ function App() {
     setShowCreateChurchModal(false);
     setEditingChurch(null);
     setIsChurchCreationMandatory(false);
-    navigate('/dashboard');
+    navigate('/pastorate-dashboard');
   };
 
   const handleChurchSelected = (church) => {
     setCurrentChurch(church);
     setShowChurchSelectionModal(false);
-    navigate('/dashboard');
+    navigate('/pastorate-dashboard');
   };
 
   const handleChurchChange = (church) => {
@@ -433,6 +442,58 @@ function App() {
           element={
             user ? (
               <Dashboard
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/pastorate-dashboard"
+          element={
+            user ? (
+              <PastorateDashboardPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/church-dashboard"
+          element={
+            user ? (
+              <ChurchDashboardPage
                 user={user}
                 currentPastorate={currentPastorate}
                 userPastorates={userPastorates}

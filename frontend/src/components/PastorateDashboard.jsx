@@ -273,7 +273,7 @@ const PastorateDashboard = ({
     <div className={styles.container}>
       {/* Breadcrumb Navigation */}
       <Breadcrumb
-        pageTitle={`Pastorate Dashboard - ${currentPastorate.pastorate_name}`}
+        pageTitle={`${currentPastorate.pastorate_name}`}
         breadcrumbs={[
           {
             label: 'Pastorate Dashboard',

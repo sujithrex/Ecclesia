@@ -351,7 +351,7 @@ const MemberDetailsPage = ({
   };
 
   const handleBackToDashboard = () => {
-    navigate('/dashboard');
+    navigate('/church-dashboard');
   };
 
   const handleBackToArea = () => {

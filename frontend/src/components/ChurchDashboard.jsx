@@ -363,15 +363,15 @@ const ChurchDashboard = ({
     <div className={styles.container}>
       {/* Breadcrumb Navigation */}
       <Breadcrumb
-        pageTitle={`${currentPastorate.pastorate_short_name} - ${currentChurch.church_name}`}
+        pageTitle={`${currentChurch.church_name}`}
         breadcrumbs={[
           {
-            label: 'Dashboard',
+            label: `${currentPastorate.pastorate_short_name} Dashboard`,
             icon: <HomeRegular />,
-            onClick: () => navigate('/dashboard')
+            onClick: () => navigate('/pastorate-dashboard')
           },
           {
-            label: `${currentPastorate.pastorate_short_name} - ${currentChurch.church_name}`,
+            label: `${currentChurch.church_name}`,
             current: true
           }
         ]}

@@ -588,7 +588,7 @@ const ProfilePage = ({
           {
             label: 'Dashboard',
             icon: <HomeRegular />,
-            onClick: () => navigate('/dashboard')
+            onClick: () => navigate('/pastorate-dashboard')
           },
           {
             label: 'Profile',

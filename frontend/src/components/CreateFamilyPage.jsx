@@ -238,7 +238,7 @@ const CreateFamilyPage = ({
     setLoadingArea(true);
     try {
       if (!currentChurch) {
-        navigate('/dashboard');
+        navigate('/church-dashboard');
         return;
       }
 
@@ -253,15 +253,15 @@ const CreateFamilyPage = ({
         if (area) {
           setCurrentArea(area);
         } else {
-          navigate('/dashboard');
+          navigate('/church-dashboard');
         }
       } else {
         console.error('Failed to load areas:', areasResult.error);
-        navigate('/dashboard');
+        navigate('/church-dashboard');
       }
     } catch (error) {
       console.error('Error loading area info:', error);
-      navigate('/dashboard');
+      navigate('/church-dashboard');
     } finally {
       setLoadingArea(false);
     }
@@ -546,15 +546,11 @@ const CreateFamilyPage = ({
           {
             label: 'Dashboard',
             icon: <HomeRegular />,
-            onClick: () => navigate('/dashboard')
-          },
-          {
-            label: currentPastorate?.pastorate_short_name || 'Pastorate',
-            onClick: () => navigate('/dashboard')
+            onClick: () => navigate('/pastorate-dashboard')
           },
           {
             label: currentChurch?.church_name || 'Church',
-            onClick: () => navigate('/dashboard')
+            onClick: () => navigate('/church-dashboard')
           },
           {
             label: currentArea.area_name,

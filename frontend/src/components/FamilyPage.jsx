@@ -326,7 +326,7 @@ const FamilyPage = ({
   };
 
   const handleBackToDashboard = () => {
-    navigate('/dashboard');
+    navigate('/church-dashboard');
   };
 
   const formatFamilyName = (family) => {

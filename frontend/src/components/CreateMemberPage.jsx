@@ -600,7 +600,7 @@ const CreateMemberPage = ({
   };
 
   const handleBackToDashboard = () => {
-    navigate('/dashboard');
+    navigate('/church-dashboard');
   };
 
   const handleBackToArea = () => {
