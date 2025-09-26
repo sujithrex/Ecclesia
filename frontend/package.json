@@ -12,6 +12,8 @@
   "dependencies": {
     "@fluentui/react-components": "^9.70.0",
     "@fluentui/react-icons": "^2.0.310",
+    "html2canvas": "^1.4.1",
+    "pdfmake": "^0.2.20",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1",

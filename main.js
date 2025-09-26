@@ -303,6 +303,10 @@ ipcMain.handle('family-get-auto-numbers', async (event, { areaId, userId }) => {
   return await familyService.getAutoNumbers(areaId, userId);
 });
 
+ipcMain.handle('family-get-by-id', async (event, { familyId, userId }) => {
+  return await familyService.getFamilyById(familyId, userId);
+});
+
 // Member management IPC handlers
 ipcMain.handle('member-create', async (event, { familyId, memberData, userId }) => {
   return await memberService.createMember(familyId, memberData, userId);
@@ -330,6 +334,45 @@ ipcMain.handle('member-get-auto-numbers', async (event, { familyId, userId }) =>
 
 ipcMain.handle('member-get-family-members', async (event, { familyId, userId, excludeMemberId }) => {
   return await memberService.getFamilyMembers(familyId, userId, excludeMemberId);
+});
+
+// Birthday related IPC handlers
+ipcMain.handle('member-get-birthdays-by-date-range', async (event, { churchId, fromDate, toDate, userId, areaId }) => {
+  return await memberService.getBirthdaysByDateRange(churchId, fromDate, toDate, userId, areaId);
+});
+
+ipcMain.handle('member-get-todays-birthdays', async (event, { churchId, userId, areaId }) => {
+  return await memberService.getTodaysBirthdays(churchId, userId, areaId);
+});
+
+ipcMain.handle('member-get-this-week-birthdays', async (event, { churchId, userId, areaId }) => {
+  return await memberService.getThisWeekBirthdays(churchId, userId, areaId);
+});
+
+ipcMain.handle('member-get-birthday-statistics', async (event, { churchId, userId, areaId }) => {
+  return await memberService.getBirthdayStatistics(churchId, userId, areaId);
+});
+
+// Birthday Report IPC handler
+ipcMain.handle('member-get-birthday-report-data', async (event, { churchId, fromDate, toDate, userId, areaId }) => {
+  return await memberService.getBirthdayReportData(churchId, fromDate, toDate, userId, areaId);
+});
+
+// Wedding Anniversary related IPC handlers
+ipcMain.handle('member-get-weddings-by-date-range', async (event, { churchId, fromDate, toDate, userId, areaId }) => {
+  return await memberService.getWeddingsByDateRange(churchId, fromDate, toDate, userId, areaId);
+});
+
+ipcMain.handle('member-get-todays-weddings', async (event, { churchId, userId, areaId }) => {
+  return await memberService.getTodaysWeddings(churchId, userId, areaId);
+});
+
+ipcMain.handle('member-get-this-week-weddings', async (event, { churchId, userId, areaId }) => {
+  return await memberService.getThisWeekWeddings(churchId, userId, areaId);
+});
+
+ipcMain.handle('member-get-wedding-statistics', async (event, { churchId, userId, areaId }) => {
+  return await memberService.getWeddingStatistics(churchId, userId, areaId);
 });
 
 // File management IPC handlers

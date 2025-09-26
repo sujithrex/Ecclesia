@@ -292,6 +292,38 @@ class FamilyService {
             return { success: false, error: 'Failed to get auto numbers' };
         }
     }
+
+    async getFamilyById(familyId, userId) {
+        try {
+            // Get the family
+            const family = await this.db.getFamilyById(familyId);
+            if (!family) {
+                return { success: false, error: 'Family not found' };
+            }
+
+            // Get area info and verify user access
+            const area = await this.db.getAreaById(family.area_id);
+            if (!area) {
+                return { success: false, error: 'Area not found' };
+            }
+
+            // Verify user has access to the church that owns this area
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === area.church_id);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this family' };
+            }
+
+            return {
+                success: true,
+                family: family
+            };
+        } catch (error) {
+            console.error('Get family by ID error:', error);
+            return { success: false, error: 'Failed to get family' };
+        }
+    }
 }
 
 module.exports = FamilyService;

@@ -24,6 +24,8 @@ import PastorateSettingsPage from './components/PastorateSettingsPage';
 import ChurchSettingsPage from './components/ChurchSettingsPage';
 import PastorateDashboardPage from './components/PastorateDashboardPage';
 import ChurchDashboardPage from './components/ChurchDashboardPage';
+import BirthdayListPage from './components/BirthdayListPage';
+import WeddingListPage from './components/WeddingListPage';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -754,6 +756,58 @@ function App() {
           element={
             user ? (
               <ChurchSettingsPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/birthday-list"
+          element={
+            user ? (
+              <BirthdayListPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/wedding-list"
+          element={
+            user ? (
+              <WeddingListPage
                 user={user}
                 currentPastorate={currentPastorate}
                 userPastorates={userPastorates}

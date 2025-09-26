@@ -7,7 +7,11 @@ import {
   BuildingRegular,
   AddRegular,
   SearchRegular,
-  SettingsRegular
+  SettingsRegular,
+  CalendarDateRegular,
+  HeartRegular,
+  PeopleListRegular,
+  MoneyRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
@@ -147,6 +151,41 @@ const useStyles = makeStyles({
   gridContent: {
     display: 'flex',
     flexDirection: 'column',
+  },
+  buttonRow: {
+    display: 'flex',
+    gap: '16px',
+    marginBottom: '24px',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  actionButton: {
+    backgroundColor: '#B5316A',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '12px 20px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'all 0.2s ease',
+    minWidth: '140px',
+    justifyContent: 'center',
+    '&:hover': {
+      backgroundColor: '#A12B5E',
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(181, 49, 106, 0.3)',
+    },
+    '&:active': {
+      transform: 'translateY(0)',
+    },
+  },
+  tamilText: {
+    fontFamily: 'Pavanam, Segoe UI, sans-serif',
+    fontSize: '14px',
   }
 });
 
@@ -359,6 +398,24 @@ const ChurchDashboard = ({
     navigate('/church-settings');
   };
 
+  const handleBirthdayList = () => {
+    navigate('/birthday-list');
+  };
+
+  const handleWeddingList = () => {
+    navigate('/wedding-list');
+  };
+
+  const handleSabaiJabitha = () => {
+    // TODO: Implement சபை ஜாபிதா functionality
+    console.log('சபை ஜாபிதா clicked');
+  };
+
+  const handleAccounts = () => {
+    // TODO: Implement accounts functionality
+    console.log('Accounts clicked');
+  };
+
   return (
     <div className={styles.container}>
       {/* Breadcrumb Navigation */}
@@ -375,11 +432,6 @@ const ChurchDashboard = ({
             current: true
           }
         ]}
-        actionButton={{
-          label: 'Church Settings',
-          icon: <SettingsRegular />,
-          onClick: handleChurchSettings
-        }}
         onNavigate={(path) => navigate(path)}
       />
 
@@ -400,6 +452,50 @@ const ChurchDashboard = ({
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Action Buttons Row */}
+        <div className={styles.buttonRow}>
+          <button
+            className={styles.actionButton}
+            onClick={handleBirthdayList}
+            type="button"
+          >
+            <CalendarDateRegular />
+            Birthday List
+          </button>
+          <button
+            className={styles.actionButton}
+            onClick={handleWeddingList}
+            type="button"
+          >
+            <HeartRegular />
+            Wedding List
+          </button>
+          <button
+            className={styles.actionButton}
+            onClick={handleSabaiJabitha}
+            type="button"
+          >
+            <PeopleListRegular />
+            <span className={styles.tamilText}>சபை ஜாபிதா</span>
+          </button>
+          <button
+            className={styles.actionButton}
+            onClick={handleChurchSettings}
+            type="button"
+          >
+            <SettingsRegular />
+            Church Settings
+          </button>
+          <button
+            className={styles.actionButton}
+            onClick={handleAccounts}
+            type="button"
+          >
+            <MoneyRegular />
+            Accounts
+          </button>
         </div>
 
         {/* Two-Column Layout for Data Grids */}

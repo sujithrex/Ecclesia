@@ -1604,6 +1604,419 @@ class DatabaseManager {
         });
     }
 
+    // Birthday related methods
+    async getBirthdaysByDateRange(churchId, fromDate, toDate, areaId = null) {
+        return new Promise((resolve, reject) => {
+            let query = `
+                SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
+                       CASE
+                           WHEN f.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(f.respect, 1, 1)) || SUBSTR(f.respect, 2) || '. ' || f.family_name
+                           ELSE f.family_name
+                       END as family_head,
+                       CASE
+                           WHEN m.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(m.respect, 1, 1)) || SUBSTR(m.respect, 2)
+                           ELSE m.respect
+                       END as formatted_respect,
+                       strftime('%d-%m', m.dob) as birthday_date
+                FROM members m
+                JOIN families f ON m.family_id = f.id
+                JOIN areas a ON f.area_id = a.id
+                WHERE a.church_id = ? AND m.dob IS NOT NULL AND m.is_alive = 'alive'
+            `;
+            
+            let params = [churchId];
+            
+            // Add area filter if specified
+            if (areaId) {
+                query += ' AND a.id = ?';
+                params.push(areaId);
+            }
+            
+            // Add date range filter - handle year crossing
+            if (fromDate && toDate) {
+                const fromParts = fromDate.split('-');
+                const toParts = toDate.split('-');
+                const fromDay = parseInt(fromParts[0]);
+                const fromMonth = parseInt(fromParts[1]);
+                const toDay = parseInt(toParts[0]);
+                const toMonth = parseInt(toParts[1]);
+                
+                if (fromMonth <= toMonth) {
+                    // Same year range
+                    query += ` AND (
+                        (CAST(strftime('%m', m.dob) AS INTEGER) > ? OR
+                         (CAST(strftime('%m', m.dob) AS INTEGER) = ? AND CAST(strftime('%d', m.dob) AS INTEGER) >= ?)) AND
+                        (CAST(strftime('%m', m.dob) AS INTEGER) < ? OR
+                         (CAST(strftime('%m', m.dob) AS INTEGER) = ? AND CAST(strftime('%d', m.dob) AS INTEGER) <= ?))
+                    )`;
+                    params.push(fromMonth, fromMonth, fromDay, toMonth, toMonth, toDay);
+                } else {
+                    // Cross year range (e.g., Dec to Jan)
+                    query += ` AND (
+                        (CAST(strftime('%m', m.dob) AS INTEGER) > ? OR
+                         (CAST(strftime('%m', m.dob) AS INTEGER) = ? AND CAST(strftime('%d', m.dob) AS INTEGER) >= ?)) OR
+                        (CAST(strftime('%m', m.dob) AS INTEGER) < ? OR
+                         (CAST(strftime('%m', m.dob) AS INTEGER) = ? AND CAST(strftime('%d', m.dob) AS INTEGER) <= ?))
+                    )`;
+                    params.push(fromMonth, fromMonth, fromDay, toMonth, toMonth, toDay);
+                }
+            }
+            
+            query += ' ORDER BY strftime("%m-%d", m.dob), m.name';
+            
+            this.db.all(query, params, (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getTodaysBirthdays(churchId, areaId = null) {
+        return new Promise((resolve, reject) => {
+            const today = new Date();
+            const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+            const todayDay = String(today.getDate()).padStart(2, '0');
+            
+            let query = `
+                SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
+                       CASE
+                           WHEN f.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(f.respect, 1, 1)) || SUBSTR(f.respect, 2) || '. ' || f.family_name
+                           ELSE f.family_name
+                       END as family_head,
+                       CASE
+                           WHEN m.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(m.respect, 1, 1)) || SUBSTR(m.respect, 2)
+                           ELSE m.respect
+                       END as formatted_respect
+                FROM members m
+                JOIN families f ON m.family_id = f.id
+                JOIN areas a ON f.area_id = a.id
+                WHERE a.church_id = ? AND m.dob IS NOT NULL AND m.is_alive = 'alive'
+                AND strftime('%m', m.dob) = ? AND strftime('%d', m.dob) = ?
+            `;
+            
+            let params = [churchId, todayMonth, todayDay];
+            
+            if (areaId) {
+                query += ' AND a.id = ?';
+                params.push(areaId);
+            }
+            
+            query += ' ORDER BY m.name';
+            
+            this.db.all(query, params, (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getThisWeekBirthdays(churchId, areaId = null) {
+        return new Promise((resolve, reject) => {
+            const today = new Date();
+            const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            
+            // Calculate Sunday of current week
+            const sunday = new Date(today);
+            sunday.setDate(today.getDate() - currentDay);
+            
+            // Calculate Saturday of current week
+            const saturday = new Date(sunday);
+            saturday.setDate(sunday.getDate() + 6);
+            
+            const sundayMonth = String(sunday.getMonth() + 1).padStart(2, '0');
+            const sundayDay = String(sunday.getDate()).padStart(2, '0');
+            const saturdayMonth = String(saturday.getMonth() + 1).padStart(2, '0');
+            const saturdayDay = String(saturday.getDate()).padStart(2, '0');
+            
+            let query = `
+                SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
+                       CASE
+                           WHEN f.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(f.respect, 1, 1)) || SUBSTR(f.respect, 2) || '. ' || f.family_name
+                           ELSE f.family_name
+                       END as family_head,
+                       CASE
+                           WHEN m.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(m.respect, 1, 1)) || SUBSTR(m.respect, 2)
+                           ELSE m.respect
+                       END as formatted_respect
+                FROM members m
+                JOIN families f ON m.family_id = f.id
+                JOIN areas a ON f.area_id = a.id
+                WHERE a.church_id = ? AND m.dob IS NOT NULL AND m.is_alive = 'alive'
+            `;
+            
+            let params = [churchId];
+            
+            if (areaId) {
+                query += ' AND a.id = ?';
+                params.push(areaId);
+            }
+            
+            // Handle week crossing month/year boundary
+            if (sunday.getMonth() === saturday.getMonth()) {
+                // Same month
+                query += ` AND strftime('%m', m.dob) = ?
+                          AND CAST(strftime('%d', m.dob) AS INTEGER) BETWEEN ? AND ?`;
+                params.push(sundayMonth, parseInt(sundayDay), parseInt(saturdayDay));
+            } else {
+                // Cross month boundary
+                query += ` AND (
+                    (strftime('%m', m.dob) = ? AND CAST(strftime('%d', m.dob) AS INTEGER) >= ?) OR
+                    (strftime('%m', m.dob) = ? AND CAST(strftime('%d', m.dob) AS INTEGER) <= ?)
+                )`;
+                params.push(sundayMonth, parseInt(sundayDay), saturdayMonth, parseInt(saturdayDay));
+            }
+            
+            query += ' ORDER BY strftime("%m-%d", m.dob), m.name';
+            
+            this.db.all(query, params, (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getBirthdayStatistics(churchId, areaId = null) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const todaysBirthdays = await this.getTodaysBirthdays(churchId, areaId);
+                const thisWeekBirthdays = await this.getThisWeekBirthdays(churchId, areaId);
+                
+                resolve({
+                    todayCount: todaysBirthdays.length,
+                    thisWeekCount: thisWeekBirthdays.length
+                });
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    // Wedding Anniversary related methods
+    async getWeddingsByDateRange(churchId, fromDate, toDate, areaId = null) {
+        return new Promise((resolve, reject) => {
+            let query = `
+                SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
+                       spouse.name as spouse_name, spouse.respect as spouse_respect,
+                       CASE
+                           WHEN f.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(f.respect, 1, 1)) || SUBSTR(f.respect, 2) || '. ' || f.family_name
+                           ELSE f.family_name
+                       END as family_head,
+                       CASE
+                           WHEN m.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(m.respect, 1, 1)) || SUBSTR(m.respect, 2)
+                           ELSE m.respect
+                       END as formatted_respect,
+                       strftime('%d-%m', m.date_of_marriage) as wedding_date
+                FROM members m
+                JOIN families f ON m.family_id = f.id
+                JOIN areas a ON f.area_id = a.id
+                LEFT JOIN members spouse ON m.spouse_id = spouse.id
+                WHERE a.church_id = ? AND m.date_of_marriage IS NOT NULL AND m.is_married = 'yes' AND m.is_alive = 'alive'
+                AND m.sex = 'male'
+            `;
+            
+            let params = [churchId];
+            
+            // Add area filter if specified
+            if (areaId) {
+                query += ' AND a.id = ?';
+                params.push(areaId);
+            }
+            
+            // Add date range filter - handle year crossing
+            if (fromDate && toDate) {
+                const fromParts = fromDate.split('-');
+                const toParts = toDate.split('-');
+                const fromDay = parseInt(fromParts[0]);
+                const fromMonth = parseInt(fromParts[1]);
+                const toDay = parseInt(toParts[0]);
+                const toMonth = parseInt(toParts[1]);
+                
+                if (fromMonth <= toMonth) {
+                    // Same year range
+                    query += ` AND (
+                        (CAST(strftime('%m', m.date_of_marriage) AS INTEGER) > ? OR
+                         (CAST(strftime('%m', m.date_of_marriage) AS INTEGER) = ? AND CAST(strftime('%d', m.date_of_marriage) AS INTEGER) >= ?)) AND
+                        (CAST(strftime('%m', m.date_of_marriage) AS INTEGER) < ? OR
+                         (CAST(strftime('%m', m.date_of_marriage) AS INTEGER) = ? AND CAST(strftime('%d', m.date_of_marriage) AS INTEGER) <= ?))
+                    )`;
+                    params.push(fromMonth, fromMonth, fromDay, toMonth, toMonth, toDay);
+                } else {
+                    // Cross year range (e.g., Dec to Jan)
+                    query += ` AND (
+                        (CAST(strftime('%m', m.date_of_marriage) AS INTEGER) > ? OR
+                         (CAST(strftime('%m', m.date_of_marriage) AS INTEGER) = ? AND CAST(strftime('%d', m.date_of_marriage) AS INTEGER) >= ?)) OR
+                        (CAST(strftime('%m', m.date_of_marriage) AS INTEGER) < ? OR
+                         (CAST(strftime('%m', m.date_of_marriage) AS INTEGER) = ? AND CAST(strftime('%d', m.date_of_marriage) AS INTEGER) <= ?))
+                    )`;
+                    params.push(fromMonth, fromMonth, fromDay, toMonth, toMonth, toDay);
+                }
+            }
+            
+            query += ' ORDER BY strftime("%m-%d", m.date_of_marriage), m.name';
+            
+            this.db.all(query, params, (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getTodaysWeddings(churchId, areaId = null) {
+        return new Promise((resolve, reject) => {
+            const today = new Date();
+            const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+            const todayDay = String(today.getDate()).padStart(2, '0');
+            
+            let query = `
+                SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
+                       spouse.name as spouse_name, spouse.respect as spouse_respect,
+                       CASE
+                           WHEN f.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(f.respect, 1, 1)) || SUBSTR(f.respect, 2) || '. ' || f.family_name
+                           ELSE f.family_name
+                       END as family_head,
+                       CASE
+                           WHEN m.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(m.respect, 1, 1)) || SUBSTR(m.respect, 2)
+                           ELSE m.respect
+                       END as formatted_respect
+                FROM members m
+                JOIN families f ON m.family_id = f.id
+                JOIN areas a ON f.area_id = a.id
+                LEFT JOIN members spouse ON m.spouse_id = spouse.id
+                WHERE a.church_id = ? AND m.date_of_marriage IS NOT NULL AND m.is_married = 'yes' AND m.is_alive = 'alive'
+                AND m.sex = 'male'
+                AND strftime('%m', m.date_of_marriage) = ? AND strftime('%d', m.date_of_marriage) = ?
+            `;
+            
+            let params = [churchId, todayMonth, todayDay];
+            
+            if (areaId) {
+                query += ' AND a.id = ?';
+                params.push(areaId);
+            }
+            
+            query += ' ORDER BY m.name';
+            
+            this.db.all(query, params, (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getThisWeekWeddings(churchId, areaId = null) {
+        return new Promise((resolve, reject) => {
+            const today = new Date();
+            const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            
+            // Calculate Sunday of current week
+            const sunday = new Date(today);
+            sunday.setDate(today.getDate() - currentDay);
+            
+            // Calculate Saturday of current week
+            const saturday = new Date(sunday);
+            saturday.setDate(sunday.getDate() + 6);
+            
+            const sundayMonth = String(sunday.getMonth() + 1).padStart(2, '0');
+            const sundayDay = String(sunday.getDate()).padStart(2, '0');
+            const saturdayMonth = String(saturday.getMonth() + 1).padStart(2, '0');
+            const saturdayDay = String(saturday.getDate()).padStart(2, '0');
+            
+            let query = `
+                SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
+                       spouse.name as spouse_name, spouse.respect as spouse_respect,
+                       CASE
+                           WHEN f.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(f.respect, 1, 1)) || SUBSTR(f.respect, 2) || '. ' || f.family_name
+                           ELSE f.family_name
+                       END as family_head,
+                       CASE
+                           WHEN m.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
+                           THEN UPPER(SUBSTR(m.respect, 1, 1)) || SUBSTR(m.respect, 2)
+                           ELSE m.respect
+                       END as formatted_respect
+                FROM members m
+                JOIN families f ON m.family_id = f.id
+                JOIN areas a ON f.area_id = a.id
+                LEFT JOIN members spouse ON m.spouse_id = spouse.id
+                WHERE a.church_id = ? AND m.date_of_marriage IS NOT NULL AND m.is_married = 'yes' AND m.is_alive = 'alive'
+                AND m.sex = 'male'
+            `;
+            
+            let params = [churchId];
+            
+            if (areaId) {
+                query += ' AND a.id = ?';
+                params.push(areaId);
+            }
+            
+            // Handle week crossing month/year boundary
+            if (sunday.getMonth() === saturday.getMonth()) {
+                // Same month
+                query += ` AND strftime('%m', m.date_of_marriage) = ?
+                          AND CAST(strftime('%d', m.date_of_marriage) AS INTEGER) BETWEEN ? AND ?`;
+                params.push(sundayMonth, parseInt(sundayDay), parseInt(saturdayDay));
+            } else {
+                // Cross month boundary
+                query += ` AND (
+                    (strftime('%m', m.date_of_marriage) = ? AND CAST(strftime('%d', m.date_of_marriage) AS INTEGER) >= ?) OR
+                    (strftime('%m', m.date_of_marriage) = ? AND CAST(strftime('%d', m.date_of_marriage) AS INTEGER) <= ?)
+                )`;
+                params.push(sundayMonth, parseInt(sundayDay), saturdayMonth, parseInt(saturdayDay));
+            }
+            
+            query += ' ORDER BY strftime("%m-%d", m.date_of_marriage), m.name';
+            
+            this.db.all(query, params, (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getWeddingStatistics(churchId, areaId = null) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const todaysWeddings = await this.getTodaysWeddings(churchId, areaId);
+                const thisWeekWeddings = await this.getThisWeekWeddings(churchId, areaId);
+                
+                resolve({
+                    todayCount: todaysWeddings.length,
+                    thisWeekCount: thisWeekWeddings.length
+                });
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
     close() {
         if (this.db) {
             this.db.close();

@@ -28,7 +28,7 @@ const useStyles = makeStyles({
     borderRadius: '8px',
     padding: '32px',
     width: '100%',
-    maxWidth: '480px',
+    maxWidth: '70%',
     maxHeight: '80vh',
     overflow: 'auto',
     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',

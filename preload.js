@@ -87,6 +87,7 @@ contextBridge.exposeInMainWorld('electron', {
   family: {
     create: (data) => ipcRenderer.invoke('family-create', data),
     getByArea: (data) => ipcRenderer.invoke('family-get-by-area', data),
+    getById: (data) => ipcRenderer.invoke('family-get-by-id', data),
     update: (data) => ipcRenderer.invoke('family-update', data),
     delete: (data) => ipcRenderer.invoke('family-delete', data),
     getAutoNumbers: (data) => ipcRenderer.invoke('family-get-auto-numbers', data)
@@ -100,6 +101,17 @@ contextBridge.exposeInMainWorld('electron', {
     update: (data) => ipcRenderer.invoke('member-update', data),
     delete: (data) => ipcRenderer.invoke('member-delete', data),
     getAutoNumbers: (data) => ipcRenderer.invoke('member-get-auto-numbers', data),
-    getFamilyMembers: (data) => ipcRenderer.invoke('member-get-family-members', data)
+    getFamilyMembers: (data) => ipcRenderer.invoke('member-get-family-members', data),
+    // Birthday related methods
+    getBirthdaysByDateRange: (data) => ipcRenderer.invoke('member-get-birthdays-by-date-range', data),
+    getTodaysBirthdays: (data) => ipcRenderer.invoke('member-get-todays-birthdays', data),
+    getThisWeekBirthdays: (data) => ipcRenderer.invoke('member-get-this-week-birthdays', data),
+    getBirthdayStatistics: (data) => ipcRenderer.invoke('member-get-birthday-statistics', data),
+    getBirthdayReportData: (data) => ipcRenderer.invoke('member-get-birthday-report-data', data),
+    // Wedding Anniversary related methods
+    getWeddingsByDateRange: (data) => ipcRenderer.invoke('member-get-weddings-by-date-range', data),
+    getTodaysWeddings: (data) => ipcRenderer.invoke('member-get-todays-weddings', data),
+    getThisWeekWeddings: (data) => ipcRenderer.invoke('member-get-this-week-weddings', data),
+    getWeddingStatistics: (data) => ipcRenderer.invoke('member-get-wedding-statistics', data)
   }
 });

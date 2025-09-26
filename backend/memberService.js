@@ -479,6 +479,242 @@ class MemberService {
             return { success: false, error: 'Failed to clear spouse connection' };
         }
     }
+
+    async getBirthdaysByDateRange(churchId, fromDate, toDate, userId, areaId = null) {
+        try {
+            // Verify user has access to the church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            const birthdays = await this.db.getBirthdaysByDateRange(churchId, fromDate, toDate, areaId);
+            return {
+                success: true,
+                birthdays: birthdays
+            };
+        } catch (error) {
+            console.error('Get birthdays by date range error:', error);
+            return { success: false, error: 'Failed to get birthdays' };
+        }
+    }
+
+    async getTodaysBirthdays(churchId, userId, areaId = null) {
+        try {
+            // Verify user has access to the church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            const birthdays = await this.db.getTodaysBirthdays(churchId, areaId);
+            return {
+                success: true,
+                birthdays: birthdays
+            };
+        } catch (error) {
+            console.error('Get today\'s birthdays error:', error);
+            return { success: false, error: 'Failed to get today\'s birthdays' };
+        }
+    }
+
+    async getThisWeekBirthdays(churchId, userId, areaId = null) {
+        try {
+            // Verify user has access to the church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            const birthdays = await this.db.getThisWeekBirthdays(churchId, areaId);
+            return {
+                success: true,
+                birthdays: birthdays
+            };
+        } catch (error) {
+            console.error('Get this week birthdays error:', error);
+            return { success: false, error: 'Failed to get this week birthdays' };
+        }
+    }
+
+    async getBirthdayStatistics(churchId, userId, areaId = null) {
+        try {
+            // Verify user has access to the church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            const stats = await this.db.getBirthdayStatistics(churchId, areaId);
+            return {
+                success: true,
+                statistics: stats
+            };
+        } catch (error) {
+            console.error('Get birthday statistics error:', error);
+            return { success: false, error: 'Failed to get birthday statistics' };
+        }
+    }
+
+    async getWeddingsByDateRange(churchId, fromDate, toDate, userId, areaId = null) {
+        try {
+            // Verify user has access to the church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            const weddings = await this.db.getWeddingsByDateRange(churchId, fromDate, toDate, areaId);
+            return {
+                success: true,
+                weddings: weddings
+            };
+        } catch (error) {
+            console.error('Get weddings by date range error:', error);
+            return { success: false, error: 'Failed to get weddings' };
+        }
+    }
+
+    async getTodaysWeddings(churchId, userId, areaId = null) {
+        try {
+            // Verify user has access to the church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            const weddings = await this.db.getTodaysWeddings(churchId, areaId);
+            return {
+                success: true,
+                weddings: weddings
+            };
+        } catch (error) {
+            console.error('Get today\'s weddings error:', error);
+            return { success: false, error: 'Failed to get today\'s weddings' };
+        }
+    }
+
+    async getThisWeekWeddings(churchId, userId, areaId = null) {
+        try {
+            // Verify user has access to the church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            const weddings = await this.db.getThisWeekWeddings(churchId, areaId);
+            return {
+                success: true,
+                weddings: weddings
+            };
+        } catch (error) {
+            console.error('Get this week weddings error:', error);
+            return { success: false, error: 'Failed to get this week weddings' };
+        }
+    }
+
+    async getWeddingStatistics(churchId, userId, areaId = null) {
+        try {
+            // Verify user has access to the church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            const stats = await this.db.getWeddingStatistics(churchId, areaId);
+            return {
+                success: true,
+                statistics: stats
+            };
+        } catch (error) {
+            console.error('Get wedding statistics error:', error);
+            return { success: false, error: 'Failed to get wedding statistics' };
+        }
+    }
+
+    async getBirthdayReportData(churchId, fromDate, toDate, userId, areaId = null) {
+        try {
+            // Verify user has access to the church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+            
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            // Get church details
+            const church = await this.db.getChurchById(churchId);
+            if (!church) {
+                return { success: false, error: 'Church not found' };
+            }
+
+            // Get birthday members in the date range
+            const birthdayMembers = await this.db.getBirthdaysByDateRange(churchId, fromDate, toDate, areaId);
+            
+            // Group members by family
+            const familiesWithBirthdays = {};
+            for (const member of birthdayMembers) {
+                if (!familiesWithBirthdays[member.family_id]) {
+                    familiesWithBirthdays[member.family_id] = {
+                        family: null,
+                        members: [],
+                        celebrants: []
+                    };
+                }
+                familiesWithBirthdays[member.family_id].celebrants.push(member);
+            }
+
+            // For each family with birthday celebrants, get all family members and family details
+            for (const familyId in familiesWithBirthdays) {
+                const family = await this.db.getFamilyById(parseInt(familyId));
+                if (family) {
+                    const area = await this.db.getAreaById(family.area_id);
+                    const fellowship = await this.db.getPrayerCellById(family.prayer_cell_id);
+                    
+                    // Add area and fellowship details to family
+                    family.area_name = area ? area.area_name : 'N/A';
+                    family.fellowship_name = fellowship ? fellowship.prayer_cell_name : 'N/A';
+                    
+                    familiesWithBirthdays[familyId].family = family;
+                    
+                    // Get all family members
+                    const allFamilyMembers = await this.db.getMembersByFamily(parseInt(familyId));
+                    familiesWithBirthdays[familyId].members = allFamilyMembers;
+                }
+            }
+
+            // Convert to array and sort by family ID
+            const reportData = Object.values(familiesWithBirthdays)
+                .filter(data => data.family)
+                .sort((a, b) => a.family.id - b.family.id);
+
+            return {
+                success: true,
+                church: church,
+                reportData: reportData,
+                dateRange: { fromDate, toDate }
+            };
+        } catch (error) {
+            console.error('Get birthday report data error:', error);
+            return { success: false, error: 'Failed to get birthday report data' };
+        }
+    }
 }
 
 module.exports = MemberService;
