@@ -1,217 +1,335 @@
-import pdfMake from 'pdfmake/build/pdfmake';
-import * as pdfFonts from 'pdfmake/build/vfs_fonts';
-
-// Set up fonts for pdfmake
-if (typeof pdfFonts !== 'undefined' && pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
-  pdfMake.vfs = pdfFonts.pdfMake.vfs;
-}
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 export class BirthdayReportPDF {
     constructor() {
-        // Define custom styles
-        this.styles = {
-            header: {
-                fontSize: 12,
-                bold: true,
-                alignment: 'center',
-                margin: [0, 0, 0, 10]
-            },
-            subheader: {
-                fontSize: 10,
-                alignment: 'center',
-                margin: [0, 0, 0, 20]
-            },
-            familyInfo: {
-                fontSize: 12,
-                margin: [0, 10, 0, 5]
-            },
-            tableHeader: {
-                fontSize: 12,
-                bold: true,
-                fillColor: '#f0f0f0'
-            },
-            celebrant: {
-                fontSize: 12,
-                bold: true,
-                color: '#b22222' // Dark red for celebrants
-            },
-            normal: {
-                fontSize: 12
-            },
-            separator: {
-                margin: [0, 15, 0, 15]
-            }
+        this.pageWidth = 595.28; // A4 width in points
+        this.pageHeight = 841.89; // A4 height in points
+        this.margins = {
+            top: 50,
+            bottom: 50,
+            left: 30,
+            right: 30
+        };
+        this.contentWidth = this.pageWidth - this.margins.left - this.margins.right;
+        this.currentY = this.pageHeight - this.margins.top;
+        
+        // Colors
+        this.colors = {
+            black: rgb(0, 0, 0),
+            darkRed: rgb(0.7, 0.13, 0.13), // For celebrants
+            gray: rgb(0.5, 0.5, 0.5),
+            lightGray: rgb(0.94, 0.94, 0.94) // For table headers
+        };
+        
+        // Font sizes
+        this.fontSizes = {
+            header: 14,
+            subheader: 12,
+            normal: 10,
+            small: 9
         };
     }
 
     async generateReport(reportData, church, dateRange) {
-        // Build document definition
-        const docDefinition = {
-            pageSize: 'A4',
-            pageMargins: [30, 30, 30, 30],
-            defaultStyle: {
-                fontSize: 12
-            },
-            styles: this.styles,
-            content: [
-                // Header
-                {
-                    text: `${church.church_name} - BIRTHDAY CELEBRATION REPORT`,
-                    style: 'header'
-                },
-                {
-                    text: `Date Range: ${this.formatDateForDisplay(dateRange.fromDate)} to ${this.formatDateForDisplay(dateRange.toDate)}`,
-                    style: 'subheader'
-                },
-                
-                // Content for each family
-                ...this.buildFamilySections(reportData)
-            ]
-        };
-
-        return pdfMake.createPdf(docDefinition);
-    }
-
-    buildFamilySections(reportData) {
-        const sections = [];
-
-        reportData.forEach((familyData, index) => {
-            const { family, members, celebrants } = familyData;
+        try {
+            const pdfDoc = await PDFDocument.create();
+            const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+            const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
             
-            // Add page break before each family except the first
-            if (index > 0) {
-                sections.push({ text: '', pageBreak: 'before' });
+            let currentPage = null;
+            let currentY = 0;
+            
+            // Process each family
+            for (let familyIndex = 0; familyIndex < reportData.length; familyIndex++) {
+                const { family, members, celebrants } = reportData[familyIndex];
+                
+                // Start new page for each family or first page
+                currentPage = pdfDoc.addPage([this.pageWidth, this.pageHeight]);
+                currentY = this.pageHeight - this.margins.top;
+                
+                // Draw header on first page or if it's a new family
+                if (familyIndex === 0) {
+                    currentY = await this.drawHeader(currentPage, boldFont, church, dateRange, currentY);
+                }
+                
+                // Draw separator line
+                currentY = await this.drawSeparatorLine(currentPage, currentY);
+                
+                // Draw family information
+                currentY = await this.drawFamilyInfo(currentPage, font, boldFont, family, currentY);
+                
+                // Draw members table
+                currentY = await this.drawMembersTable(currentPage, font, boldFont, members, celebrants, currentY);
             }
-
-            // Separator line
-            sections.push({
-                canvas: [
-                    {
-                        type: 'line',
-                        x1: 0,
-                        y1: 0,
-                        x2: 535,
-                        y2: 0,
-                        lineWidth: 1
-                    }
-                ],
-                style: 'separator'
-            });
-
-            // Family information
-            sections.push({
-                columns: [
-                    { text: `Family No: ${family.family_number || family.id}`, width: '25%' },
-                    { text: `Area: ${family.area_name || 'N/A'}`, width: '25%' },
-                    { text: `Fellowship: ${family.fellowship_name || 'N/A'}`, width: '25%' },
-                    { text: `Mobile: ${family.mobile || 'N/A'}`, width: '25%' }
-                ],
-                style: 'familyInfo'
-            });
-
-            // Address and prayer points
-            let addressText = `Address: ${family.address || 'N/A'}`;
-            if (family.prayer_points) {
-                addressText += ` | Prayer Points: ${family.prayer_points}`;
-            }
-
-            sections.push({
-                text: addressText,
-                style: 'familyInfo',
-                margin: [0, 5, 0, 15]
-            });
-
-            // Members table
-            sections.push(this.buildMembersTable(members, celebrants));
-        });
-
-        return sections;
+            
+            return pdfDoc;
+        } catch (error) {
+            console.error('Error generating PDF with pdf-lib:', error);
+            throw error;
+        }
     }
 
-    buildMembersTable(members, celebrants) {
-        // Table headers
-        const headers = [
-            { text: 'M.NO', style: 'tableHeader' },
-            { text: 'Names', style: 'tableHeader' },
-            { text: 'Age', style: 'tableHeader' },
-            { text: 'Relationship', style: 'tableHeader' },
-            { text: 'Occupation', style: 'tableHeader' },
-            { text: 'Working place', style: 'tableHeader' },
-            { text: 'Birthday', style: 'tableHeader' }
-        ];
-
-        // Table rows
-        const rows = [headers];
+    async drawHeader(page, boldFont, church, dateRange, y) {
+        const headerText = `${church.church_name} - BIRTHDAY CELEBRATION REPORT`;
+        const subHeaderText = `Date Range: ${this.formatDateForDisplay(dateRange.fromDate)} to ${this.formatDateForDisplay(dateRange.toDate)}`;
         
+        // Main header
+        const headerWidth = boldFont.widthOfTextAtSize(headerText, this.fontSizes.header);
+        const headerX = (this.pageWidth - headerWidth) / 2;
+        
+        page.drawText(headerText, {
+            x: headerX,
+            y: y - 20,
+            size: this.fontSizes.header,
+            font: boldFont,
+            color: this.colors.black,
+        });
+        
+        // Sub header
+        const subHeaderWidth = boldFont.widthOfTextAtSize(subHeaderText, this.fontSizes.subheader);
+        const subHeaderX = (this.pageWidth - subHeaderWidth) / 2;
+        
+        page.drawText(subHeaderText, {
+            x: subHeaderX,
+            y: y - 40,
+            size: this.fontSizes.subheader,
+            font: boldFont,
+            color: this.colors.black,
+        });
+        
+        return y - 70; // Return new Y position
+    }
+
+    async drawSeparatorLine(page, y) {
+        page.drawLine({
+            start: { x: this.margins.left, y: y - 10 },
+            end: { x: this.pageWidth - this.margins.right, y: y - 10 },
+            thickness: 1,
+            color: this.colors.black,
+        });
+        
+        return y - 25;
+    }
+
+    async drawFamilyInfo(page, font, boldFont, family, y) {
+        const lineHeight = 15;
+        
+        // First line: Family No, Area, Fellowship, Mobile
+        const line1Parts = [
+            `Family No: ${family.family_number || family.id}`,
+            `Area: ${family.area_name || 'N/A'}`,
+            `Fellowship: ${family.fellowship_name || 'N/A'}`,
+            `Mobile: ${family.mobile || 'N/A'}`
+        ];
+        
+        const columnWidth = this.contentWidth / 4;
+        
+        line1Parts.forEach((text, index) => {
+            page.drawText(text, {
+                x: this.margins.left + (index * columnWidth),
+                y: y,
+                size: this.fontSizes.normal,
+                font: font,
+                color: this.colors.black,
+            });
+        });
+        
+        // Second line: Address and prayer points
+        let addressText = `Address: ${family.address || 'N/A'}`;
+        if (family.prayer_points) {
+            addressText += ` | Prayer Points: ${family.prayer_points}`;
+        }
+        
+        // Wrap long text
+        const wrappedText = this.wrapText(addressText, font, this.fontSizes.normal, this.contentWidth);
+        wrappedText.forEach((line, index) => {
+            page.drawText(line, {
+                x: this.margins.left,
+                y: y - lineHeight - (index * lineHeight),
+                size: this.fontSizes.normal,
+                font: font,
+                color: this.colors.black,
+            });
+        });
+        
+        return y - (lineHeight * (2 + wrappedText.length - 1)) - 10;
+    }
+
+    async drawMembersTable(page, font, boldFont, members, celebrants, y) {
+        const tableHeaders = ['M.NO', 'Names', 'Age', 'Relationship', 'Occupation', 'Working place', 'Birthday'];
+        const columnWidths = [50, 120, 35, 80, 80, 80, 100]; // Total: 545
+        const rowHeight = 20;
+        const headerHeight = 25;
+        
+        let currentY = y;
+        
+        // Draw table header background
+        page.drawRectangle({
+            x: this.margins.left,
+            y: currentY - headerHeight,
+            width: this.contentWidth,
+            height: headerHeight,
+            color: this.colors.lightGray,
+        });
+        
+        // Draw table header borders
+        this.drawTableBorders(page, this.margins.left, currentY - headerHeight, columnWidths, headerHeight);
+        
+        // Draw header text
+        let currentX = this.margins.left;
+        tableHeaders.forEach((header, index) => {
+            page.drawText(header, {
+                x: currentX + 5,
+                y: currentY - 15,
+                size: this.fontSizes.normal,
+                font: boldFont,
+                color: this.colors.black,
+            });
+            currentX += columnWidths[index];
+        });
+        
+        currentY -= headerHeight;
+        
+        // Draw member rows
         members.forEach(member => {
             const isCelebrant = celebrants.some(c => c.id === member.id);
             
-            // Format respect properly
-            let respect = '';
-            if (member.respect) {
-                const respectMap = {
-                    'mr': 'Mr.',
-                    'mrs': 'Mrs.',
-                    'ms': 'Ms.',
-                    'master': 'Master',
-                    'rev': 'Rev.',
-                    'dr': 'Dr.',
-                    'er': 'Er.',
-                    'sis': 'Sis.'
-                };
-                respect = respectMap[member.respect.toLowerCase()] || member.respect;
-            }
-
+            // Draw row background (alternating would go here if needed)
+            page.drawRectangle({
+                x: this.margins.left,
+                y: currentY - rowHeight,
+                width: this.contentWidth,
+                height: rowHeight,
+                color: rgb(1, 1, 1), // White background
+            });
+            
+            // Draw row borders
+            this.drawTableBorders(page, this.margins.left, currentY - rowHeight, columnWidths, rowHeight);
+            
+            // Prepare member data
+            const respect = this.formatRespect(member.respect);
             const memberNumber = member.member_number || member.member_id?.split('-').pop() || '';
-            const celebrantIndicator = isCelebrant ? '★ ' : '';
+            const celebrantIndicator = isCelebrant ? '* ' : '';
             const memberName = `${celebrantIndicator}${respect} ${member.name || ''}`.trim();
             const age = member.age || '';
             const relation = member.relation || '';
             const occupation = member.occupation || member.working || '';
             const workingPlace = member.working_place || member.working || '';
             const birthday = member.dob ? this.formatBirthdayDate(member.dob) : '';
-
-            // Apply celebrant styling if needed
-            const textStyle = isCelebrant ? 'celebrant' : 'normal';
-
-            const row = [
-                { text: memberNumber, style: textStyle },
-                { text: memberName.length > 20 ? memberName.substring(0, 20) + '...' : memberName, style: textStyle },
-                { text: age, style: textStyle },
-                { text: relation.length > 12 ? relation.substring(0, 12) + '...' : relation, style: textStyle },
-                { text: occupation.length > 12 ? occupation.substring(0, 12) + '...' : occupation, style: textStyle },
-                { text: workingPlace.length > 12 ? workingPlace.substring(0, 12) + '...' : workingPlace, style: textStyle },
-                { text: birthday, style: textStyle }
+            
+            const rowData = [
+                memberNumber,
+                this.truncateText(memberName, 18),
+                age,
+                this.truncateText(relation, 10),
+                this.truncateText(occupation, 10),
+                this.truncateText(workingPlace, 10),
+                birthday
             ];
-
-            rows.push(row);
+            
+            // Draw row data
+            let currentX = this.margins.left;
+            rowData.forEach((text, index) => {
+                page.drawText(text, {
+                    x: currentX + 5,
+                    y: currentY - 15,
+                    size: this.fontSizes.small,
+                    font: isCelebrant ? boldFont : font,
+                    color: isCelebrant ? this.colors.darkRed : this.colors.black,
+                });
+                currentX += columnWidths[index];
+            });
+            
+            currentY -= rowHeight;
         });
+        
+        return currentY - 20;
+    }
 
-        return {
-            table: {
-                headerRows: 1,
-                widths: [50, 120, 35, 80, 80, 80, 100],
-                body: rows
-            },
-            layout: {
-                fillColor: function (rowIndex) {
-                    return (rowIndex === 0) ? '#f0f0f0' : null;
-                },
-                hLineWidth: function () {
-                    return 1;
-                },
-                vLineWidth: function () {
-                    return 1;
-                },
-                hLineColor: function () {
-                    return '#000';
-                },
-                vLineColor: function () {
-                    return '#000';
-                }
-            },
-            margin: [0, 0, 0, 20]
+    drawTableBorders(page, x, y, columnWidths, height) {
+        let currentX = x;
+        
+        // Vertical lines
+        columnWidths.forEach((width, index) => {
+            page.drawLine({
+                start: { x: currentX, y: y },
+                end: { x: currentX, y: y + height },
+                thickness: 1,
+                color: this.colors.black,
+            });
+            currentX += width;
+        });
+        
+        // Last vertical line
+        page.drawLine({
+            start: { x: currentX, y: y },
+            end: { x: currentX, y: y + height },
+            thickness: 1,
+            color: this.colors.black,
+        });
+        
+        // Horizontal lines
+        page.drawLine({
+            start: { x: x, y: y },
+            end: { x: x + this.contentWidth, y: y },
+            thickness: 1,
+            color: this.colors.black,
+        });
+        
+        page.drawLine({
+            start: { x: x, y: y + height },
+            end: { x: x + this.contentWidth, y: y + height },
+            thickness: 1,
+            color: this.colors.black,
+        });
+    }
+
+    formatRespect(respect) {
+        if (!respect) return '';
+        const respectMap = {
+            'mr': 'Mr.',
+            'mrs': 'Mrs.',
+            'ms': 'Ms.',
+            'master': 'Master',
+            'rev': 'Rev.',
+            'dr': 'Dr.',
+            'er': 'Er.',
+            'sis': 'Sis.'
         };
+        return respectMap[respect.toLowerCase()] || respect;
+    }
+
+    truncateText(text, maxLength) {
+        if (!text) return '';
+        return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+    }
+
+    wrapText(text, font, fontSize, maxWidth) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+        
+        for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const lineWidth = font.widthOfTextAtSize(testLine, fontSize);
+            
+            if (lineWidth <= maxWidth) {
+                currentLine = testLine;
+            } else {
+                if (currentLine) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    lines.push(word); // Word is too long but we have to include it
+                }
+            }
+        }
+        
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+        
+        return lines;
     }
 
     formatDateForDisplay(dateStr) {
@@ -246,7 +364,16 @@ export class BirthdayReportPDF {
 
     async saveReport(pdfDoc, fileName) {
         try {
-            pdfDoc.download(fileName);
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.click();
+            
+            URL.revokeObjectURL(url);
             return { success: true };
         } catch (error) {
             console.error('Error saving PDF:', error);
@@ -256,7 +383,19 @@ export class BirthdayReportPDF {
 
     async printReport(pdfDoc) {
         try {
-            pdfDoc.print();
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            
+            const printWindow = window.open(url);
+            printWindow.onload = function() {
+                printWindow.print();
+                printWindow.onafterprint = function() {
+                    printWindow.close();
+                    URL.revokeObjectURL(url);
+                };
+            };
+            
             return { success: true };
         } catch (error) {
             console.error('Error printing PDF:', error);
