@@ -1810,7 +1810,8 @@ class DatabaseManager {
     async getWeddingsByDateRange(churchId, fromDate, toDate, areaId = null) {
         return new Promise((resolve, reject) => {
             let query = `
-                SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
+                SELECT m.*, f.respect as family_respect, f.family_name, f.family_address, f.family_phone, f.prayer_points,
+                       a.area_name, a.area_identity,
                        spouse.name as spouse_name, spouse.respect as spouse_respect,
                        CASE
                            WHEN f.respect IN ('mr', 'mrs', 'ms', 'master', 'rev', 'dr', 'er', 'sis', 'bishop')
@@ -1822,7 +1823,8 @@ class DatabaseManager {
                            THEN UPPER(SUBSTR(m.respect, 1, 1)) || SUBSTR(m.respect, 2)
                            ELSE m.respect
                        END as formatted_respect,
-                       strftime('%d-%m', m.date_of_marriage) as wedding_date
+                       strftime('%d-%m', m.date_of_marriage) as wedding_date,
+                       f.family_number
                 FROM members m
                 JOIN families f ON m.family_id = f.id
                 JOIN areas a ON f.area_id = a.id

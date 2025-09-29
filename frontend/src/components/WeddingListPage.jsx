@@ -9,10 +9,13 @@ import {
   ChevronLeftRegular,
   ChevronRightRegular,
   PersonRegular,
-  ArrowClockwiseRegular
+  ArrowClockwiseRegular,
+  DocumentPdfRegular,
+  PrintRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
+import { generateInDesignWeddingReport } from '../utils/weddingReportInDesign';
 
 const useStyles = makeStyles({
   container: {
@@ -353,6 +356,46 @@ const useStyles = makeStyles({
     fontSize: '16px',
     color: '#605e5c',
   },
+  reportButtons: {
+    display: 'flex',
+    gap: '12px',
+    marginTop: '16px',
+  },
+  reportButton: {
+    backgroundColor: '#B5316A',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '10px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#A12B5E',
+      transform: 'translateY(-1px)',
+    },
+    '&:disabled': {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+      '&:hover': {
+        transform: 'none',
+        backgroundColor: '#B5316A',
+      },
+    },
+  },
+  printButton: {
+    backgroundColor: '#B5316A',
+    '&:hover': {
+      backgroundColor: '#A12B5E',
+    },
+    '&:disabled:hover': {
+      backgroundColor: '#B5316A',
+    },
+  },
 });
 
 const WeddingListPage = ({
@@ -389,6 +432,7 @@ const WeddingListPage = ({
   const [selectedMember, setSelectedMember] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [modalFamily, setModalFamily] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
   const itemsPerPage = 8;
 
   // Load initial data
@@ -509,6 +553,164 @@ const WeddingListPage = ({
     handleContextMenuClose();
   };
 
+  // Report generation functions
+  const handleGenerateReport = async (action = 'download') => {
+    if (!fromDate || !toDate) {
+      alert('Please select date range first');
+      return;
+    }
+
+    if (weddings.length === 0) {
+      alert('No wedding anniversary data to generate report');
+      return;
+    }
+
+    setReportLoading(true);
+    try {
+      // Use the existing wedding data and transform it for the report
+      const reportData = await transformWeddingDataForReport(weddings);
+      
+      // Get enhanced church data with proper diocese name from pastorate settings
+      const enhancedChurch = await getEnhancedChurchData();
+      
+      // Create date range object
+      const dateRange = {
+        fromDate,
+        toDate
+      };
+      
+      // Generate PDF report
+      const reportResult = await generateInDesignWeddingReport(reportData, enhancedChurch, dateRange, action);
+      
+      if (!reportResult.success) {
+        alert(`Error ${action === 'download' ? 'saving' : 'printing'} report: ${reportResult.error}`);
+      }
+    } catch (error) {
+      console.error('Wedding report generation error:', error);
+      alert(`Error generating wedding report: ${error.message}`);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  // Get enhanced church data with proper diocese name from pastorate settings
+  const getEnhancedChurchData = async () => {
+    try {
+      // Try to get pastorate settings for proper diocese name
+      let pastorateSettings = null;
+      let churchSettings = null;
+
+      try {
+        const settingsResult = await window.electron.pastorateSettings.get({
+          pastorateId: currentPastorate.id,
+          userId: user.id
+        });
+        if (settingsResult.success) {
+          pastorateSettings = settingsResult.settings;
+        }
+      } catch (error) {
+        console.warn('Could not fetch pastorate settings:', error);
+      }
+
+      try {
+        const churchSettingsResult = await window.electron.churchSettings.get({
+          churchId: currentChurch.id,
+          userId: user.id
+        });
+        if (churchSettingsResult.success) {
+          churchSettings = churchSettingsResult.settings;
+        }
+      } catch (error) {
+        console.warn('Could not fetch church settings:', error);
+      }
+
+      // Create enhanced church object with proper diocese name
+      return {
+        ...currentChurch,
+        diocese_name: pastorateSettings?.diocese_name_english || 'Tirunelveli Diocese',
+        pastorate_short_name: currentPastorate?.pastorate_short_name || 'Pastorate',
+        church_display_name: churchSettings?.church_name_english || currentChurch.church_name,
+        church_short_name: currentChurch.church_short_name || currentChurch.church_name?.substring(0, 4)?.toUpperCase()
+      };
+    } catch (error) {
+      console.error('Error getting enhanced church data:', error);
+      // Fallback to basic church data
+      return {
+        ...currentChurch,
+        diocese_name: 'Tirunelveli Diocese',
+        pastorate_short_name: currentPastorate?.pastorate_short_name || 'Pastorate',
+        church_display_name: currentChurch.church_name,
+        church_short_name: currentChurch.church_short_name || currentChurch.church_name?.substring(0, 4)?.toUpperCase()
+      };
+    }
+  };
+
+  // Transform existing wedding data into report format
+  const transformWeddingDataForReport = async (weddingData) => {
+    // Group weddings by family
+    const familyGroups = {};
+    
+    for (const wedding of weddingData) {
+      const familyId = wedding.family_id;
+      
+      if (!familyGroups[familyId]) {
+        // Create family structure using actual database data
+        familyGroups[familyId] = {
+          family: {
+            id: familyId,
+            family_name: wedding.family_name || 'Unknown',
+            family_number: wedding.family_number || '001',
+            respect: wedding.family_respect || 'Mr',
+            family_phone: wedding.family_phone || wedding.mobile || null,
+            family_address: wedding.family_address || null,
+            prayer_points: wedding.prayer_points || null,
+            area_name: wedding.area_name || 'Unknown Area',
+            area_identity: wedding.area_identity || 'A1'
+          },
+          members: [],
+          celebrants: []
+        };
+      }
+      
+      // Add the wedding couple as members using actual data from members table
+      const member = {
+        id: wedding.id,
+        name: wedding.name,
+        respect: wedding.respect,
+        relation: wedding.relation || 'Head',
+        age: wedding.age || null,
+        occupation: wedding.occupation || null,
+        working_place: wedding.working_place || null,
+        mobile: wedding.mobile
+      };
+      
+      familyGroups[familyId].members.push(member);
+      familyGroups[familyId].celebrants.push({ id: wedding.id }); // Mark as celebrant
+      
+      // Add spouse if available using actual spouse data
+      if (wedding.spouse_name) {
+        const spouseMember = {
+          id: wedding.id + '_spouse',
+          name: wedding.spouse_name,
+          respect: wedding.spouse_respect || (wedding.respect === 'mr' ? 'mrs' : 'ms'),
+          relation: 'Spouse',
+          age: null, // Spouse age not available in this query
+          occupation: null, // Spouse occupation not available in this query
+          working_place: null, // Spouse working place not available in this query
+          mobile: null // Spouse mobile not available in this query
+        };
+        
+        familyGroups[familyId].members.push(spouseMember);
+        familyGroups[familyId].celebrants.push({ id: wedding.id + '_spouse' }); // Both are celebrants
+      }
+    }
+    
+    return Object.values(familyGroups);
+  };
+
+  const handleSaveReport = () => handleGenerateReport('download');
+  const handlePrintReport = () => handleGenerateReport('print');
+
   // Close context menu when clicking elsewhere
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -599,6 +801,28 @@ const WeddingListPage = ({
                 <div className={styles.statLabel}>This Week Anniversaries</div>
                 <div className={styles.statValue}>{statistics.thisWeekCount}</div>
               </div>
+            </div>
+            
+            {/* Report Buttons */}
+            <div className={styles.reportButtons}>
+              <button
+                type="button"
+                className={`${styles.reportButton}`}
+                onClick={handleSaveReport}
+                disabled={reportLoading || loading || weddings.length === 0}
+              >
+                <DocumentPdfRegular />
+                {reportLoading ? 'Generating...' : 'Save Report'}
+              </button>
+              <button
+                type="button"
+                className={`${styles.reportButton} ${styles.printButton}`}
+                onClick={handlePrintReport}
+                disabled={reportLoading || loading || weddings.length === 0}
+              >
+                <PrintRegular />
+                {reportLoading ? 'Generating...' : 'Print Report'}
+              </button>
             </div>
           </div>
 
