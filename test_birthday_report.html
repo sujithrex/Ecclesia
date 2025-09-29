@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test InDesign Birthday Report</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+</head>
+<body>
+    <h1>Test InDesign Birthday Report Generator</h1>
+    <button onclick="testReport()">Generate Test Report</button>
+    <p><strong>Debug:</strong> Open browser console (F12) to see any errors</p>
+
+    <script type="module">
+        // Sample test data matching your database structure
+        const sampleReportData = [
+            {
+                family: {
+                    id: 1,
+                    family_number: "222",
+                    respect: "mr",
+                    family_name: "SUJITH",
+                    family_address: "North Street,Tenkasi",
+                    family_phone: "7538812218",
+                    area_name: "SAKTHI NAGAR",
+                    area_identity: "A1",
+                    prayer_points: "Good Health for the Family. Prayers for the Studies"
+                },
+                members: [
+                    {
+                        id: 1,
+                        name: "Sujith",
+                        respect: "mr",
+                        age: 18,
+                        relation: "Family Head",
+                        occupation: "Catechist",
+                        working_place: "Tenkasi"
+                    },
+                    {
+                        id: 2,
+                        name: "Remina",
+                        respect: "mrs",
+                        age: 17,
+                        relation: "Wife",
+                        occupation: "VLSI Er",
+                        working_place: "Tenkasi"
+                    }
+                ],
+                celebrants: [
+                    {
+                        id: 1,
+                        name: "Sujith"
+                    }
+                ]
+            },
+            {
+                family: {
+                    id: 2,
+                    family_number: "223",
+                    respect: "mr",
+                    family_name: "KUMAR",
+                    family_address: "South Street,Tenkasi",
+                    family_phone: "9876543210",
+                    area_name: "SAKTHI NAGAR",
+                    area_identity: "A1",
+                    prayer_points: "Blessings for the Family. Health and Prosperity"
+                },
+                members: [
+                    {
+                        id: 3,
+                        name: "Kumar",
+                        respect: "mr",
+                        age: 25,
+                        relation: "Family Head",
+                        occupation: "Teacher",
+                        working_place: "Tenkasi"
+                    },
+                    {
+                        id: 4,
+                        name: "Priya",
+                        respect: "mrs",
+                        age: 22,
+                        relation: "Wife",
+                        occupation: "Nurse",
+                        working_place: "Hospital"
+                    }
+                ],
+                celebrants: [
+                    {
+                        id: 4,
+                        name: "Priya"
+                    }
+                ]
+            }
+        ];
+
+        const sampleChurch = {
+            church_name: "Test Church",
+            church_short_name: "TC"
+        };
+
+        const sampleDateRange = {
+            fromDate: "29-09",
+            toDate: "03-10"
+        };
+
+        // Import and test function
+        import { generateInDesignBirthdayReport } from './frontend/src/utils/birthdayReportInDesign.js';
+
+        window.testReport = async function() {
+            try {
+                console.log("Testing InDesign birthday report...");
+                const result = await generateInDesignBirthdayReport(sampleReportData, sampleChurch, sampleDateRange, 'view');
+                
+                if (result.success) {
+                    console.log("✅ Report generated successfully!");
+                } else {
+                    console.error("❌ Report generation failed:", result.error);
+                }
+            } catch (error) {
+                console.error("❌ Test failed:", error);
+            }
+        };
+    </script>
+</body>
+</html>

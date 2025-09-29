@@ -15,7 +15,7 @@ import {
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
-import { generateBirthdayReport } from '../utils/birthdayReportPDF';
+import { generateInDesignBirthdayReport } from '../utils/birthdayReportInDesign';
 
 const useStyles = makeStyles({
   container: {
@@ -607,7 +607,7 @@ const BirthdayListPage = ({
         const { church, reportData, dateRange } = result;
         
         // Generate PDF report
-        const reportResult = await generateBirthdayReport(reportData, church, dateRange, action);
+        const reportResult = await generateInDesignBirthdayReport(reportData, church, dateRange, action);
         
         if (!reportResult.success) {
           alert(`Error ${action === 'download' ? 'saving' : 'printing'} report: ${reportResult.error}`);
