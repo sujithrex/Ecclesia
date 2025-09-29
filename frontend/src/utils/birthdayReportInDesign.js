@@ -96,7 +96,10 @@ export class InDesignBirthdayReportPDF {
         // Text properties matching HTML
         this.fonts = {
             regular: null,
-            bold: null
+            bold: null,
+            celebrant: null, // PIZZADUDESTARS font for birthday celebrants
+            tamil: null,     // Vijaya font for Tamil text
+            tamilBold: null  // Vijaya Bold font for Tamil text
         };
         
         this.colors = {
@@ -131,9 +134,87 @@ export class InDesignBirthdayReportPDF {
 
             const pdfDoc = await PDFDocument.create();
             
-            // Embed fonts
-            this.fonts.regular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-            this.fonts.bold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+            // Embed fonts with multiple fallback strategies
+            try {
+                // Strategy 1: Try importing as modules (for dev mode)
+                try {
+                    const timesUrl = (await import('../assets/times.ttf?url')).default;
+                    const timesBoldUrl = (await import('../assets/timesbd.ttf?url')).default;
+                    const pizzaStarsUrl = (await import('../assets/PIZZADUDESTARS.ttf?url')).default;
+                    const vijayaUrl = (await import('../assets/vijaya.ttf?url')).default;
+                    const vijayaBoldUrl = (await import('../assets/vijayab.ttf?url')).default;
+                    
+                    const [timesResponse, timesBoldResponse, celebrantResponse, vijayaResponse, vijayaBoldResponse] = await Promise.all([
+                        fetch(timesUrl),
+                        fetch(timesBoldUrl),
+                        fetch(pizzaStarsUrl),
+                        fetch(vijayaUrl),
+                        fetch(vijayaBoldUrl)
+                    ]);
+                    
+                    if (timesResponse.ok && timesBoldResponse.ok && celebrantResponse.ok && vijayaResponse.ok && vijayaBoldResponse.ok) {
+                        const [timesBytes, timesBoldBytes, celebrantBytes, vijayaBytes, vijayaBoldBytes] = await Promise.all([
+                            timesResponse.arrayBuffer(),
+                            timesBoldResponse.arrayBuffer(),
+                            celebrantResponse.arrayBuffer(),
+                            vijayaResponse.arrayBuffer(),
+                            vijayaBoldResponse.arrayBuffer()
+                        ]);
+                        
+                        this.fonts.regular = await pdfDoc.embedFont(timesBytes);
+                        this.fonts.bold = await pdfDoc.embedFont(timesBoldBytes);
+                        this.fonts.celebrant = await pdfDoc.embedFont(celebrantBytes);
+                        this.fonts.tamil = await pdfDoc.embedFont(vijayaBytes);
+                        this.fonts.tamilBold = await pdfDoc.embedFont(vijayaBoldBytes);
+                        console.log('✅ All custom fonts (including Tamil) loaded successfully via import');
+                        return;
+                    }
+                } catch (importError) {
+                    console.log('Import strategy failed, trying direct fetch...');
+                }
+                
+                // Strategy 2: Try direct fetch from public folder (for production)
+                try {
+                    const [timesResponse, timesBoldResponse, celebrantResponse, vijayaResponse, vijayaBoldResponse] = await Promise.all([
+                        fetch('./times.ttf'),
+                        fetch('./timesbd.ttf'),
+                        fetch('./PIZZADUDESTARS.ttf'),
+                        fetch('./vijaya.ttf'),
+                        fetch('./vijayab.ttf')
+                    ]);
+                    
+                    if (timesResponse.ok && timesBoldResponse.ok && celebrantResponse.ok && vijayaResponse.ok && vijayaBoldResponse.ok) {
+                        const [timesBytes, timesBoldBytes, celebrantBytes, vijayaBytes, vijayaBoldBytes] = await Promise.all([
+                            timesResponse.arrayBuffer(),
+                            timesBoldResponse.arrayBuffer(),
+                            celebrantResponse.arrayBuffer(),
+                            vijayaResponse.arrayBuffer(),
+                            vijayaBoldResponse.arrayBuffer()
+                        ]);
+                        
+                        this.fonts.regular = await pdfDoc.embedFont(timesBytes);
+                        this.fonts.bold = await pdfDoc.embedFont(timesBoldBytes);
+                        this.fonts.celebrant = await pdfDoc.embedFont(celebrantBytes);
+                        this.fonts.tamil = await pdfDoc.embedFont(vijayaBytes);
+                        this.fonts.tamilBold = await pdfDoc.embedFont(vijayaBoldBytes);
+                        console.log('✅ All custom fonts (including Tamil) loaded successfully via public fetch');
+                        return;
+                    }
+                } catch (fetchError) {
+                    console.log('Public fetch strategy failed, using fallback...');
+                }
+                
+                // Strategy 3: Fallback to standard fonts
+                throw new Error('All font loading strategies failed');
+                
+            } catch (error) {
+                console.warn('All custom font loading strategies failed, using standard fonts:', error);
+                this.fonts.regular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+                this.fonts.bold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+                this.fonts.celebrant = this.fonts.regular;
+                this.fonts.tamil = this.fonts.regular;
+                this.fonts.tamilBold = this.fonts.bold;
+            }
             
             // Store church data for use in family generation
             this.currentChurch = church;
@@ -173,15 +254,21 @@ export class InDesignBirthdayReportPDF {
     }
 
     async drawHeaders(page, church, dateRange) {
-        // Diocese/Pastorate name - centered and bold
-        const dioceseText = "Diocese of Tirunelveli - Tenkasi North Zion Nagar Pastorate";
-        await this.drawCenteredText(page, dioceseText, this.coordinates.header.diocese, this.fontSizes.header, this.fonts.bold);
+        // Dynamic Diocese/Pastorate name - centered and bold
+        const dioceseName = church.diocese_name || 'Tirunelveli Diocese';
+        const pastorateShortName = church.pastorate_short_name || 'Pastorate';
+        const churchName = church.church_display_name || church.church_name || 'Church';
+        
+        const dioceseText = `${dioceseName} - ${pastorateShortName} ${churchName}`;
+        const headerFont = this.chooseFontForText(dioceseText, true);
+        await this.drawCenteredText(page, dioceseText, this.coordinates.header.diocese, this.fontSizes.header, headerFont);
         
         // Report title with date range - centered and bold
         const fromDate = this.formatDateRange(dateRange.fromDate);
         const toDate = this.formatDateRange(dateRange.toDate);
         const titleText = `Birthday List - From ${fromDate} to ${toDate}`;
-        await this.drawCenteredText(page, titleText, this.coordinates.header.reportTitle, this.fontSizes.header, this.fonts.bold);
+        const titleFont = this.chooseFontForText(titleText, true);
+        await this.drawCenteredText(page, titleText, this.coordinates.header.reportTitle, this.fontSizes.header, titleFont);
     }
 
     async drawTopLine(page) {
@@ -250,7 +337,8 @@ export class InDesignBirthdayReportPDF {
         // Family Number and Mobile Number (top row)
         await this.drawText(page, "Family Number :", familyConfig.familyNumber.label, this.fontSizes.label);
         const familyNumber = this.generateFamilyNumber(family, church);
-        await this.drawText(page, familyNumber, familyConfig.familyNumber.value, this.fontSizes.value, this.fonts.bold);
+        const familyNumberFont = this.chooseFontForText(familyNumber, true);
+        await this.drawText(page, familyNumber, familyConfig.familyNumber.value, this.fontSizes.value, familyNumberFont);
         
         await this.drawText(page, "Mobile Number :", familyConfig.mobileNumber.label, this.fontSizes.label);
         await this.drawText(page, family.family_phone || 'N/A', familyConfig.mobileNumber.value, this.fontSizes.value, this.fonts.bold);
@@ -258,22 +346,27 @@ export class InDesignBirthdayReportPDF {
         // Family Head and Area (second row)
         await this.drawText(page, "Family Head :", familyConfig.familyHead.label, this.fontSizes.label);
         const familyHead = `${this.formatRespect(family.respect)} ${family.family_name}`;
-        await this.drawText(page, familyHead, familyConfig.familyHead.value, this.fontSizes.value, this.fonts.bold);
+        const familyHeadFont = this.chooseFontForText(familyHead, true);
+        await this.drawText(page, familyHead, familyConfig.familyHead.value, this.fontSizes.value, familyHeadFont);
         
         await this.drawText(page, "Area :", familyConfig.area.label, this.fontSizes.label);
-        await this.drawText(page, family.area_name || 'SAKTHI NAGAR', familyConfig.area.value, this.fontSizes.value, this.fonts.bold);
+        const areaName = family.area_name || 'SAKTHI NAGAR';
+        const areaFont = this.chooseFontForText(areaName, true);
+        await this.drawText(page, areaName, familyConfig.area.value, this.fontSizes.value, areaFont);
         
         // Address and Prayer Points (third row with wrapping)
         await this.drawText(page, "Address :", familyConfig.address.label, this.fontSizes.label);
         // Only render address if data exists, otherwise leave empty space
         if (family.family_address && family.family_address.trim()) {
-            await this.drawWrappedTextWithFrameConstraints(page, family.family_address, familyConfig.address.value, this.fontSizes.address, familyConfig.address.value.width, familyConfig.address.value.frameHeight);
+            const addressFont = this.chooseFontForText(family.family_address);
+            await this.drawWrappedTextWithFrameConstraints(page, family.family_address, familyConfig.address.value, this.fontSizes.address, familyConfig.address.value.width, familyConfig.address.value.frameHeight, addressFont);
         }
         
         await this.drawText(page, "Prayer Points :", familyConfig.prayerPoints.label, this.fontSizes.label);
         // Only render prayer points if data exists, otherwise leave empty space
         if (family.prayer_points && family.prayer_points.trim()) {
-            await this.drawWrappedTextWithFrameConstraints(page, family.prayer_points, familyConfig.prayerPoints.value, this.fontSizes.prayerPoints, familyConfig.prayerPoints.value.width, familyConfig.prayerPoints.value.frameHeight);
+            const prayerPointsFont = this.chooseFontForText(family.prayer_points);
+            await this.drawWrappedTextWithFrameConstraints(page, family.prayer_points, familyConfig.prayerPoints.value, this.fontSizes.prayerPoints, familyConfig.prayerPoints.value.width, familyConfig.prayerPoints.value.frameHeight, prayerPointsFont);
         }
     }
 
@@ -302,25 +395,43 @@ export class InDesignBirthdayReportPDF {
             const isCelebrant = celebrants.some(c => c.id === member.id);
             
             try {
-                // Member name - left aligned
+                // Member name - left aligned (use celebrant font for celebrants, otherwise choose based on text)
                 const memberName = `${this.formatRespect(member.respect)} ${member.name}`;
-                await this.drawText(page, memberName, { x: this.coordinates.memberColumns.name.x, y: currentY }, this.fontSizes.member);
+                const nameFont = isCelebrant ? this.fonts.celebrant : this.chooseFontForText(memberName);
+                await this.drawText(page, memberName, { x: this.coordinates.memberColumns.name.x, y: currentY }, this.fontSizes.member, nameFont);
                 
-                // Age - centered
+                // Age - centered (use special font for celebrants)
                 const age = member.age ? member.age.toString() : '';
-                await this.drawCenteredText(page, age, { x: this.coordinates.memberColumns.age.x, y: currentY }, this.fontSizes.member);
+                const ageFont = isCelebrant ? this.fonts.celebrant : this.chooseFontForText(age);
+                await this.drawCenteredText(page, age, { x: this.coordinates.memberColumns.age.x, y: currentY }, this.fontSizes.member, ageFont);
                 
-                // Relationship - centered
+                // Relationship - centered (use special font for celebrants, otherwise choose based on text)
                 const relationship = member.relation || '';
-                await this.drawCenteredText(page, relationship, { x: this.coordinates.memberColumns.relationship.x, y: currentY }, this.fontSizes.member);
+                const relationFont = isCelebrant ? this.fonts.celebrant : this.chooseFontForText(relationship);
+                await this.drawCenteredText(page, relationship, { x: this.coordinates.memberColumns.relationship.x, y: currentY }, this.fontSizes.member, relationFont);
                 
-                // Occupation - centered
+                // Occupation - centered (use special font for celebrants, otherwise choose based on text)
                 const occupation = member.occupation || '';
-                await this.drawCenteredText(page, occupation, { x: this.coordinates.memberColumns.occupation.x, y: currentY }, this.fontSizes.member);
+                const occupationFont = isCelebrant ? this.fonts.celebrant : this.chooseFontForText(occupation);
+                await this.drawCenteredText(page, occupation, { x: this.coordinates.memberColumns.occupation.x, y: currentY }, this.fontSizes.member, occupationFont);
                 
-                // Working Place - centered
+                // Working Place - centered with text wrapping (use special font for celebrants, otherwise choose based on text)
                 const workingPlace = member.working_place || '';
-                await this.drawCenteredText(page, workingPlace, { x: this.coordinates.memberColumns.workingPlace.x, y: currentY }, this.fontSizes.member);
+                const workingPlaceFont = isCelebrant ? this.fonts.celebrant : this.chooseFontForText(workingPlace);
+                if (workingPlace.length > 10) {
+                    // For longer text, use wrapped text with reduced font size
+                    await this.drawWrappedTextWithFrameConstraints(
+                        page,
+                        workingPlace,
+                        { x: this.coordinates.memberColumns.workingPlace.x - 47, y: currentY },
+                        10, // Smaller font size
+                        94.89, // Column width constraint
+                        15, // Frame height
+                        workingPlaceFont
+                    );
+                } else {
+                    await this.drawCenteredText(page, workingPlace, { x: this.coordinates.memberColumns.workingPlace.x, y: currentY }, this.fontSizes.member, workingPlaceFont);
+                }
                 
                 currentY -= this.layout.memberRowHeight;
             } catch (error) {
@@ -451,15 +562,44 @@ export class InDesignBirthdayReportPDF {
         return respectMap[respect.toLowerCase()] || respect;
     }
 
+    // Function to detect if text contains Tamil characters
+    isTamilText(text) {
+        if (!text) return false;
+        // Tamil Unicode range: U+0B80 to U+0BFF
+        const tamilRange = /[\u0B80-\u0BFF]/;
+        return tamilRange.test(text);
+    }
+
+    // Function to choose appropriate font based on text content
+    chooseFontForText(text, isBold = false, isCelebrant = false) {
+        if (isCelebrant && this.fonts.celebrant) {
+            return this.fonts.celebrant;
+        }
+        
+        if (this.isTamilText(text)) {
+            return isBold ? (this.fonts.tamilBold || this.fonts.tamil || this.fonts.bold)
+                          : (this.fonts.tamil || this.fonts.regular);
+        }
+        
+        return isBold ? this.fonts.bold : this.fonts.regular;
+    }
+
     formatDateRange(dateStr) {
-        // Convert date to DD.MM format
+        // Convert date to DD-MM format or handle DD-MM input format
         if (!dateStr) return '';
+        
+        // If it's already in DD-MM format, return as is
+        if (dateStr.match(/^\d{2}-\d{2}$/)) {
+            return dateStr;
+        }
+        
+        // If it's a full date, format to DD-MM
         const date = new Date(dateStr);
         if (isNaN(date)) return dateStr;
         
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
-        return `${day}.${month}`;
+        return `${day}-${month}`;
     }
 
     drawLine(page, line) {
@@ -480,11 +620,14 @@ export class InDesignBirthdayReportPDF {
             // Ensure fontSize is a valid number
             const validFontSize = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : this.fontSizes.value;
             
+            // Use provided font or choose appropriate font based on text content
+            const selectedFont = font || this.chooseFontForText(text);
+            
             page.drawText(String(text), {
                 x: position.x,
                 y: position.y,
                 size: validFontSize,
-                font: font || this.fonts.regular,
+                font: selectedFont,
                 color: this.colors.black
             });
         } catch (error) {
@@ -500,7 +643,9 @@ export class InDesignBirthdayReportPDF {
             
             // Ensure fontSize is a valid number
             const validFontSize = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : this.fontSizes.value;
-            const textFont = font || this.fonts.regular;
+            
+            // Use provided font or choose appropriate font based on text content
+            const textFont = font || this.chooseFontForText(text);
             const textWidth = textFont.widthOfTextAtSize(String(text), validFontSize);
             const centeredX = position.x - (textWidth / 2);
             
@@ -576,7 +721,9 @@ export class InDesignBirthdayReportPDF {
             
             // Ensure fontSize is a valid number
             const validFontSize = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : this.fontSizes.value;
-            const textFont = font || this.fonts.regular;
+            
+            // Use provided font or choose appropriate font based on text content
+            const textFont = font || this.chooseFontForText(text);
             const lines = this.wrapText(String(text), textFont, validFontSize, maxWidth);
             const lineHeight = this.getLineHeight(validFontSize);
             

@@ -36,6 +36,27 @@ export class BirthdayReportPDF {
             const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
             const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
             
+            // Load Tamil fonts if available
+            let tamilFont = font;
+            let tamilBoldFont = boldFont;
+            
+            try {
+                // Try to load Vijaya fonts for Tamil text support
+                const vijayaResponse = await fetch('./vijaya.ttf');
+                const vijayaBoldResponse = await fetch('./vijayab.ttf');
+                
+                if (vijayaResponse.ok && vijayaBoldResponse.ok) {
+                    const vijayaBytes = await vijayaResponse.arrayBuffer();
+                    const vijayaBoldBytes = await vijayaBoldResponse.arrayBuffer();
+                    
+                    tamilFont = await pdfDoc.embedFont(vijayaBytes);
+                    tamilBoldFont = await pdfDoc.embedFont(vijayaBoldBytes);
+                    console.log('✅ Tamil fonts loaded successfully');
+                }
+            } catch (error) {
+                console.warn('Tamil fonts not available, using fallback fonts:', error);
+            }
+            
             let currentPage = null;
             let currentY = 0;
             
@@ -49,17 +70,17 @@ export class BirthdayReportPDF {
                 
                 // Draw header on first page or if it's a new family
                 if (familyIndex === 0) {
-                    currentY = await this.drawHeader(currentPage, boldFont, church, dateRange, currentY);
+                    currentY = await this.drawHeader(currentPage, boldFont, church, dateRange, currentY, tamilBoldFont);
                 }
                 
                 // Draw separator line
                 currentY = await this.drawSeparatorLine(currentPage, currentY);
                 
                 // Draw family information
-                currentY = await this.drawFamilyInfo(currentPage, font, boldFont, family, currentY);
+                currentY = await this.drawFamilyInfo(currentPage, font, boldFont, family, currentY, tamilFont, tamilBoldFont);
                 
                 // Draw members table
-                currentY = await this.drawMembersTable(currentPage, font, boldFont, members, celebrants, currentY);
+                currentY = await this.drawMembersTable(currentPage, font, boldFont, members, celebrants, currentY, tamilFont, tamilBoldFont);
             }
             
             return pdfDoc;
@@ -69,31 +90,40 @@ export class BirthdayReportPDF {
         }
     }
 
-    async drawHeader(page, boldFont, church, dateRange, y) {
-        const headerText = `${church.church_name} - BIRTHDAY CELEBRATION REPORT`;
+    async drawHeader(page, boldFont, church, dateRange, y, tamilBoldFont) {
+        // Dynamic header using diocese, pastorate and church names
+        const dioceseName = church.diocese_name || 'Tirunelveli Diocese';
+        const pastorateShortName = church.pastorate_short_name || 'Pastorate';
+        const churchName = church.church_display_name || church.church_name || 'Church';
+        
+        const headerText = `${dioceseName} - ${pastorateShortName} ${churchName} Pastorate - BIRTHDAY CELEBRATION REPORT`;
         const subHeaderText = `Date Range: ${this.formatDateForDisplay(dateRange.fromDate)} to ${this.formatDateForDisplay(dateRange.toDate)}`;
         
+        // Choose appropriate font for header text
+        const headerFont = this.chooseFontForText(headerText, true, boldFont, boldFont, tamilBoldFont, tamilBoldFont);
+        const subHeaderFont = this.chooseFontForText(subHeaderText, true, boldFont, boldFont, tamilBoldFont, tamilBoldFont);
+        
         // Main header
-        const headerWidth = boldFont.widthOfTextAtSize(headerText, this.fontSizes.header);
+        const headerWidth = headerFont.widthOfTextAtSize(headerText, this.fontSizes.header);
         const headerX = (this.pageWidth - headerWidth) / 2;
         
         page.drawText(headerText, {
             x: headerX,
             y: y - 20,
             size: this.fontSizes.header,
-            font: boldFont,
+            font: headerFont,
             color: this.colors.black,
         });
         
         // Sub header
-        const subHeaderWidth = boldFont.widthOfTextAtSize(subHeaderText, this.fontSizes.subheader);
+        const subHeaderWidth = subHeaderFont.widthOfTextAtSize(subHeaderText, this.fontSizes.subheader);
         const subHeaderX = (this.pageWidth - subHeaderWidth) / 2;
         
         page.drawText(subHeaderText, {
             x: subHeaderX,
             y: y - 40,
             size: this.fontSizes.subheader,
-            font: boldFont,
+            font: subHeaderFont,
             color: this.colors.black,
         });
         
@@ -111,7 +141,7 @@ export class BirthdayReportPDF {
         return y - 25;
     }
 
-    async drawFamilyInfo(page, font, boldFont, family, y) {
+    async drawFamilyInfo(page, font, boldFont, family, y, tamilFont, tamilBoldFont) {
         const lineHeight = 15;
         
         // First line: Family No, Area, Fellowship, Mobile
@@ -125,11 +155,12 @@ export class BirthdayReportPDF {
         const columnWidth = this.contentWidth / 4;
         
         line1Parts.forEach((text, index) => {
+            const textFont = this.chooseFontForText(text, false, font, boldFont, tamilFont, tamilBoldFont);
             page.drawText(text, {
                 x: this.margins.left + (index * columnWidth),
                 y: y,
                 size: this.fontSizes.normal,
-                font: font,
+                font: textFont,
                 color: this.colors.black,
             });
         });
@@ -140,14 +171,19 @@ export class BirthdayReportPDF {
             addressText += ` | Prayer Points: ${family.prayer_points}`;
         }
         
+        // Choose appropriate font for address text
+        const addressFont = this.chooseFontForText(addressText, false, font, boldFont, tamilFont, tamilBoldFont);
+        
         // Wrap long text
-        const wrappedText = this.wrapText(addressText, font, this.fontSizes.normal, this.contentWidth);
+        const wrappedText = this.wrapText(addressText, addressFont, this.fontSizes.normal, this.contentWidth);
         wrappedText.forEach((line, index) => {
+            // Choose font for each line individually in case they contain different scripts
+            const lineFont = this.chooseFontForText(line, false, font, boldFont, tamilFont, tamilBoldFont);
             page.drawText(line, {
                 x: this.margins.left,
                 y: y - lineHeight - (index * lineHeight),
                 size: this.fontSizes.normal,
-                font: font,
+                font: lineFont,
                 color: this.colors.black,
             });
         });
@@ -155,7 +191,7 @@ export class BirthdayReportPDF {
         return y - (lineHeight * (2 + wrappedText.length - 1)) - 10;
     }
 
-    async drawMembersTable(page, font, boldFont, members, celebrants, y) {
+    async drawMembersTable(page, font, boldFont, members, celebrants, y, tamilFont, tamilBoldFont) {
         const tableHeaders = ['M.NO', 'Names', 'Age', 'Relationship', 'Occupation', 'Working place', 'Birthday'];
         const columnWidths = [50, 120, 35, 80, 80, 80, 100]; // Total: 545
         const rowHeight = 20;
@@ -178,11 +214,12 @@ export class BirthdayReportPDF {
         // Draw header text
         let currentX = this.margins.left;
         tableHeaders.forEach((header, index) => {
+            const headerFont = this.chooseFontForText(header, true, font, boldFont, tamilFont, tamilBoldFont);
             page.drawText(header, {
                 x: currentX + 5,
                 y: currentY - 15,
                 size: this.fontSizes.normal,
-                font: boldFont,
+                font: headerFont,
                 color: this.colors.black,
             });
             currentX += columnWidths[index];
@@ -230,11 +267,13 @@ export class BirthdayReportPDF {
             // Draw row data
             let currentX = this.margins.left;
             rowData.forEach((text, index) => {
+                // Choose appropriate font for each cell based on content
+                const cellFont = this.chooseFontForText(text, isCelebrant, font, boldFont, tamilFont, tamilBoldFont);
                 page.drawText(text, {
                     x: currentX + 5,
                     y: currentY - 15,
                     size: this.fontSizes.small,
-                    font: isCelebrant ? boldFont : font,
+                    font: cellFont,
                     color: isCelebrant ? this.colors.darkRed : this.colors.black,
                 });
                 currentX += columnWidths[index];
@@ -332,23 +371,39 @@ export class BirthdayReportPDF {
         return lines;
     }
 
+    // Function to detect if text contains Tamil characters
+    isTamilText(text) {
+        if (!text) return false;
+        // Tamil Unicode range: U+0B80 to U+0BFF
+        const tamilRange = /[\u0B80-\u0BFF]/;
+        return tamilRange.test(text);
+    }
+
+    // Function to choose appropriate font based on text content
+    chooseFontForText(text, isBold = false, regularFont, boldFont, tamilFont, tamilBoldFont) {
+        if (this.isTamilText(text)) {
+            return isBold ? (tamilBoldFont || tamilFont || boldFont)
+                          : (tamilFont || regularFont);
+        }
+        
+        return isBold ? boldFont : regularFont;
+    }
+
     formatDateForDisplay(dateStr) {
         if (!dateStr) return 'N/A';
         
-        // If it's already in DD-MM format, add current year
+        // If it's already in DD-MM format, return as is (matching the birthday page format)
         if (dateStr.match(/^\d{2}-\d{2}$/)) {
-            const currentYear = new Date().getFullYear();
-            return `${dateStr}-${currentYear}`;
+            return dateStr;
         }
         
-        // If it's a full date, format it
+        // If it's a full date, format to DD-MM
         const date = new Date(dateStr);
         if (isNaN(date)) return dateStr;
         
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}-${month}-${year}`;
+        return `${day}-${month}`;
     }
 
     formatBirthdayDate(dob) {

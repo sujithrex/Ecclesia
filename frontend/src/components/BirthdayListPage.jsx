@@ -362,7 +362,7 @@ const useStyles = makeStyles({
     marginTop: '16px',
   },
   reportButton: {
-    backgroundColor: '#0078d4',
+    backgroundColor: '#B5316A',
     color: 'white',
     border: 'none',
     borderRadius: '4px',
@@ -375,7 +375,7 @@ const useStyles = makeStyles({
     gap: '6px',
     transition: 'all 0.2s ease',
     '&:hover': {
-      backgroundColor: '#106ebe',
+      backgroundColor: '#A12B5E',
       transform: 'translateY(-1px)',
     },
     '&:disabled': {
@@ -383,17 +383,17 @@ const useStyles = makeStyles({
       cursor: 'not-allowed',
       '&:hover': {
         transform: 'none',
-        backgroundColor: '#0078d4',
+        backgroundColor: '#B5316A',
       },
     },
   },
   printButton: {
-    backgroundColor: '#107c10',
+    backgroundColor: '#B5316A',
     '&:hover': {
-      backgroundColor: '#0e6b0e',
+      backgroundColor: '#A12B5E',
     },
     '&:disabled:hover': {
-      backgroundColor: '#107c10',
+      backgroundColor: '#B5316A',
     },
   },
 });

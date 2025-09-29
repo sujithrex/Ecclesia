@@ -664,6 +664,42 @@ class MemberService {
                 return { success: false, error: 'Church not found' };
             }
 
+            // Get pastorate details for dynamic header information
+            const pastorate = await this.db.getPastorateById(church.pastorate_id);
+            let pastorateSettings = null;
+            let churchSettings = null;
+            
+            try {
+                pastorateSettings = await this.db.getPastorateSettings(church.pastorate_id);
+                if (!pastorateSettings) {
+                    // Fallback to default pastorate settings
+                    pastorateSettings = await this.db.getDefaultPastorateSettings(church.pastorate_id);
+                }
+            } catch (error) {
+                console.warn('Could not fetch pastorate settings:', error);
+            }
+
+            try {
+                churchSettings = await this.db.getChurchSettings(churchId);
+                if (!churchSettings) {
+                    // Fallback to default church settings
+                    churchSettings = await this.db.getDefaultChurchSettings(churchId);
+                }
+            } catch (error) {
+                console.warn('Could not fetch church settings:', error);
+            }
+
+            // Enhance church object with dynamic header information
+            const enhancedChurch = {
+                ...church,
+                // Diocese name from pastorate settings
+                diocese_name: pastorateSettings?.diocese_name_english || 'Tirunelveli Diocese',
+                // Pastorate short name from pastorate table
+                pastorate_short_name: pastorate?.pastorate_short_name || 'Pastorate',
+                // Church name from church settings or fallback to church name
+                church_display_name: churchSettings?.church_name_english || church.church_name
+            };
+
             // Get birthday members in the date range
             const birthdayMembers = await this.db.getBirthdaysByDateRange(churchId, fromDate, toDate, areaId);
             
@@ -706,7 +742,7 @@ class MemberService {
 
             return {
                 success: true,
-                church: church,
+                church: enhancedChurch,
                 reportData: reportData,
                 dateRange: { fromDate, toDate }
             };
