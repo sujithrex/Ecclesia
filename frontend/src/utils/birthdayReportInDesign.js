@@ -135,6 +135,9 @@ export class InDesignBirthdayReportPDF {
             this.fonts.regular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
             this.fonts.bold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
             
+            // Store church data for use in family generation
+            this.currentChurch = church;
+            
             let familyIndex = 0;
             let isFirstPage = true;
             
@@ -170,15 +173,15 @@ export class InDesignBirthdayReportPDF {
     }
 
     async drawHeaders(page, church, dateRange) {
-        // Diocese/Pastorate name - centered
+        // Diocese/Pastorate name - centered and bold
         const dioceseText = "Diocese of Tirunelveli - Tenkasi North Zion Nagar Pastorate";
-        await this.drawCenteredText(page, dioceseText, this.coordinates.header.diocese, this.fontSizes.header);
+        await this.drawCenteredText(page, dioceseText, this.coordinates.header.diocese, this.fontSizes.header, this.fonts.bold);
         
-        // Report title with date range - centered
+        // Report title with date range - centered and bold
         const fromDate = this.formatDateRange(dateRange.fromDate);
         const toDate = this.formatDateRange(dateRange.toDate);
         const titleText = `Birthday List - From ${fromDate} to ${toDate}`;
-        await this.drawCenteredText(page, titleText, this.coordinates.header.reportTitle, this.fontSizes.header);
+        await this.drawCenteredText(page, titleText, this.coordinates.header.reportTitle, this.fontSizes.header, this.fonts.bold);
     }
 
     async drawTopLine(page) {
@@ -214,7 +217,7 @@ export class InDesignBirthdayReportPDF {
             const validCelebrants = Array.isArray(celebrants) ? celebrants : [];
             
             // Draw family information
-            await this.drawFamilyInfo(page, family, familyConfig);
+            await this.drawFamilyInfo(page, family, familyConfig, this.currentChurch);
             
             // Draw family separator line
             this.drawLine(page, familyConfig.lines.afterFamily);
@@ -243,22 +246,22 @@ export class InDesignBirthdayReportPDF {
         }
     }
 
-    async drawFamilyInfo(page, family, familyConfig) {
+    async drawFamilyInfo(page, family, familyConfig, church) {
         // Family Number and Mobile Number (top row)
         await this.drawText(page, "Family Number :", familyConfig.familyNumber.label, this.fontSizes.label);
-        const familyNumber = this.generateFamilyNumber(family);
-        await this.drawText(page, familyNumber, familyConfig.familyNumber.value, this.fontSizes.value);
+        const familyNumber = this.generateFamilyNumber(family, church);
+        await this.drawText(page, familyNumber, familyConfig.familyNumber.value, this.fontSizes.value, this.fonts.bold);
         
         await this.drawText(page, "Mobile Number :", familyConfig.mobileNumber.label, this.fontSizes.label);
-        await this.drawText(page, family.family_phone || 'N/A', familyConfig.mobileNumber.value, this.fontSizes.value);
+        await this.drawText(page, family.family_phone || 'N/A', familyConfig.mobileNumber.value, this.fontSizes.value, this.fonts.bold);
         
         // Family Head and Area (second row)
         await this.drawText(page, "Family Head :", familyConfig.familyHead.label, this.fontSizes.label);
         const familyHead = `${this.formatRespect(family.respect)} ${family.family_name}`;
-        await this.drawText(page, familyHead, familyConfig.familyHead.value, this.fontSizes.value);
+        await this.drawText(page, familyHead, familyConfig.familyHead.value, this.fontSizes.value, this.fonts.bold);
         
         await this.drawText(page, "Area :", familyConfig.area.label, this.fontSizes.label);
-        await this.drawText(page, family.area_name || 'SAKTHI NAGAR', familyConfig.area.value, this.fontSizes.value);
+        await this.drawText(page, family.area_name || 'SAKTHI NAGAR', familyConfig.area.value, this.fontSizes.value, this.fonts.bold);
         
         // Address and Prayer Points (third row with wrapping)
         await this.drawText(page, "Address :", familyConfig.address.label, this.fontSizes.label);
@@ -275,12 +278,12 @@ export class InDesignBirthdayReportPDF {
     }
 
     async drawTableHeaders(page, headerConfig) {
-        // Draw headers - Name is left aligned, others are centered
-        await this.drawText(page, "Name", headerConfig.name, this.fontSizes.header);
-        await this.drawCenteredText(page, "Age", headerConfig.age, this.fontSizes.header);
-        await this.drawCenteredText(page, "Relationship", headerConfig.relationship, this.fontSizes.header);
-        await this.drawCenteredText(page, "Occupation", headerConfig.occupation, this.fontSizes.header);
-        await this.drawCenteredText(page, "Working Place", headerConfig.workingPlace, this.fontSizes.header);
+        // Draw headers in bold - Name is left aligned, others are centered
+        await this.drawText(page, "Name", headerConfig.name, this.fontSizes.header, this.fonts.bold);
+        await this.drawCenteredText(page, "Age", headerConfig.age, this.fontSizes.header, this.fonts.bold);
+        await this.drawCenteredText(page, "Relationship", headerConfig.relationship, this.fontSizes.header, this.fonts.bold);
+        await this.drawCenteredText(page, "Occupation", headerConfig.occupation, this.fontSizes.header, this.fonts.bold);
+        await this.drawCenteredText(page, "Working Place", headerConfig.workingPlace, this.fontSizes.header, this.fonts.bold);
     }
 
     async drawMembers(page, members, celebrants, startY) {
@@ -423,9 +426,10 @@ export class InDesignBirthdayReportPDF {
     }
 
     // Helper methods
-    generateFamilyNumber(family) {
-        // Generate family number like "TNZN-A1-222"
-        const pastorateCode = 'TNZN'; // Could be dynamic from church data
+    generateFamilyNumber(family, church) {
+        // Generate dynamic family number like "TNZN-A1-222"
+        // Format: {church_short_name}-{area_identity}-{family_number}
+        const pastorateCode = church?.church_short_name || 'TNZN';
         const areaCode = family.area_identity || 'A1';
         const familyNum = family.family_number || '001';
         return `${pastorateCode}-${areaCode}-${familyNum}`;
