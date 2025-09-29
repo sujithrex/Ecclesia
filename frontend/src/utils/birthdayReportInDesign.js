@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 
 export class InDesignBirthdayReportPDF {
     constructor() {
@@ -134,15 +135,26 @@ export class InDesignBirthdayReportPDF {
 
             const pdfDoc = await PDFDocument.create();
             
-            // Embed fonts with multiple fallback strategies
+            // Register fontkit to enable custom font embedding
+            pdfDoc.registerFontkit(fontkit);
+            console.log('✅ Fontkit registered successfully');
+            
+            // Embed fonts with multiple fallback strategies and detailed error logging
+            let fontsLoaded = false;
+            
             try {
+                console.log('🔄 Starting font loading process...');
+                
                 // Strategy 1: Try importing as modules (for dev mode)
                 try {
+                    console.log('🔄 Trying Strategy 1: Import from assets...');
                     const timesUrl = (await import('../assets/times.ttf?url')).default;
                     const timesBoldUrl = (await import('../assets/timesbd.ttf?url')).default;
                     const pizzaStarsUrl = (await import('../assets/PIZZADUDESTARS.ttf?url')).default;
                     const vijayaUrl = (await import('../assets/vijaya.ttf?url')).default;
                     const vijayaBoldUrl = (await import('../assets/vijayab.ttf?url')).default;
+                    
+                    console.log('📁 Font URLs:', { timesUrl, timesBoldUrl, pizzaStarsUrl, vijayaUrl, vijayaBoldUrl });
                     
                     const [timesResponse, timesBoldResponse, celebrantResponse, vijayaResponse, vijayaBoldResponse] = await Promise.all([
                         fetch(timesUrl),
@@ -152,36 +164,13 @@ export class InDesignBirthdayReportPDF {
                         fetch(vijayaBoldUrl)
                     ]);
                     
-                    if (timesResponse.ok && timesBoldResponse.ok && celebrantResponse.ok && vijayaResponse.ok && vijayaBoldResponse.ok) {
-                        const [timesBytes, timesBoldBytes, celebrantBytes, vijayaBytes, vijayaBoldBytes] = await Promise.all([
-                            timesResponse.arrayBuffer(),
-                            timesBoldResponse.arrayBuffer(),
-                            celebrantResponse.arrayBuffer(),
-                            vijayaResponse.arrayBuffer(),
-                            vijayaBoldResponse.arrayBuffer()
-                        ]);
-                        
-                        this.fonts.regular = await pdfDoc.embedFont(timesBytes);
-                        this.fonts.bold = await pdfDoc.embedFont(timesBoldBytes);
-                        this.fonts.celebrant = await pdfDoc.embedFont(celebrantBytes);
-                        this.fonts.tamil = await pdfDoc.embedFont(vijayaBytes);
-                        this.fonts.tamilBold = await pdfDoc.embedFont(vijayaBoldBytes);
-                        console.log('✅ All custom fonts (including Tamil) loaded successfully via import');
-                        return;
-                    }
-                } catch (importError) {
-                    console.log('Import strategy failed, trying direct fetch...');
-                }
-                
-                // Strategy 2: Try direct fetch from public folder (for production)
-                try {
-                    const [timesResponse, timesBoldResponse, celebrantResponse, vijayaResponse, vijayaBoldResponse] = await Promise.all([
-                        fetch('./times.ttf'),
-                        fetch('./timesbd.ttf'),
-                        fetch('./PIZZADUDESTARS.ttf'),
-                        fetch('./vijaya.ttf'),
-                        fetch('./vijayab.ttf')
-                    ]);
+                    console.log('📥 Response status:', {
+                        times: timesResponse.status,
+                        timesBold: timesBoldResponse.status,
+                        celebrant: celebrantResponse.status,
+                        vijaya: vijayaResponse.status,
+                        vijayaBold: vijayaBoldResponse.status
+                    });
                     
                     if (timesResponse.ok && timesBoldResponse.ok && celebrantResponse.ok && vijayaResponse.ok && vijayaBoldResponse.ok) {
                         const [timesBytes, timesBoldBytes, celebrantBytes, vijayaBytes, vijayaBoldBytes] = await Promise.all([
@@ -192,29 +181,144 @@ export class InDesignBirthdayReportPDF {
                             vijayaBoldResponse.arrayBuffer()
                         ]);
                         
+                        console.log('📊 Font sizes (bytes):', {
+                            times: timesBytes.byteLength,
+                            timesBold: timesBoldBytes.byteLength,
+                            celebrant: celebrantBytes.byteLength,
+                            vijaya: vijayaBytes.byteLength,
+                            vijayaBold: vijayaBoldBytes.byteLength
+                        });
+                        
                         this.fonts.regular = await pdfDoc.embedFont(timesBytes);
                         this.fonts.bold = await pdfDoc.embedFont(timesBoldBytes);
                         this.fonts.celebrant = await pdfDoc.embedFont(celebrantBytes);
                         this.fonts.tamil = await pdfDoc.embedFont(vijayaBytes);
                         this.fonts.tamilBold = await pdfDoc.embedFont(vijayaBoldBytes);
-                        console.log('✅ All custom fonts (including Tamil) loaded successfully via public fetch');
-                        return;
+                        
+                        console.log('✅ All custom fonts (including Tamil & Stars) loaded successfully via import');
+                        console.log('🎯 Celebrant font loaded:', !!this.fonts.celebrant);
+                        console.log('🇮🇳 Tamil fonts loaded:', !!this.fonts.tamil, !!this.fonts.tamilBold);
+                        fontsLoaded = true;
                     }
-                } catch (fetchError) {
-                    console.log('Public fetch strategy failed, using fallback...');
+                } catch (importError) {
+                    console.warn('❌ Strategy 1 failed:', importError.message);
                 }
                 
-                // Strategy 3: Fallback to standard fonts
-                throw new Error('All font loading strategies failed');
+                // Strategy 2: Try direct fetch from public folder (for production)
+                if (!fontsLoaded) {
+                    try {
+                        console.log('🔄 Trying Strategy 2: Public folder fetch...');
+                        const [timesResponse, timesBoldResponse, celebrantResponse, vijayaResponse, vijayaBoldResponse] = await Promise.all([
+                            fetch('./times.ttf'),
+                            fetch('./timesbd.ttf'),
+                            fetch('./PIZZADUDESTARS.ttf'),
+                            fetch('./vijaya.ttf'),
+                            fetch('./vijayab.ttf')
+                        ]);
+                        
+                        console.log('📥 Public fetch response status:', {
+                            times: timesResponse.status,
+                            timesBold: timesBoldResponse.status,
+                            celebrant: celebrantResponse.status,
+                            vijaya: vijayaResponse.status,
+                            vijayaBold: vijayaBoldResponse.status
+                        });
+                        
+                        if (timesResponse.ok && timesBoldResponse.ok && celebrantResponse.ok && vijayaResponse.ok && vijayaBoldResponse.ok) {
+                            const [timesBytes, timesBoldBytes, celebrantBytes, vijayaBytes, vijayaBoldBytes] = await Promise.all([
+                                timesResponse.arrayBuffer(),
+                                timesBoldResponse.arrayBuffer(),
+                                celebrantResponse.arrayBuffer(),
+                                vijayaResponse.arrayBuffer(),
+                                vijayaBoldResponse.arrayBuffer()
+                            ]);
+                            
+                            this.fonts.regular = await pdfDoc.embedFont(timesBytes);
+                            this.fonts.bold = await pdfDoc.embedFont(timesBoldBytes);
+                            this.fonts.celebrant = await pdfDoc.embedFont(celebrantBytes);
+                            this.fonts.tamil = await pdfDoc.embedFont(vijayaBytes);
+                            this.fonts.tamilBold = await pdfDoc.embedFont(vijayaBoldBytes);
+                            
+                            console.log('✅ All custom fonts (including Tamil & Stars) loaded successfully via public fetch');
+                            console.log('🎯 Celebrant font loaded:', !!this.fonts.celebrant);
+                            console.log('🇮🇳 Tamil fonts loaded:', !!this.fonts.tamil, !!this.fonts.tamilBold);
+                            fontsLoaded = true;
+                        }
+                    } catch (fetchError) {
+                        console.warn('❌ Strategy 2 failed:', fetchError.message);
+                    }
+                }
+                
+                // Strategy 3: Try absolute paths from public folder
+                if (!fontsLoaded) {
+                    try {
+                        console.log('🔄 Trying Strategy 3: Absolute paths from public...');
+                        const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+                        const [timesResponse, timesBoldResponse, celebrantResponse, vijayaResponse, vijayaBoldResponse] = await Promise.all([
+                            fetch(baseUrl + 'times.ttf'),
+                            fetch(baseUrl + 'timesbd.ttf'),
+                            fetch(baseUrl + 'PIZZADUDESTARS.ttf'),
+                            fetch(baseUrl + 'vijaya.ttf'),
+                            fetch(baseUrl + 'vijayab.ttf')
+                        ]);
+                        
+                        console.log('📥 Absolute path response status:', {
+                            times: timesResponse.status,
+                            timesBold: timesBoldResponse.status,
+                            celebrant: celebrantResponse.status,
+                            vijaya: vijayaResponse.status,
+                            vijayaBold: vijayaBoldResponse.status
+                        });
+                        
+                        if (timesResponse.ok && timesBoldResponse.ok && celebrantResponse.ok && vijayaResponse.ok && vijayaBoldResponse.ok) {
+                            const [timesBytes, timesBoldBytes, celebrantBytes, vijayaBytes, vijayaBoldBytes] = await Promise.all([
+                                timesResponse.arrayBuffer(),
+                                timesBoldResponse.arrayBuffer(),
+                                celebrantResponse.arrayBuffer(),
+                                vijayaResponse.arrayBuffer(),
+                                vijayaBoldResponse.arrayBuffer()
+                            ]);
+                            
+                            this.fonts.regular = await pdfDoc.embedFont(timesBytes);
+                            this.fonts.bold = await pdfDoc.embedFont(timesBoldBytes);
+                            this.fonts.celebrant = await pdfDoc.embedFont(celebrantBytes);
+                            this.fonts.tamil = await pdfDoc.embedFont(vijayaBytes);
+                            this.fonts.tamilBold = await pdfDoc.embedFont(vijayaBoldBytes);
+                            
+                            console.log('✅ All custom fonts (including Tamil & Stars) loaded successfully via absolute paths');
+                            console.log('🎯 Celebrant font loaded:', !!this.fonts.celebrant);
+                            console.log('🇮🇳 Tamil fonts loaded:', !!this.fonts.tamil, !!this.fonts.tamilBold);
+                            fontsLoaded = true;
+                        }
+                    } catch (absoluteError) {
+                        console.warn('❌ Strategy 3 failed:', absoluteError.message);
+                    }
+                }
+                
+                // Strategy 4: Fallback to standard fonts (but warn user)
+                if (!fontsLoaded) {
+                    throw new Error('All font loading strategies failed - using standard fonts');
+                }
                 
             } catch (error) {
-                console.warn('All custom font loading strategies failed, using standard fonts:', error);
+                console.error('⚠️ FONT LOADING FAILURE - Tamil text and birthday stars will not display correctly!');
+                console.error('Error details:', error.message);
+                console.warn('🔄 Falling back to standard fonts (Tamil & stars will not work)');
+                
                 this.fonts.regular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
                 this.fonts.bold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-                this.fonts.celebrant = this.fonts.regular;
-                this.fonts.tamil = this.fonts.regular;
-                this.fonts.tamilBold = this.fonts.bold;
+                this.fonts.celebrant = await pdfDoc.embedFont(StandardFonts.TimesRoman); // This won't show stars
+                this.fonts.tamil = await pdfDoc.embedFont(StandardFonts.TimesRoman); // This won't show Tamil
+                this.fonts.tamilBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold); // This won't show Tamil
+                
+                // Alert user about the problem
+                if (typeof window !== 'undefined') {
+                    console.error('🚨 CRITICAL: Custom fonts failed to load! Tamil text and birthday stars will not appear in PDF.');
+                }
             }
+            
+            // Validate that fonts are properly embedded
+            await this.validateFontEmbedding();
             
             // Store church data for use in family generation
             this.currentChurch = church;
@@ -395,29 +499,36 @@ export class InDesignBirthdayReportPDF {
             const isCelebrant = celebrants.some(c => c.id === member.id);
             
             try {
+                // Log celebrant status for debugging
+                if (isCelebrant) {
+                    console.log(`🎉 Drawing birthday celebrant: ${member.name}`);
+                } else {
+                    console.log(`👤 Drawing regular member: ${member.name}`);
+                }
+                
                 // Member name - left aligned (use celebrant font for celebrants, otherwise choose based on text)
                 const memberName = `${this.formatRespect(member.respect)} ${member.name}`;
-                const nameFont = isCelebrant ? this.fonts.celebrant : this.chooseFontForText(memberName);
+                const nameFont = this.chooseFontForText(memberName, false, isCelebrant);
                 await this.drawText(page, memberName, { x: this.coordinates.memberColumns.name.x, y: currentY }, this.fontSizes.member, nameFont);
                 
                 // Age - centered (use special font for celebrants)
                 const age = member.age ? member.age.toString() : '';
-                const ageFont = isCelebrant ? this.fonts.celebrant : this.chooseFontForText(age);
+                const ageFont = this.chooseFontForText(age, false, isCelebrant);
                 await this.drawCenteredText(page, age, { x: this.coordinates.memberColumns.age.x, y: currentY }, this.fontSizes.member, ageFont);
                 
                 // Relationship - centered (use special font for celebrants, otherwise choose based on text)
                 const relationship = member.relation || '';
-                const relationFont = isCelebrant ? this.fonts.celebrant : this.chooseFontForText(relationship);
+                const relationFont = this.chooseFontForText(relationship, false, isCelebrant);
                 await this.drawCenteredText(page, relationship, { x: this.coordinates.memberColumns.relationship.x, y: currentY }, this.fontSizes.member, relationFont);
                 
                 // Occupation - centered (use special font for celebrants, otherwise choose based on text)
                 const occupation = member.occupation || '';
-                const occupationFont = isCelebrant ? this.fonts.celebrant : this.chooseFontForText(occupation);
+                const occupationFont = this.chooseFontForText(occupation, false, isCelebrant);
                 await this.drawCenteredText(page, occupation, { x: this.coordinates.memberColumns.occupation.x, y: currentY }, this.fontSizes.member, occupationFont);
                 
                 // Working Place - centered with text wrapping (use special font for celebrants, otherwise choose based on text)
                 const workingPlace = member.working_place || '';
-                const workingPlaceFont = isCelebrant ? this.fonts.celebrant : this.chooseFontForText(workingPlace);
+                const workingPlaceFont = this.chooseFontForText(workingPlace, false, isCelebrant);
                 if (workingPlace.length > 10) {
                     // For longer text, use wrapped text with reduced font size
                     await this.drawWrappedTextWithFrameConstraints(
@@ -546,6 +657,96 @@ export class InDesignBirthdayReportPDF {
         return `${pastorateCode}-${areaCode}-${familyNum}`;
     }
 
+    // Function to detect if text contains Tamil characters
+    isTamilText(text) {
+        if (!text || typeof text !== 'string') return false;
+        // Tamil Unicode range: U+0B80 to U+0BFF
+        const tamilRange = /[\u0B80-\u0BFF]/;
+        const hasTamil = tamilRange.test(text);
+        if (hasTamil) {
+            console.log(`🇮🇳 Tamil text detected: "${text}"`);
+        }
+        return hasTamil;
+    }
+
+    // Function to choose appropriate font based on text content
+    chooseFontForText(text, isBold = false, isCelebrant = false) {
+        // Priority 1: Celebrant (birthday person) gets star font regardless of text content
+        if (isCelebrant) {
+            if (this.fonts.celebrant) {
+                console.log(`🎯 Using celebrant font for: "${text}"`);
+                return this.fonts.celebrant;
+            } else {
+                console.warn(`⚠️ Celebrant font not available for: "${text}", using fallback`);
+            }
+        }
+        
+        // Priority 2: Tamil text gets Tamil font
+        if (this.isTamilText(text)) {
+            const tamilFont = isBold ? (this.fonts.tamilBold || this.fonts.tamil || this.fonts.bold)
+                                    : (this.fonts.tamil || this.fonts.regular);
+            console.log(`🇮🇳 Using Tamil font (bold:${isBold}) for: "${text}"`);
+            return tamilFont;
+        }
+        
+        // Priority 3: Regular English text
+        const regularFont = isBold ? this.fonts.bold : this.fonts.regular;
+        return regularFont;
+    }
+
+    // New method to validate font embedding
+    async validateFontEmbedding() {
+        console.log('\n🔍 Validating Font Embedding:');
+        console.log('=====================================');
+        
+        const fontStatus = {
+            regular: !!this.fonts.regular,
+            bold: !!this.fonts.bold,
+            celebrant: !!this.fonts.celebrant,
+            tamil: !!this.fonts.tamil,
+            tamilBold: !!this.fonts.tamilBold
+        };
+        
+        Object.entries(fontStatus).forEach(([name, loaded]) => {
+            console.log(`${loaded ? '✅' : '❌'} ${name.toUpperCase()}: ${loaded ? 'Loaded' : 'Missing'}`);
+        });
+        
+        // Test Tamil text detection with sample
+        const tamilSample = 'அன்பு சந்தோஷம்';
+        const englishSample = 'John Mary';
+        
+        console.log(`\n🧪 Tamil Detection Test:`);
+        console.log(`"${tamilSample}" is Tamil: ${this.isTamilText(tamilSample)}`);
+        console.log(`"${englishSample}" is Tamil: ${this.isTamilText(englishSample)}`);
+        
+        // Test font selection
+        console.log(`\n🎯 Font Selection Test:`);
+        const tamilFont = this.chooseFontForText(tamilSample, false, false);
+        const celebrantFont = this.chooseFontForText(englishSample, false, true);
+        const regularFont = this.chooseFontForText(englishSample, false, false);
+        
+        console.log(`Tamil text font: ${tamilFont === this.fonts.tamil ? 'TAMIL' : tamilFont === this.fonts.regular ? 'REGULAR (FALLBACK)' : 'UNKNOWN'}`);
+        console.log(`Celebrant font: ${celebrantFont === this.fonts.celebrant ? 'CELEBRANT' : celebrantFont === this.fonts.regular ? 'REGULAR (FALLBACK)' : 'UNKNOWN'}`);
+        console.log(`Regular font: ${regularFont === this.fonts.regular ? 'REGULAR' : 'UNKNOWN'}`);
+        
+        const allFontsLoaded = Object.values(fontStatus).every(loaded => loaded);
+        console.log(`\n📊 Overall Status: ${allFontsLoaded ? '✅ ALL FONTS READY' : '⚠️ SOME FONTS MISSING'}`);
+        
+        if (!allFontsLoaded) {
+            console.warn('\n⚠️ WARNING: Missing fonts will cause rendering issues!');
+            console.warn('• Tamil text will appear as blank or squares');
+            console.warn('• Birthday stars will not appear');
+            console.warn('• Check font files in public/ and src/assets/ folders');
+            
+            // Show user alert if fonts are missing
+            if (typeof window !== 'undefined') {
+                alert('⚠️ FONT LOADING WARNING\n\nSome fonts failed to load properly.\nTamil text and birthday stars may not display correctly.\n\nCheck browser console for details.');
+            }
+        }
+        
+        return allFontsLoaded;
+    }
+
     formatRespect(respect) {
         if (!respect) return '';
         const respectMap = {
@@ -562,27 +763,6 @@ export class InDesignBirthdayReportPDF {
         return respectMap[respect.toLowerCase()] || respect;
     }
 
-    // Function to detect if text contains Tamil characters
-    isTamilText(text) {
-        if (!text) return false;
-        // Tamil Unicode range: U+0B80 to U+0BFF
-        const tamilRange = /[\u0B80-\u0BFF]/;
-        return tamilRange.test(text);
-    }
-
-    // Function to choose appropriate font based on text content
-    chooseFontForText(text, isBold = false, isCelebrant = false) {
-        if (isCelebrant && this.fonts.celebrant) {
-            return this.fonts.celebrant;
-        }
-        
-        if (this.isTamilText(text)) {
-            return isBold ? (this.fonts.tamilBold || this.fonts.tamil || this.fonts.bold)
-                          : (this.fonts.tamil || this.fonts.regular);
-        }
-        
-        return isBold ? this.fonts.bold : this.fonts.regular;
-    }
 
     formatDateRange(dateStr) {
         // Convert date to DD-MM format or handle DD-MM input format
@@ -623,6 +803,16 @@ export class InDesignBirthdayReportPDF {
             // Use provided font or choose appropriate font based on text content
             const selectedFont = font || this.chooseFontForText(text);
             
+            // Log font selection for debugging
+            const fontName = selectedFont === this.fonts.celebrant ? 'CELEBRANT' :
+                           selectedFont === this.fonts.tamil ? 'TAMIL' :
+                           selectedFont === this.fonts.tamilBold ? 'TAMIL_BOLD' :
+                           selectedFont === this.fonts.bold ? 'BOLD' : 'REGULAR';
+            
+            if (this.isTamilText(text) || selectedFont === this.fonts.celebrant) {
+                console.log(`✍️ Drawing "${text}" with ${fontName} font at (${position.x}, ${position.y})`);
+            }
+            
             page.drawText(String(text), {
                 x: position.x,
                 y: position.y,
@@ -631,7 +821,20 @@ export class InDesignBirthdayReportPDF {
                 color: this.colors.black
             });
         } catch (error) {
-            console.error('Error drawing text:', error);
+            console.error('Error drawing text:', { text, error });
+            // Try fallback with regular font
+            try {
+                page.drawText(String(text), {
+                    x: position.x,
+                    y: position.y,
+                    size: validFontSize,
+                    font: this.fonts.regular,
+                    color: this.colors.black
+                });
+                console.warn('Used fallback font for:', text);
+            } catch (fallbackError) {
+                console.error('Fallback font also failed:', fallbackError);
+            }
         }
     }
 
@@ -646,6 +849,17 @@ export class InDesignBirthdayReportPDF {
             
             // Use provided font or choose appropriate font based on text content
             const textFont = font || this.chooseFontForText(text);
+            
+            // Log font selection for debugging
+            const fontName = textFont === this.fonts.celebrant ? 'CELEBRANT' :
+                           textFont === this.fonts.tamil ? 'TAMIL' :
+                           textFont === this.fonts.tamilBold ? 'TAMIL_BOLD' :
+                           textFont === this.fonts.bold ? 'BOLD' : 'REGULAR';
+            
+            if (this.isTamilText(text) || textFont === this.fonts.celebrant) {
+                console.log(`✍️ Centering "${text}" with ${fontName} font at (${position.x}, ${position.y})`);
+            }
+            
             const textWidth = textFont.widthOfTextAtSize(String(text), validFontSize);
             const centeredX = position.x - (textWidth / 2);
             
@@ -657,7 +871,24 @@ export class InDesignBirthdayReportPDF {
                 color: this.colors.black
             });
         } catch (error) {
-            console.error('Error drawing centered text:', error);
+            console.error('Error drawing centered text:', { text, error });
+            // Try fallback with regular font
+            try {
+                const fallbackFont = this.fonts.regular;
+                const textWidth = fallbackFont.widthOfTextAtSize(String(text), validFontSize);
+                const centeredX = position.x - (textWidth / 2);
+                
+                page.drawText(String(text), {
+                    x: centeredX,
+                    y: position.y,
+                    size: validFontSize,
+                    font: fallbackFont,
+                    color: this.colors.black
+                });
+                console.warn('Used fallback font for centered text:', text);
+            } catch (fallbackError) {
+                console.error('Fallback font also failed for centered text:', fallbackError);
+            }
         }
     }
 
@@ -686,30 +917,36 @@ export class InDesignBirthdayReportPDF {
     wrapText(text, font, fontSize, maxWidth) {
         if (!text || text.trim() === "") return [];
         
-        const words = text.split(/\s+/);
-        const lines = [];
-        let currentLine = "";
-        
-        for (let i = 0; i < words.length; i++) {
-            const word = words[i];
-            const testLine = currentLine + (currentLine ? " " : "") + word;
-            const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+        try {
+            const words = text.split(/\s+/);
+            const lines = [];
+            let currentLine = "";
             
-            if (testWidth <= maxWidth || currentLine === "") {
-                currentLine = testLine;
-            } else {
-                if (currentLine) {
-                    lines.push(currentLine);
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i];
+                const testLine = currentLine + (currentLine ? " " : "") + word;
+                const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+                
+                if (testWidth <= maxWidth || currentLine === "") {
+                    currentLine = testLine;
+                } else {
+                    if (currentLine) {
+                        lines.push(currentLine);
+                    }
+                    currentLine = word;
                 }
-                currentLine = word;
             }
+            
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+            
+            return lines;
+        } catch (error) {
+            console.error('Error in wrapText:', { text, error });
+            // Return single line as fallback
+            return [text];
         }
-        
-        if (currentLine) {
-            lines.push(currentLine);
-        }
-        
-        return lines;
     }
 
     // New method for text wrapping with frame height constraints (like HTML template)
@@ -724,6 +961,17 @@ export class InDesignBirthdayReportPDF {
             
             // Use provided font or choose appropriate font based on text content
             const textFont = font || this.chooseFontForText(text);
+            
+            // Log font selection for debugging
+            const fontName = textFont === this.fonts.celebrant ? 'CELEBRANT' :
+                           textFont === this.fonts.tamil ? 'TAMIL' :
+                           textFont === this.fonts.tamilBold ? 'TAMIL_BOLD' :
+                           textFont === this.fonts.bold ? 'BOLD' : 'REGULAR';
+            
+            if (this.isTamilText(text) || textFont === this.fonts.celebrant) {
+                console.log(`📝 Wrapping "${text}" with ${fontName} font in frame (${maxWidth}x${maxHeight})`);
+            }
+            
             const lines = this.wrapText(String(text), textFont, validFontSize, maxWidth);
             const lineHeight = this.getLineHeight(validFontSize);
             
@@ -751,7 +999,17 @@ export class InDesignBirthdayReportPDF {
                 console.log(`Text frame clipped: ${lines.length - linesToRender.length} lines not rendered due to frame height constraint`);
             }
         } catch (error) {
-            console.error('Error drawing wrapped text with frame constraints:', error);
+            console.error('Error drawing wrapped text with frame constraints:', { text, error });
+            // Fallback: try to draw single line with regular font
+            try {
+                // Ensure fontSize is a valid number for fallback
+                const fallbackFontSize = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : this.fontSizes.value;
+                
+                await this.drawText(page, text, position, fallbackFontSize, this.fonts.regular);
+                console.warn('Used fallback single-line rendering for:', text);
+            } catch (fallbackError) {
+                console.error('Fallback rendering also failed:', fallbackError);
+            }
         }
     }
 

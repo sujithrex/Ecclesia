@@ -65,7 +65,10 @@ function createWindow() {
     mainWindow.maximize(); // Maximize the window (not fullscreen)
     mainWindow.show();
     
+    // Automatically open Developer Tools for debugging
+    mainWindow.webContents.openDevTools({  });
     
+    console.log('🔧 Developer Tools opened automatically for font debugging');
   });
 
   mainWindow.on('closed', () => {
