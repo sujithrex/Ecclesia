@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
+import { tamilRenderer } from './tamilTextRenderer.js';
 
 export class InDesignBirthdayReportPDF {
     constructor() {
@@ -506,27 +507,28 @@ export class InDesignBirthdayReportPDF {
                     console.log(`👤 Drawing regular member: ${member.name}`);
                 }
                 
-                // Member name - left aligned (use celebrant font for celebrants, otherwise choose based on text)
-                const memberName = `${this.formatRespect(member.respect)} ${member.name}`;
-                const nameFont = this.chooseFontForText(memberName, false, isCelebrant);
-                await this.drawText(page, memberName, { x: this.coordinates.memberColumns.name.x, y: currentY }, this.fontSizes.member, nameFont);
+                // Member name - left aligned (add star for celebrants, use appropriate font)
+                const baseMemberName = `${this.formatRespect(member.respect)} ${member.name}`;
+                const displayMemberName = this.getCelebrantDisplayText(baseMemberName, isCelebrant);
+                const nameFont = this.chooseFontForText(baseMemberName, false, isCelebrant);
+                await this.drawText(page, displayMemberName, { x: this.coordinates.memberColumns.name.x, y: currentY }, this.fontSizes.member, nameFont, false);
                 
-                // Age - centered (use special font for celebrants)
+                // Age - centered (use bold for celebrants)
                 const age = member.age ? member.age.toString() : '';
                 const ageFont = this.chooseFontForText(age, false, isCelebrant);
-                await this.drawCenteredText(page, age, { x: this.coordinates.memberColumns.age.x, y: currentY }, this.fontSizes.member, ageFont);
+                await this.drawCenteredText(page, age, { x: this.coordinates.memberColumns.age.x, y: currentY }, this.fontSizes.member, ageFont, false);
                 
-                // Relationship - centered (use special font for celebrants, otherwise choose based on text)
+                // Relationship - centered (use bold for celebrants)
                 const relationship = member.relation || '';
                 const relationFont = this.chooseFontForText(relationship, false, isCelebrant);
-                await this.drawCenteredText(page, relationship, { x: this.coordinates.memberColumns.relationship.x, y: currentY }, this.fontSizes.member, relationFont);
+                await this.drawCenteredText(page, relationship, { x: this.coordinates.memberColumns.relationship.x, y: currentY }, this.fontSizes.member, relationFont, false);
                 
-                // Occupation - centered (use special font for celebrants, otherwise choose based on text)
+                // Occupation - centered (use bold for celebrants)
                 const occupation = member.occupation || '';
                 const occupationFont = this.chooseFontForText(occupation, false, isCelebrant);
-                await this.drawCenteredText(page, occupation, { x: this.coordinates.memberColumns.occupation.x, y: currentY }, this.fontSizes.member, occupationFont);
+                await this.drawCenteredText(page, occupation, { x: this.coordinates.memberColumns.occupation.x, y: currentY }, this.fontSizes.member, occupationFont, false);
                 
-                // Working Place - centered with text wrapping (use special font for celebrants, otherwise choose based on text)
+                // Working Place - centered with text wrapping (use bold for celebrants)
                 const workingPlace = member.working_place || '';
                 const workingPlaceFont = this.chooseFontForText(workingPlace, false, isCelebrant);
                 if (workingPlace.length > 10) {
@@ -538,10 +540,11 @@ export class InDesignBirthdayReportPDF {
                         10, // Smaller font size
                         94.89, // Column width constraint
                         15, // Frame height
-                        workingPlaceFont
+                        workingPlaceFont,
+                        false
                     );
                 } else {
-                    await this.drawCenteredText(page, workingPlace, { x: this.coordinates.memberColumns.workingPlace.x, y: currentY }, this.fontSizes.member, workingPlaceFont);
+                    await this.drawCenteredText(page, workingPlace, { x: this.coordinates.memberColumns.workingPlace.x, y: currentY }, this.fontSizes.member, workingPlaceFont, false);
                 }
                 
                 currentY -= this.layout.memberRowHeight;
@@ -671,27 +674,33 @@ export class InDesignBirthdayReportPDF {
 
     // Function to choose appropriate font based on text content
     chooseFontForText(text, isBold = false, isCelebrant = false) {
-        // Priority 1: Celebrant (birthday person) gets star font regardless of text content
-        if (isCelebrant) {
-            if (this.fonts.celebrant) {
-                console.log(`🎯 Using celebrant font for: "${text}"`);
-                return this.fonts.celebrant;
-            } else {
-                console.warn(`⚠️ Celebrant font not available for: "${text}", using fallback`);
-            }
-        }
+        // For celebrants, use normal fonts (not the star font)
+        // The star indicator will be added separately
         
-        // Priority 2: Tamil text gets Tamil font
+        // Priority 1: Tamil text gets Tamil font (even for celebrants)
         if (this.isTamilText(text)) {
             const tamilFont = isBold ? (this.fonts.tamilBold || this.fonts.tamil || this.fonts.bold)
                                     : (this.fonts.tamil || this.fonts.regular);
-            console.log(`🇮🇳 Using Tamil font (bold:${isBold}) for: "${text}"`);
+            console.log(`🇮🇳 Using Tamil font (bold:${isBold}${isCelebrant ? ', celebrant' : ''}) for: "${text}"`);
             return tamilFont;
         }
         
-        // Priority 3: Regular English text
-        const regularFont = isBold ? this.fonts.bold : this.fonts.regular;
+        // Priority 2: Regular English text (use bold for celebrants to make them stand out)
+        const regularFont = (isBold || isCelebrant) ? this.fonts.bold : this.fonts.regular;
+        if (isCelebrant) {
+            console.log(`🎯 Using bold font for celebrant: "${text}"`);
+        }
         return regularFont;
+    }
+
+    // Function to add star indicator for celebrants
+    getCelebrantDisplayText(text, isCelebrant = false) {
+        if (!isCelebrant) {
+            return text;
+        }
+        
+        // Add star indicator next to celebrant name
+        return `${text} ★`;
     }
 
     // New method to validate font embedding
@@ -791,7 +800,7 @@ export class InDesignBirthdayReportPDF {
         });
     }
 
-    async drawText(page, text, position, fontSize, font = null) {
+    async drawText(page, text, position, fontSize, font = null, isCelebrant = false) {
         try {
             if (!text || !position || typeof position.x !== 'number' || typeof position.y !== 'number') {
                 return;
@@ -800,8 +809,14 @@ export class InDesignBirthdayReportPDF {
             // Ensure fontSize is a valid number
             const validFontSize = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : this.fontSizes.value;
             
+            // Check if text contains Tamil characters and use image rendering
+            if (this.isTamilText(text)) {
+                console.log(`🖼️ Rendering Tamil text as image: "${text}"`);
+                return await this.drawTamilTextAsImage(page, text, position, validFontSize, isCelebrant);
+            }
+            
             // Use provided font or choose appropriate font based on text content
-            const selectedFont = font || this.chooseFontForText(text);
+            const selectedFont = font || this.chooseFontForText(text, false, isCelebrant);
             
             // Log font selection for debugging
             const fontName = selectedFont === this.fonts.celebrant ? 'CELEBRANT' :
@@ -809,7 +824,7 @@ export class InDesignBirthdayReportPDF {
                            selectedFont === this.fonts.tamilBold ? 'TAMIL_BOLD' :
                            selectedFont === this.fonts.bold ? 'BOLD' : 'REGULAR';
             
-            if (this.isTamilText(text) || selectedFont === this.fonts.celebrant) {
+            if (isCelebrant || selectedFont === this.fonts.celebrant) {
                 console.log(`✍️ Drawing "${text}" with ${fontName} font at (${position.x}, ${position.y})`);
             }
             
@@ -824,6 +839,7 @@ export class InDesignBirthdayReportPDF {
             console.error('Error drawing text:', { text, error });
             // Try fallback with regular font
             try {
+                const validFontSize = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : this.fontSizes.value;
                 page.drawText(String(text), {
                     x: position.x,
                     y: position.y,
@@ -838,7 +854,71 @@ export class InDesignBirthdayReportPDF {
         }
     }
 
-    async drawCenteredText(page, text, position, fontSize, font = null) {
+    /**
+     * Draw Tamil text as an embedded image
+     */
+    async drawTamilTextAsImage(page, text, position, fontSize, isCelebrant = false) {
+        try {
+            const imageData = await tamilRenderer.renderTamilTextToImage(text, {
+                fontSize: fontSize,
+                fontWeight: isCelebrant ? 'bold' : 'normal',
+                isCelebrant: isCelebrant,
+                color: '#000000',
+                padding: 1
+            });
+
+            if (!imageData || !imageData.dataUrl) {
+                console.warn(`Failed to render Tamil text as image: "${text}", using fallback`);
+                // Fallback to regular text rendering
+                page.drawText(String(text), {
+                    x: position.x,
+                    y: position.y,
+                    size: fontSize,
+                    font: this.fonts.regular,
+                    color: this.colors.black
+                });
+                return;
+            }
+
+            // Convert data URL to array buffer (avoiding fetch due to CSP restrictions)
+            const imageBytes = this.dataUrlToArrayBuffer(imageData.dataUrl);
+            
+            // Embed the image in PDF
+            const image = await page.doc.embedPng(imageBytes);
+            
+            // Calculate position - adjust Y coordinate because PDF coordinates are bottom-left origin
+            const adjustedY = position.y - imageData.height + fontSize * 0.8;
+            
+            // Draw the image
+            page.drawImage(image, {
+                x: position.x,
+                y: adjustedY,
+                width: imageData.width,
+                height: imageData.height
+            });
+            
+            console.log(`✅ Tamil text rendered as image: "${text}" (${imageData.width}x${imageData.height}px)`);
+            
+        } catch (error) {
+            console.error(`❌ Failed to render Tamil text as image: "${text}"`, error);
+            
+            // Ultimate fallback - use regular font
+            try {
+                page.drawText(String(text), {
+                    x: position.x,
+                    y: position.y,
+                    size: fontSize,
+                    font: this.fonts.regular,
+                    color: this.colors.black
+                });
+                console.warn(`Used ultimate fallback for Tamil text: "${text}"`);
+            } catch (fallbackError) {
+                console.error('Even fallback failed:', fallbackError);
+            }
+        }
+    }
+
+    async drawCenteredText(page, text, position, fontSize, font = null, isCelebrant = false) {
         try {
             if (!text || !position || typeof position.x !== 'number' || typeof position.y !== 'number') {
                 return;
@@ -847,8 +927,14 @@ export class InDesignBirthdayReportPDF {
             // Ensure fontSize is a valid number
             const validFontSize = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : this.fontSizes.value;
             
+            // Check if text contains Tamil characters and use image rendering
+            if (this.isTamilText(text)) {
+                console.log(`🖼️ Rendering centered Tamil text as image: "${text}"`);
+                return await this.drawCenteredTamilTextAsImage(page, text, position, validFontSize, isCelebrant);
+            }
+            
             // Use provided font or choose appropriate font based on text content
-            const textFont = font || this.chooseFontForText(text);
+            const textFont = font || this.chooseFontForText(text, false, isCelebrant);
             
             // Log font selection for debugging
             const fontName = textFont === this.fonts.celebrant ? 'CELEBRANT' :
@@ -856,7 +942,7 @@ export class InDesignBirthdayReportPDF {
                            textFont === this.fonts.tamilBold ? 'TAMIL_BOLD' :
                            textFont === this.fonts.bold ? 'BOLD' : 'REGULAR';
             
-            if (this.isTamilText(text) || textFont === this.fonts.celebrant) {
+            if (isCelebrant || textFont === this.fonts.celebrant) {
                 console.log(`✍️ Centering "${text}" with ${fontName} font at (${position.x}, ${position.y})`);
             }
             
@@ -874,6 +960,7 @@ export class InDesignBirthdayReportPDF {
             console.error('Error drawing centered text:', { text, error });
             // Try fallback with regular font
             try {
+                const validFontSize = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : this.fontSizes.value;
                 const fallbackFont = this.fonts.regular;
                 const textWidth = fallbackFont.widthOfTextAtSize(String(text), validFontSize);
                 const centeredX = position.x - (textWidth / 2);
@@ -892,6 +979,77 @@ export class InDesignBirthdayReportPDF {
         }
     }
 
+    /**
+     * Draw centered Tamil text as an embedded image
+     */
+    async drawCenteredTamilTextAsImage(page, text, position, fontSize, isCelebrant = false) {
+        try {
+            const imageData = await tamilRenderer.renderTamilTextToImage(text, {
+                fontSize: fontSize,
+                fontWeight: isCelebrant ? 'bold' : 'normal',
+                isCelebrant: isCelebrant,
+                color: '#000000',
+                padding: 1
+            });
+
+            if (!imageData || !imageData.dataUrl) {
+                console.warn(`Failed to render centered Tamil text as image: "${text}", using fallback`);
+                // Fallback to regular centered text rendering
+                const textWidth = this.fonts.regular.widthOfTextAtSize(String(text), fontSize);
+                const centeredX = position.x - (textWidth / 2);
+                page.drawText(String(text), {
+                    x: centeredX,
+                    y: position.y,
+                    size: fontSize,
+                    font: this.fonts.regular,
+                    color: this.colors.black
+                });
+                return;
+            }
+
+            // Convert data URL to array buffer (avoiding fetch due to CSP restrictions)
+            const imageBytes = this.dataUrlToArrayBuffer(imageData.dataUrl);
+            
+            // Embed the image in PDF
+            const image = await page.doc.embedPng(imageBytes);
+            
+            // Calculate centered X position
+            const centeredX = position.x - (imageData.width / 2);
+            
+            // Calculate position - adjust Y coordinate because PDF coordinates are bottom-left origin
+            const adjustedY = position.y - imageData.height + fontSize * 0.8;
+            
+            // Draw the image
+            page.drawImage(image, {
+                x: centeredX,
+                y: adjustedY,
+                width: imageData.width,
+                height: imageData.height
+            });
+            
+            console.log(`✅ Centered Tamil text rendered as image: "${text}" (${imageData.width}x${imageData.height}px)`);
+            
+        } catch (error) {
+            console.error(`❌ Failed to render centered Tamil text as image: "${text}"`, error);
+            
+            // Ultimate fallback - use regular centered font
+            try {
+                const textWidth = this.fonts.regular.widthOfTextAtSize(String(text), fontSize);
+                const centeredX = position.x - (textWidth / 2);
+                page.drawText(String(text), {
+                    x: centeredX,
+                    y: position.y,
+                    size: fontSize,
+                    font: this.fonts.regular,
+                    color: this.colors.black
+                });
+                console.warn(`Used ultimate fallback for centered Tamil text: "${text}"`);
+            } catch (fallbackError) {
+                console.error('Even centered fallback failed:', fallbackError);
+            }
+        }
+    }
+
     async drawWrappedText(page, text, position, fontSize, maxWidth, font = null) {
         try {
             if (!text || !position || typeof position.x !== 'number' || typeof position.y !== 'number') {
@@ -905,7 +1063,7 @@ export class InDesignBirthdayReportPDF {
             const lineHeight = this.getLineHeight(validFontSize);
             
             for (let i = 0; i < lines.length; i++) {
-                await this.drawText(page, lines[i],
+                this.drawText(page, lines[i],
                     { x: position.x, y: position.y - (i * lineHeight) },
                     validFontSize, textFont);
             }
@@ -918,39 +1076,49 @@ export class InDesignBirthdayReportPDF {
         if (!text || text.trim() === "") return [];
         
         try {
-            const words = text.split(/\s+/);
-            const lines = [];
-            let currentLine = "";
+            // Handle multi-line text (split on actual line breaks first)
+            const textLines = String(text).split(/\n/);
+            const allLines = [];
             
-            for (let i = 0; i < words.length; i++) {
-                const word = words[i];
-                const testLine = currentLine + (currentLine ? " " : "") + word;
-                const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+            for (const textLine of textLines) {
+                const words = textLine.trim().split(/\s+/).filter(word => word.length > 0);
+                if (words.length === 0) {
+                    allLines.push(''); // Preserve empty lines
+                    continue;
+                }
                 
-                if (testWidth <= maxWidth || currentLine === "") {
-                    currentLine = testLine;
-                } else {
-                    if (currentLine) {
-                        lines.push(currentLine);
+                let currentLine = "";
+                
+                for (let i = 0; i < words.length; i++) {
+                    const word = words[i];
+                    const testLine = currentLine + (currentLine ? " " : "") + word;
+                    const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+                    
+                    if (testWidth <= maxWidth || currentLine === "") {
+                        currentLine = testLine;
+                    } else {
+                        if (currentLine) {
+                            allLines.push(currentLine);
+                        }
+                        currentLine = word;
                     }
-                    currentLine = word;
+                }
+                
+                if (currentLine) {
+                    allLines.push(currentLine);
                 }
             }
             
-            if (currentLine) {
-                lines.push(currentLine);
-            }
-            
-            return lines;
+            return allLines;
         } catch (error) {
-            console.error('Error in wrapText:', { text, error });
+            console.error('Error in wrapText:', { text: String(text), error: error.message });
             // Return single line as fallback
-            return [text];
+            return [String(text)];
         }
     }
 
     // New method for text wrapping with frame height constraints (like HTML template)
-    async drawWrappedTextWithFrameConstraints(page, text, position, fontSize, maxWidth, maxHeight, font = null) {
+    async drawWrappedTextWithFrameConstraints(page, text, position, fontSize, maxWidth, maxHeight, font = null, isCelebrant = false) {
         try {
             if (!text || !position || typeof position.x !== 'number' || typeof position.y !== 'number') {
                 return;
@@ -959,8 +1127,14 @@ export class InDesignBirthdayReportPDF {
             // Ensure fontSize is a valid number
             const validFontSize = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : this.fontSizes.value;
             
+            // Check if text contains Tamil characters and use image rendering
+            if (this.isTamilText(text)) {
+                console.log(`🖼️ Rendering wrapped Tamil text as image: "${text}"`);
+                return await this.drawWrappedTamilTextAsImage(page, text, position, validFontSize, maxWidth, maxHeight, isCelebrant);
+            }
+            
             // Use provided font or choose appropriate font based on text content
-            const textFont = font || this.chooseFontForText(text);
+            const textFont = font || this.chooseFontForText(text, false, isCelebrant);
             
             // Log font selection for debugging
             const fontName = textFont === this.fonts.celebrant ? 'CELEBRANT' :
@@ -968,7 +1142,7 @@ export class InDesignBirthdayReportPDF {
                            textFont === this.fonts.tamilBold ? 'TAMIL_BOLD' :
                            textFont === this.fonts.bold ? 'BOLD' : 'REGULAR';
             
-            if (this.isTamilText(text) || textFont === this.fonts.celebrant) {
+            if (isCelebrant || textFont === this.fonts.celebrant) {
                 console.log(`📝 Wrapping "${text}" with ${fontName} font in frame (${maxWidth}x${maxHeight})`);
             }
             
@@ -991,7 +1165,7 @@ export class InDesignBirthdayReportPDF {
                 
                 await this.drawText(page, linesToRender[i],
                     { x: position.x, y: currentY },
-                    validFontSize, textFont);
+                    validFontSize, textFont, isCelebrant);
             }
             
             // Log warning if text was clipped
@@ -1005,7 +1179,7 @@ export class InDesignBirthdayReportPDF {
                 // Ensure fontSize is a valid number for fallback
                 const fallbackFontSize = (typeof fontSize === 'number' && fontSize > 0) ? fontSize : this.fontSizes.value;
                 
-                await this.drawText(page, text, position, fallbackFontSize, this.fonts.regular);
+                await this.drawText(page, text, position, fallbackFontSize, this.fonts.regular, isCelebrant);
                 console.warn('Used fallback single-line rendering for:', text);
             } catch (fallbackError) {
                 console.error('Fallback rendering also failed:', fallbackError);
@@ -1013,8 +1187,131 @@ export class InDesignBirthdayReportPDF {
         }
     }
 
+    /**
+     * Draw wrapped Tamil text as images within frame constraints (matching HTML model)
+     */
+    async drawWrappedTamilTextAsImage(page, text, position, fontSize, maxWidth, maxHeight, isCelebrant = false) {
+        try {
+            console.log(`🖼️📐 Rendering wrapped Tamil text with frame constraints: "${text}" (${maxWidth}x${maxHeight}pt)`);
+            
+            // Render Tamil text with exact frame constraints from HTML model
+            const imageData = await tamilRenderer.renderTamilTextToImage(text, {
+                fontSize: fontSize,
+                fontWeight: isCelebrant ? 'bold' : 'normal',
+                isCelebrant: isCelebrant,
+                color: '#000000',
+                padding: 1,
+                maxWidth: maxWidth,
+                maxHeight: maxHeight // Pass height constraint to renderer
+            });
+
+            if (!imageData || !imageData.dataUrl) {
+                console.warn(`Failed to render wrapped Tamil text as image: "${text}", using fallback`);
+                // Fallback to regular text rendering with proper wrapping
+                return await this.drawRegularWrappedText(page, text, position, fontSize, maxWidth, maxHeight, isCelebrant);
+            }
+
+            // Convert data URL to array buffer (avoiding fetch due to CSP restrictions)
+            const imageBytes = this.dataUrlToArrayBuffer(imageData.dataUrl);
+            
+            // Embed the image in PDF
+            const image = await page.doc.embedPng(imageBytes);
+            
+            // Calculate position exactly like HTML model (top-left alignment within frame)
+            // HTML model uses "top" vertical justification for address fields
+            const adjustedY = position.y - imageData.height + (fontSize * 0.8);
+            
+            // Ensure image fits within frame bounds (like HTML model clipping logic)
+            const finalWidth = Math.min(imageData.width, maxWidth);
+            const finalHeight = Math.min(imageData.height, maxHeight);
+            
+            // Draw the image within frame bounds
+            page.drawImage(image, {
+                x: position.x,
+                y: adjustedY,
+                width: finalWidth,
+                height: finalHeight
+            });
+            
+            console.log(`✅ Wrapped Tamil text rendered as image (HTML model compliant): "${text}" (${finalWidth}x${finalHeight}px in ${maxWidth}x${maxHeight}pt frame)`);
+            
+        } catch (error) {
+            console.error(`❌ Failed to render wrapped Tamil text as image: "${text}"`, error);
+            
+            // Ultimate fallback with proper frame constraints
+            return await this.drawRegularWrappedText(page, text, position, fontSize, maxWidth, maxHeight, isCelebrant);
+        }
+    }
+
+    /**
+     * Fallback method for regular wrapped text rendering (like HTML model)
+     */
+    async drawRegularWrappedText(page, text, position, fontSize, maxWidth, maxHeight, isCelebrant = false) {
+        try {
+            console.log(`📝 Fallback: Drawing regular wrapped text in frame: "${text}" (${maxWidth}x${maxHeight}pt)`);
+            
+            const textFont = this.chooseFontForText(text, false, isCelebrant);
+            const lines = this.wrapText(String(text), textFont, fontSize, maxWidth);
+            const lineHeight = this.getLineHeight(fontSize);
+            
+            // Calculate maximum lines that fit in frame height (like HTML model)
+            const maxLines = Math.floor(maxHeight / lineHeight);
+            const linesToRender = lines.slice(0, maxLines);
+            
+            console.log(`📏 Frame analysis: ${lines.length} total lines, ${linesToRender.length} will fit in ${maxHeight}pt height`);
+            
+            // Draw each line within frame constraints (like HTML model logic)
+            for (let i = 0; i < linesToRender.length; i++) {
+                const currentY = position.y - (i * lineHeight);
+                
+                // Check frame boundary (like HTML model clipping check)
+                const frameBottom = position.y - maxHeight;
+                if (currentY < frameBottom) {
+                    console.log(`📐 Line ${i + 1} clipped due to frame constraint: "${linesToRender[i]}" (Y: ${currentY}, Frame bottom: ${frameBottom})`);
+                    break;
+                }
+                
+                await this.drawText(page, linesToRender[i],
+                    { x: position.x, y: currentY },
+                    fontSize, textFont, isCelebrant);
+            }
+            
+            // Log clipping warning (like HTML model)
+            if (lines.length > linesToRender.length) {
+                console.log(`📐 Text frame clipped: ${lines.length - linesToRender.length} lines not rendered due to frame height constraint (${maxHeight}pt)`);
+            }
+            
+        } catch (error) {
+            console.error('Regular wrapped text fallback failed:', error);
+        }
+    }
+
     getLineHeight(fontSize) {
         return fontSize * 1.2; // Standard line spacing factor like in HTML
+    }
+
+    /**
+     * Convert data URL to ArrayBuffer without using fetch (to avoid CSP issues)
+     */
+    dataUrlToArrayBuffer(dataUrl) {
+        try {
+            // Extract the base64 part from data URL
+            const base64 = dataUrl.split(',')[1];
+            
+            // Decode base64 to binary string
+            const binaryString = atob(base64);
+            
+            // Convert binary string to ArrayBuffer
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            return bytes.buffer;
+        } catch (error) {
+            console.error('Error converting data URL to ArrayBuffer:', error);
+            throw error;
+        }
     }
 }
 
