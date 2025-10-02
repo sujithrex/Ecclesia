@@ -751,6 +751,105 @@ class MemberService {
             return { success: false, error: 'Failed to get birthday report data' };
         }
     }
+
+    async getWeddingReportData(churchId, fromDate, toDate, userId, areaId = null) {
+        try {
+            // Verify user has access to the church
+            const userChurches = await this.db.getUserChurches(userId);
+            const hasAccess = userChurches.some(c => c.id === churchId);
+
+            if (!hasAccess) {
+                return { success: false, error: 'You do not have access to this church' };
+            }
+
+            // Get church details
+            const church = await this.db.getChurchById(churchId);
+            if (!church) {
+                return { success: false, error: 'Church not found' };
+            }
+
+            // Get pastorate details for dynamic header information
+            const pastorate = await this.db.getPastorateById(church.pastorate_id);
+            let pastorateSettings = null;
+            let churchSettings = null;
+
+            try {
+                pastorateSettings = await this.db.getPastorateSettings(church.pastorate_id);
+                if (!pastorateSettings) {
+                    pastorateSettings = await this.db.getDefaultPastorateSettings(church.pastorate_id);
+                }
+            } catch (error) {
+                console.warn('Could not fetch pastorate settings:', error);
+            }
+
+            try {
+                churchSettings = await this.db.getChurchSettings(churchId);
+                if (!churchSettings) {
+                    churchSettings = await this.db.getDefaultChurchSettings(churchId);
+                }
+            } catch (error) {
+                console.warn('Could not fetch church settings:', error);
+            }
+
+            // Enhance church object with dynamic header information
+            const enhancedChurch = {
+                ...church,
+                diocese_name: pastorateSettings?.diocese_name_english || 'Tirunelveli Diocese',
+                pastorate_short_name: pastorate?.pastorate_short_name || 'Pastorate',
+                church_display_name: churchSettings?.church_name_english || church.church_name
+            };
+
+            // Get wedding anniversary members in the date range
+            const weddingMembers = await this.db.getWeddingsByDateRange(churchId, fromDate, toDate, areaId);
+
+            // Group members by family
+            const familiesWithWeddings = {};
+            for (const member of weddingMembers) {
+                if (!familiesWithWeddings[member.family_id]) {
+                    familiesWithWeddings[member.family_id] = {
+                        family: null,
+                        members: [],
+                        celebrants: []
+                    };
+                }
+                familiesWithWeddings[member.family_id].celebrants.push(member);
+            }
+
+            // For each family with wedding celebrants, get all family members and family details
+            for (const familyId in familiesWithWeddings) {
+                const family = await this.db.getFamilyById(parseInt(familyId));
+                if (family) {
+                    const area = await this.db.getAreaById(family.area_id);
+                    const fellowship = await this.db.getPrayerCellById(family.prayer_cell_id);
+
+                    // Add area and fellowship details to family
+                    family.area_name = area ? area.area_name : 'N/A';
+                    family.fellowship_name = fellowship ? fellowship.prayer_cell_name : 'N/A';
+
+                    familiesWithWeddings[familyId].family = family;
+
+                    // Get all family members
+                    const allFamilyMembers = await this.db.getMembersByFamily(parseInt(familyId));
+                    familiesWithWeddings[familyId].members = allFamilyMembers;
+                }
+            }
+
+            // Convert to array and sort by family ID
+            const reportData = Object.values(familiesWithWeddings)
+                .filter(data => data.family)
+                .sort((a, b) => a.family.id - b.family.id);
+
+            return {
+                success: true,
+                church: enhancedChurch,
+                reportData: reportData,
+                dateRange: { fromDate, toDate }
+            };
+        } catch (error) {
+            console.error('Get wedding report data error:', error);
+            return { success: false, error: 'Failed to get wedding report data' };
+        }
+    }
 }
 
 module.exports = MemberService;

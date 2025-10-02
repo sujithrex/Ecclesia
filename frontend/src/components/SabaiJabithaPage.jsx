@@ -11,7 +11,7 @@ import {
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
-import { generateInDesignSabaiJabithaReport } from '../utils/sabaiJabithaReportInDesign';
+import { generatePuppeteerSabaiJabithaReport } from '../utils/sabaiJabithaReportPuppeteer';
 
 const SabaiJabithaPage = ({
   user,
@@ -233,9 +233,9 @@ const SabaiJabithaPage = ({
       const enhancedChurch = await getEnhancedChurchData();
       console.log('✅ Enhanced church data retrieved');
       
-      // Generate PDF report using utility module
-      console.log('🔄 Calling generateInDesignSabaiJabithaReport...');
-      const reportResult = await generateInDesignSabaiJabithaReport(
+      // Generate PDF report using Puppeteer utility module
+      console.log('🔄 Calling generatePuppeteerSabaiJabithaReport...');
+      const reportResult = await generatePuppeteerSabaiJabithaReport(
         congregationData,
         enhancedChurch,
         {

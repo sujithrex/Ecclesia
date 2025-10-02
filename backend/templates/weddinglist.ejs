@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @font-face {
+      font-family: 'Vijaya';
+      src: url('file:///<%= fontPath.replace(/\\/g, '/') %>') format('truetype');
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      width: 210.00mm;
+      height: 297.00mm;
+      position: relative;
+      overflow: hidden;
+      font-family: 'Times New Roman', 'Vijaya', serif;
+    }
+    .page {
+      width: 210.00mm;
+      height: 297.00mm;
+      position: relative;
+      page-break-after: always;
+    }
+    .page:last-child {
+      page-break-after: auto;
+    }
+    .text-frame {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .text-content {
+      width: 100%;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    .shape {
+      position: absolute;
+    }
+    .line {
+      position: absolute;
+    }
+    .english-text {
+      font-family: 'Times New Roman', serif;
+    }
+    .tamil-text {
+      font-family: 'Vijaya', serif;
+    }
+    .bold-text {
+      font-weight: bold;
+    }
+    @media print {
+      body { margin: 0; }
+      .page { page-break-after: always; }
+      .page:last-child { page-break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+<%
+// Helper functions
+function formatRespect(respect) {
+  if (!respect) return '';
+  const respectMap = {
+    'mr': 'Mr.', 'mrs': 'Mrs.', 'ms': 'Ms.', 'master': 'Master',
+    'rev': 'Rev.', 'dr': 'Dr.', 'er': 'Er.', 'sis': 'Sis.', 'bishop': 'Bishop'
+  };
+  return respectMap[respect.toLowerCase()] || respect;
+}
+
+function calculateAge(dob) {
+  if (!dob) return '';
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+function calculateAnniversaryYears(dateOfMarriage) {
+  if (!dateOfMarriage) return '';
+  const marriageDate = new Date(dateOfMarriage);
+  const today = new Date();
+  let years = today.getFullYear() - marriageDate.getFullYear();
+  const monthDiff = today.getMonth() - marriageDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < marriageDate.getDate())) {
+    years--;
+  }
+  return years;
+}
+
+function formatDateRange(dateStr) {
+  if (!dateStr) return '';
+  if (dateStr.match(/^\d{2}-\d{2}$/)) return dateStr;
+  const date = new Date(dateStr);
+  if (isNaN(date)) return dateStr;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}-${month}`;
+}
+
+// Check if text contains Tamil characters
+function isTamilText(text) {
+  if (!text) return false;
+  // Tamil Unicode range: \u0B80-\u0BFF
+  const tamilRegex = /[\u0B80-\u0BFF]/;
+  return tamilRegex.test(text);
+}
+
+// Get font class based on text content
+function getFontClass(text) {
+  return isTamilText(text) ? 'tamil-text' : 'english-text';
+}
+
+// Get font size based on text content (Tamil gets +1pt)
+function getFontSize(text, baseSize) {
+  return isTamilText(text) ? (baseSize + 1) : baseSize;
+}
+
+// Calculate total pages needed (2 families per page)
+const familiesPerPage = 2;
+const totalPages = Math.ceil(reportData.length / familiesPerPage);
+
+for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+  const startIdx = pageNum * familiesPerPage;
+  const endIdx = Math.min(startIdx + familiesPerPage, reportData.length);
+  const familiesOnPage = reportData.slice(startIdx, endIdx);
+%>
+<div class="page">
+  <% if (pageNum === 0) { %>
+  <!-- Header - Only on first page - EXACT positions from HTML -->
+  <div class="text-frame" style="left: 35.13mm; top: 14.48mm; width: 139.39mm; height: 5.56mm;">
+    <div class="text-content english-text bold-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; font-size: 12.0pt; color: #000000; text-align: center;">Diocese of <%= church.diocese_name || 'Tirunelveli' %> - <%= church.pastorate_name || 'Tenkasi North Zion Nagar Pastorate' %></div>
+  </div>
+  <div class="text-frame" style="left: 36.61mm; top: 20.95mm; width: 139.39mm; height: 5.56mm;">
+    <div class="text-content english-text bold-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; font-size: 12.0pt; color: #000000; text-align: center;">Wedding Anniversary List - From <%= formatDateRange(dateRange.fromDate) %> to <%= formatDateRange(dateRange.toDate) %></div>
+  </div>
+  
+  <!-- Top Line -->
+  <svg class="line" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;">
+    <line x1="12.70mm" y1="27.00mm" x2="197.10mm" y2="27.00mm" stroke="#000000" stroke-width="0.35mm" />
+  </svg>
+  <% } %>
+  
+  <% familiesOnPage.forEach((familyData, familyIdx) => {
+    const family = familyData.family;
+    const members = familyData.members;
+    const celebrants = familyData.celebrants || [];
+
+    // EXACT positions from HTML - First family: 30.30mm, Second: 86.30mm
+    const familyTop = 30.30 + (familyIdx * 56);
+    const tableHeaderTop = familyTop + 28.65; // 58.95 - 30.30 = 28.65mm
+    const firstMemberTop = tableHeaderTop + 7.65; // Height of header row
+    const memberRowHeight = 8.05; // Space between member rows
+    
+    // Detect font and size for family data
+    const familyNameText = formatRespect(family.respect) + ' ' + (family.family_name || '');
+    const familyNameFont = getFontClass(familyNameText);
+    const familyNameSize = getFontSize(familyNameText, 12);
+    const areaFont = getFontClass(family.area_name);
+    const areaSize = getFontSize(family.area_name, 12);
+    const addressFont = getFontClass(family.family_address);
+    const addressSize = getFontSize(family.family_address, 10);
+    const prayerFont = getFontClass(family.prayer_points);
+    const prayerSize = getFontSize(family.prayer_points, 10);
+  %>
+  
+  <!-- Family <%= family.family_number || family.id %> -->
+  <!-- Family Number -->
+  <div class="text-frame" style="left: 14.00mm; top: <%= familyTop %>mm; width: 31.20mm; height: 4.50mm;">
+    <div class="text-content english-text" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: 12pt; color: #000000; text-align: left;">Family Number :</div>
+  </div>
+  <div class="text-frame" style="left: 49.07mm; top: <%= familyTop %>mm; width: 51.20mm; height: 4.50mm;">
+    <div class="text-content english-text bold-text" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: 12pt; color: #000000; text-align: left;"><%= family.family_number || '' %></div>
+  </div>
+  
+  <!-- Mobile Number -->
+  <div class="text-frame" style="left: 105.05mm; top: <%= familyTop %>mm; width: 31.20mm; height: 4.50mm;">
+    <div class="text-content english-text" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: 12pt; color: #000000; text-align: left;">Mobile Number :</div>
+  </div>
+  <div class="text-frame" style="left: 139.78mm; top: <%= familyTop %>mm; width: 56.00mm; height: 4.50mm;">
+    <div class="text-content english-text bold-text" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: 12pt; color: #000000; text-align: left;"><%= family.family_phone || '' %></div>
+  </div>
+  
+  <!-- Family Head -->
+  <div class="text-frame" style="left: 13.98mm; top: <%= familyTop + 6.62 %>mm; width: 31.20mm; height: 4.50mm;">
+    <div class="text-content english-text" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: 12pt; color: #000000; text-align: left;">Family Head :</div>
+  </div>
+  <div class="text-frame" style="left: 49.07mm; top: <%= familyTop + 6.62 %>mm; width: 51.20mm; height: 4.50mm;">
+    <div class="text-content <%= familyNameFont %> bold-text" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: <%= familyNameSize %>pt; color: #000000; text-align: left;"><%= formatRespect(family.respect) %> <%= family.family_name || '' %></div>
+  </div>
+  
+  <!-- Area -->
+  <div class="text-frame" style="left: 105.05mm; top: <%= familyTop + 6.62 %>mm; width: 31.20mm; height: 4.50mm;">
+    <div class="text-content english-text" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: 12pt; color: #000000; text-align: left;">Area :</div>
+  </div>
+  <div class="text-frame" style="left: 139.78mm; top: <%= familyTop + 6.62 %>mm; width: 56.00mm; height: 4.50mm;">
+    <div class="text-content <%= areaFont %> bold-text" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: <%= areaSize %>pt; color: #000000; text-align: left;"><%= family.area_name || '' %></div>
+  </div>
+  
+  <!-- Address -->
+  <div class="text-frame" style="left: 13.98mm; top: <%= familyTop + 13.25 %>mm; width: 31.20mm; height: 4.50mm;">
+    <div class="text-content english-text" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: 12pt; color: #000000; text-align: left;">Address :</div>
+  </div>
+  <div class="text-frame" style="left: 49.07mm; top: <%= familyTop + 13.25 %>mm; width: 51.20mm; height: 14.50mm;">
+    <div class="text-content <%= addressFont %>" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: <%= addressSize %>pt; color: #000000; text-align: left;"><%= family.family_address || '' %></div>
+  </div>
+  
+  <!-- Prayer Points -->
+  <div class="text-frame" style="left: 104.80mm; top: <%= familyTop + 13.25 %>mm; width: 31.20mm; height: 4.50mm;">
+    <div class="text-content english-text" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: 12pt; color: #000000; text-align: left;">Prayer Points :</div>
+  </div>
+  <div class="text-frame" style="left: 139.78mm; top: <%= familyTop + 13.25 %>mm; width: 56.00mm; height: 14.20mm;">
+    <div class="text-content <%= prayerFont %>" style="width: 100%; height: 100%; padding: 0mm; display: flex; justify-content: flex-start; align-items: flex-start; font-size: <%= prayerSize %>pt; color: #000000; text-align: left;"><%= family.prayer_points || '' %></div>
+  </div>
+
+  <!-- Line before table headers -->
+  <svg class="line" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;">
+    <line x1="12.70mm" y1="<%= tableHeaderTop %>mm" x2="197.10mm" y2="<%= tableHeaderTop %>mm" stroke="#000000" stroke-width="0.35mm" />
+  </svg>
+
+  <!-- Table Headers - Same as birthday list -->
+  <div class="text-frame" style="left: 15.00mm; top: <%= tableHeaderTop %>mm; width: 43.22mm; height: 7.65mm;">
+    <div class="text-content english-text bold-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; font-size: 12.0pt; color: #000000; text-align: left;">Name</div>
+  </div>
+  <div class="text-frame" style="left: 58.22mm; top: <%= tableHeaderTop %>mm; width: 16.26mm; height: 7.65mm;">
+    <div class="text-content english-text bold-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 12.0pt; color: #000000; text-align: center;">Age (Year)</div>
+  </div>
+  <div class="text-frame" style="left: 74.48mm; top: <%= tableHeaderTop %>mm; width: 38.88mm; height: 7.65mm;">
+    <div class="text-content english-text bold-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 12.0pt; color: #000000; text-align: center;">Relationship</div>
+  </div>
+  <div class="text-frame" style="left: 113.36mm; top: <%= tableHeaderTop %>mm; width: 50.44mm; height: 7.65mm;">
+    <div class="text-content english-text bold-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 12.0pt; color: #000000; text-align: center;">Occupation</div>
+  </div>
+  <div class="text-frame" style="left: 163.80mm; top: <%= tableHeaderTop %>mm; width: 33.32mm; height: 7.65mm;">
+    <div class="text-content english-text bold-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 12.0pt; color: #000000; text-align: center;">Working Place</div>
+  </div>
+
+  <!-- Line before table data -->
+  <svg class="line" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;">
+    <line x1="12.70mm" y1="<%= tableHeaderTop + 7.65 %>mm" x2="197.10mm" y2="<%= tableHeaderTop + 7.65 %>mm" stroke="#000000" stroke-width="0.35mm" />
+  </svg>
+  
+  <!-- Member Rows - All family members (same as birthday list) -->
+  <%
+  const celebrantIds = celebrants.map(c => c.id);
+
+  members.forEach((member, memberIdx) => {
+    const memberTop = firstMemberTop + (memberIdx * memberRowHeight);
+
+    // Debug logging
+    console.log('Member:', member.name, 'DOB:', member.dob, 'Marriage:', member.date_of_marriage);
+
+    const age = calculateAge(member.dob);
+    const anniversaryYears = member.date_of_marriage ? calculateAnniversaryYears(member.date_of_marriage) : '';
+    const isCelebrant = celebrantIds.includes(member.id);
+    const boldClass = isCelebrant ? 'bold-text' : '';
+
+    // Debug calculated values
+    console.log('Calculated age:', age, 'Anniversary years:', anniversaryYears);
+
+    // Format age with anniversary: "45 (20)" or just "45" if no anniversary
+    const ageDisplay = anniversaryYears ? `${age} (${anniversaryYears})` : age;
+
+    // Detect font and size for each member field
+    const memberNameText = formatRespect(member.respect) + ' ' + (member.name || '');
+    const nameFont = getFontClass(memberNameText);
+    const nameSize = getFontSize(memberNameText, 12);
+    const relationFont = getFontClass(member.relation);
+    const relationSize = getFontSize(member.relation, 12);
+    const occupationFont = getFontClass(member.occupation);
+    const occupationSize = getFontSize(member.occupation, 12);
+    const workingPlaceFont = getFontClass(member.working_place);
+    const workingPlaceSize = getFontSize(member.working_place, 12);
+  %>
+  <div class="text-frame" style="left: 15.00mm; top: <%= memberTop %>mm; width: 43.22mm; height: 7.65mm;">
+    <div class="text-content <%= nameFont %> <%= boldClass %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; font-size: <%= nameSize %>pt; color: #000000; text-align: left;"><%= formatRespect(member.respect) %> <%= member.name || '' %></div>
+  </div>
+  <div class="text-frame" style="left: 58.22mm; top: <%= memberTop %>mm; width: 16.26mm; height: 7.65mm;">
+    <div class="text-content english-text <%= boldClass %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 12.0pt; color: #000000; text-align: center;"><%= ageDisplay %></div>
+  </div>
+  <div class="text-frame" style="left: 74.48mm; top: <%= memberTop %>mm; width: 38.88mm; height: 7.65mm;">
+    <div class="text-content <%= relationFont %> <%= boldClass %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= relationSize %>pt; color: #000000; text-align: center;"><%= member.relation || '' %></div>
+  </div>
+  <div class="text-frame" style="left: 113.36mm; top: <%= memberTop %>mm; width: 50.44mm; height: 7.65mm;">
+    <div class="text-content <%= occupationFont %> <%= boldClass %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= occupationSize %>pt; color: #000000; text-align: center;"><%= member.occupation || '' %></div>
+  </div>
+  <div class="text-frame" style="left: 163.80mm; top: <%= memberTop %>mm; width: 33.32mm; height: 7.65mm;">
+    <div class="text-content <%= workingPlaceFont %> <%= boldClass %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= workingPlaceSize %>pt; color: #000000; text-align: center;"><%= member.working_place || '' %></div>
+  </div>
+  <% }); %>
+
+  <!-- Line after last member -->
+  <%
+  const lastMemberTop = firstMemberTop + (members.length * memberRowHeight);
+  %>
+  <svg class="line" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;">
+    <line x1="12.88mm" y1="<%= lastMemberTop %>mm" x2="197.12mm" y2="<%= lastMemberTop %>mm" stroke="#000000" stroke-width="0.35mm" />
+  </svg>
+
+  <!-- Vertical lines for table - EXACT positions from birthday list -->
+  <svg class="line" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;">
+    <line x1="58.22mm" y1="<%= tableHeaderTop %>mm" x2="58.22mm" y2="<%= lastMemberTop %>mm" stroke="#000000" stroke-width="0.35mm" />
+  </svg>
+  <svg class="line" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;">
+    <line x1="74.48mm" y1="<%= tableHeaderTop %>mm" x2="74.48mm" y2="<%= lastMemberTop %>mm" stroke="#000000" stroke-width="0.35mm" />
+  </svg>
+  <svg class="line" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;">
+    <line x1="113.36mm" y1="<%= tableHeaderTop %>mm" x2="113.36mm" y2="<%= lastMemberTop %>mm" stroke="#000000" stroke-width="0.35mm" />
+  </svg>
+  <svg class="line" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;">
+    <line x1="163.80mm" y1="<%= tableHeaderTop %>mm" x2="163.80mm" y2="<%= lastMemberTop %>mm" stroke="#000000" stroke-width="0.35mm" />
+  </svg>
+
+  <!-- Separator Line between families -->
+  <% if (familyIdx < familiesOnPage.length - 1) { %>
+  <svg class="line" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;">
+    <line x1="12.70mm" y1="<%= familyTop + 56 %>mm" x2="197.10mm" y2="<%= familyTop + 56 %>mm" stroke="#000000" stroke-width="0.35mm" />
+  </svg>
+  <% } %>
+  
+  <% }); %>
+  
+  <!-- Page Border -->
+  <svg class="line" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;">
+    <rect x="12.70mm" y="12.70mm" width="184.40mm" height="271.60mm" fill="none" stroke="#000000" stroke-width="0.35mm" />
+  </svg>
+</div>
+<% } %>
+</body>
+</html>
+

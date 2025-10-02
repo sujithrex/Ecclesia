@@ -113,12 +113,15 @@ contextBridge.exposeInMainWorld('electron', {
     getWeddingsByDateRange: (data) => ipcRenderer.invoke('member-get-weddings-by-date-range', data),
     getTodaysWeddings: (data) => ipcRenderer.invoke('member-get-todays-weddings', data),
     getThisWeekWeddings: (data) => ipcRenderer.invoke('member-get-this-week-weddings', data),
-    getWeddingStatistics: (data) => ipcRenderer.invoke('member-get-wedding-statistics', data)
+    getWeddingStatistics: (data) => ipcRenderer.invoke('member-get-wedding-statistics', data),
+    getWeddingReportData: (data) => ipcRenderer.invoke('member-get-wedding-report-data', data),
+    generateWeddingPDFPuppeteer: (data) => ipcRenderer.invoke('member-generate-wedding-pdf-puppeteer', data)
   },
 
   // Sabai Jabitha API
   sabaiJabitha: {
     getCongregationData: (data) => ipcRenderer.invoke('sabai-jabitha-get-congregation-data', data),
-    generatePDF: (data) => ipcRenderer.invoke('sabai-jabitha-generate-pdf', data)
+    generatePDF: (data) => ipcRenderer.invoke('sabai-jabitha-generate-pdf', data),
+    generatePDFPuppeteer: (data) => ipcRenderer.invoke('sabai-jabitha-generate-pdf-puppeteer', data)
   }
 });

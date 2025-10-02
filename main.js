@@ -14,6 +14,8 @@ const FamilyService = require('./backend/familyService.js');
 const MemberService = require('./backend/memberService.js');
 const SabaiJabithaService = require('./backend/sabaiJabithaService.js');
 const BirthdayReportPuppeteerService = require('./backend/birthdayReportPuppeteerService.js');
+const WeddingReportPuppeteerService = require('./backend/weddingReportPuppeteerService.js');
+const SabaiJabithaReportPuppeteerService = require('./backend/sabaiJabithaReportPuppeteerService.js');
 
 let mainWindow;
 let db;
@@ -29,6 +31,8 @@ let familyService;
 let memberService;
 let sabaiJabithaService;
 let birthdayReportPuppeteerService;
+let weddingReportPuppeteerService;
+let sabaiJabithaReportPuppeteerService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -370,9 +374,19 @@ ipcMain.handle('member-generate-birthday-pdf-puppeteer', async (event, { reportD
   return await birthdayReportPuppeteerService.generateBirthdayPDF(reportData, church, dateRange, options);
 });
 
+// Wedding Report Puppeteer PDF Generation IPC handler
+ipcMain.handle('member-generate-wedding-pdf-puppeteer', async (event, { reportData, church, dateRange, options }) => {
+  return await weddingReportPuppeteerService.generateWeddingPDF(reportData, church, dateRange, options);
+});
+
 // Wedding Anniversary related IPC handlers
 ipcMain.handle('member-get-weddings-by-date-range', async (event, { churchId, fromDate, toDate, userId, areaId }) => {
   return await memberService.getWeddingsByDateRange(churchId, fromDate, toDate, userId, areaId);
+});
+
+// Wedding Report IPC handler
+ipcMain.handle('member-get-wedding-report-data', async (event, { churchId, fromDate, toDate, userId, areaId }) => {
+  return await memberService.getWeddingReportData(churchId, fromDate, toDate, userId, areaId);
 });
 
 ipcMain.handle('member-get-todays-weddings', async (event, { churchId, userId, areaId }) => {
@@ -394,6 +408,11 @@ ipcMain.handle('sabai-jabitha-get-congregation-data', async (event, { churchId, 
 
 ipcMain.handle('sabai-jabitha-generate-pdf', async (event, { churchId, userId, options }) => {
   return await sabaiJabithaService.generateSabaiJabithaPDF(churchId, userId, options);
+});
+
+// Sabai Jabitha Report Puppeteer PDF Generation IPC handler
+ipcMain.handle('sabai-jabitha-generate-pdf-puppeteer', async (event, { congregationData, church, options }) => {
+  return await sabaiJabithaReportPuppeteerService.generateSabaiJabithaPDF(congregationData, church, options);
 });
 
 // File management IPC handlers
@@ -523,6 +542,8 @@ app.on('ready', async () => {
   memberService = new MemberService(db);
   sabaiJabithaService = new SabaiJabithaService(db);
   birthdayReportPuppeteerService = new BirthdayReportPuppeteerService(db);
+  weddingReportPuppeteerService = new WeddingReportPuppeteerService(db);
+  sabaiJabithaReportPuppeteerService = new SabaiJabithaReportPuppeteerService(db);
   
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

@@ -15,7 +15,7 @@ import {
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
-import { generateInDesignWeddingReport } from '../utils/weddingReportInDesign';
+import { generatePuppeteerWeddingReport } from '../utils/weddingReportPuppeteer';
 
 const useStyles = makeStyles({
   container: {
@@ -567,21 +567,23 @@ const WeddingListPage = ({
 
     setReportLoading(true);
     try {
-      // Use the existing wedding data and transform it for the report
-      const reportData = await transformWeddingDataForReport(weddings);
-      
-      // Get enhanced church data with proper diocese name from pastorate settings
-      const enhancedChurch = await getEnhancedChurchData();
-      
-      // Create date range object
-      const dateRange = {
+      // Get detailed report data from backend (includes all family members)
+      const result = await window.electron.member.getWeddingReportData({
+        churchId: currentChurch.id,
         fromDate,
-        toDate
-      };
-      
+        toDate,
+        userId: user.id,
+        areaId: selectedArea || null
+      });
+
+      if (!result.success) {
+        alert(`Error getting report data: ${result.error}`);
+        return;
+      }
+
       // Generate PDF report
-      const reportResult = await generateInDesignWeddingReport(reportData, enhancedChurch, dateRange, action);
-      
+      const reportResult = await generatePuppeteerWeddingReport(result.reportData, result.church, result.dateRange, action);
+
       if (!reportResult.success) {
         alert(`Error ${action === 'download' ? 'saving' : 'printing'} report: ${reportResult.error}`);
       }
@@ -678,15 +680,16 @@ const WeddingListPage = ({
         name: wedding.name,
         respect: wedding.respect,
         relation: wedding.relation || 'Head',
-        age: wedding.age || null,
+        dob: wedding.dob || null, // Add DOB for age calculation
+        date_of_marriage: wedding.date_of_marriage || null, // Add marriage date for anniversary calculation
         occupation: wedding.occupation || null,
         working_place: wedding.working_place || null,
         mobile: wedding.mobile
       };
-      
+
       familyGroups[familyId].members.push(member);
       familyGroups[familyId].celebrants.push({ id: wedding.id }); // Mark as celebrant
-      
+
       // Add spouse if available using actual spouse data
       if (wedding.spouse_name) {
         const spouseMember = {
@@ -694,12 +697,13 @@ const WeddingListPage = ({
           name: wedding.spouse_name,
           respect: wedding.spouse_respect || (wedding.respect === 'mr' ? 'mrs' : 'ms'),
           relation: 'Spouse',
-          age: null, // Spouse age not available in this query
+          dob: wedding.spouse_dob || null, // Add spouse DOB if available
+          date_of_marriage: wedding.date_of_marriage || null, // Same marriage date
           occupation: null, // Spouse occupation not available in this query
           working_place: null, // Spouse working place not available in this query
           mobile: null // Spouse mobile not available in this query
         };
-        
+
         familyGroups[familyId].members.push(spouseMember);
         familyGroups[familyId].celebrants.push({ id: wedding.id + '_spouse' }); // Both are celebrants
       }
