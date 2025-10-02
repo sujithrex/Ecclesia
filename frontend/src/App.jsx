@@ -26,6 +26,7 @@ import PastorateDashboardPage from './components/PastorateDashboardPage';
 import ChurchDashboardPage from './components/ChurchDashboardPage';
 import BirthdayListPage from './components/BirthdayListPage';
 import WeddingListPage from './components/WeddingListPage';
+import SabaiJabithaPage from './components/SabaiJabithaPage';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -808,6 +809,32 @@ function App() {
           element={
             user ? (
               <WeddingListPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/sabai-jabitha"
+          element={
+            user ? (
+              <SabaiJabithaPage
                 user={user}
                 currentPastorate={currentPastorate}
                 userPastorates={userPastorates}

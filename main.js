@@ -12,6 +12,7 @@ const AreaService = require('./backend/areaService.js');
 const PrayerCellService = require('./backend/prayerCellService.js');
 const FamilyService = require('./backend/familyService.js');
 const MemberService = require('./backend/memberService.js');
+const SabaiJabithaService = require('./backend/sabaiJabithaService.js');
 
 let mainWindow;
 let db;
@@ -25,6 +26,7 @@ let areaService;
 let prayerCellService;
 let familyService;
 let memberService;
+let sabaiJabithaService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -378,6 +380,15 @@ ipcMain.handle('member-get-wedding-statistics', async (event, { churchId, userId
   return await memberService.getWeddingStatistics(churchId, userId, areaId);
 });
 
+// Sabai Jabitha IPC handlers
+ipcMain.handle('sabai-jabitha-get-congregation-data', async (event, { churchId, userId, areaId }) => {
+  return await sabaiJabithaService.getCongregationData(churchId, userId, areaId);
+});
+
+ipcMain.handle('sabai-jabitha-generate-pdf', async (event, { churchId, userId, options }) => {
+  return await sabaiJabithaService.generateSabaiJabithaPDF(churchId, userId, options);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -503,6 +514,7 @@ app.on('ready', async () => {
   prayerCellService = new PrayerCellService(db);
   familyService = new FamilyService(db);
   memberService = new MemberService(db);
+  sabaiJabithaService = new SabaiJabithaService(db);
   
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

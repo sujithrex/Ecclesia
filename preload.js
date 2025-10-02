@@ -113,5 +113,11 @@ contextBridge.exposeInMainWorld('electron', {
     getTodaysWeddings: (data) => ipcRenderer.invoke('member-get-todays-weddings', data),
     getThisWeekWeddings: (data) => ipcRenderer.invoke('member-get-this-week-weddings', data),
     getWeddingStatistics: (data) => ipcRenderer.invoke('member-get-wedding-statistics', data)
+  },
+
+  // Sabai Jabitha API
+  sabaiJabitha: {
+    getCongregationData: (data) => ipcRenderer.invoke('sabai-jabitha-get-congregation-data', data),
+    generatePDF: (data) => ipcRenderer.invoke('sabai-jabitha-generate-pdf', data)
   }
 });

@@ -407,8 +407,7 @@ const ChurchDashboard = ({
   };
 
   const handleSabaiJabitha = () => {
-    // TODO: Implement சபை ஜாபிதா functionality
-    console.log('சபை ஜாபிதா clicked');
+    navigate('/sabai-jabitha');
   };
 
   const handleAccounts = () => {
