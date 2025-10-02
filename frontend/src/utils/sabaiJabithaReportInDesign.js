@@ -686,6 +686,9 @@ export class InDesignSabaiJabithaReportPDF {
             });
         } catch (error) {
             console.warn(`Failed to draw rotated Tamil text "${text}":`, error);
+        }
+    }
+
     async drawWrappedTamilText(page, text, position, fontSize, maxWidth, maxHeight) {
         try {
             if (this.isTamilText(text)) {
@@ -729,9 +732,6 @@ export class InDesignSabaiJabithaReportPDF {
         }
     }
 
-        }
-    }
-
     async drawRotatedTamilText(page, text, config, fontSize) {
         const rotationAngle = 90.0;
         const radians = rotationAngle * Math.PI / 180;
@@ -763,17 +763,6 @@ export class InDesignSabaiJabithaReportPDF {
             font: this.fonts.tamil || this.fonts.regular,
             color: this.colors.black,
             rotate: { angle: rotationAngle, type: 'degrees' }
-        });
-    }
-
-    async drawWrappedTamilText(page, text, position, fontSize, maxWidth, maxHeight) {
-        // Simple wrapped text for now
-        const lines = text.split('\n');
-        const lineHeight = fontSize * 1.2;
-        
-        lines.forEach((line, index) => {
-            const currentY = position.y - (index * lineHeight);
-            this.drawCenteredTamilText(page, line, { x: position.x, y: currentY }, fontSize);
         });
     }
 

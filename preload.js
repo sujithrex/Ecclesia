@@ -108,6 +108,7 @@ contextBridge.exposeInMainWorld('electron', {
     getThisWeekBirthdays: (data) => ipcRenderer.invoke('member-get-this-week-birthdays', data),
     getBirthdayStatistics: (data) => ipcRenderer.invoke('member-get-birthday-statistics', data),
     getBirthdayReportData: (data) => ipcRenderer.invoke('member-get-birthday-report-data', data),
+    generateBirthdayPDFPuppeteer: (data) => ipcRenderer.invoke('member-generate-birthday-pdf-puppeteer', data),
     // Wedding Anniversary related methods
     getWeddingsByDateRange: (data) => ipcRenderer.invoke('member-get-weddings-by-date-range', data),
     getTodaysWeddings: (data) => ipcRenderer.invoke('member-get-todays-weddings', data),

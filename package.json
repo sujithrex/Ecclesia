@@ -16,10 +16,12 @@
     "electron": "^38.1.2"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "ejs": "^3.1.10",
+    "puppeteer": "^24.23.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "sqlite3": "^5.1.6",
-    "bcryptjs": "^2.4.3",
     "uuid": "^9.0.1"
   }
 }

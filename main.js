@@ -13,6 +13,7 @@ const PrayerCellService = require('./backend/prayerCellService.js');
 const FamilyService = require('./backend/familyService.js');
 const MemberService = require('./backend/memberService.js');
 const SabaiJabithaService = require('./backend/sabaiJabithaService.js');
+const BirthdayReportPuppeteerService = require('./backend/birthdayReportPuppeteerService.js');
 
 let mainWindow;
 let db;
@@ -27,6 +28,7 @@ let prayerCellService;
 let familyService;
 let memberService;
 let sabaiJabithaService;
+let birthdayReportPuppeteerService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -363,6 +365,11 @@ ipcMain.handle('member-get-birthday-report-data', async (event, { churchId, from
   return await memberService.getBirthdayReportData(churchId, fromDate, toDate, userId, areaId);
 });
 
+// Birthday Report Puppeteer PDF Generation IPC handler
+ipcMain.handle('member-generate-birthday-pdf-puppeteer', async (event, { reportData, church, dateRange, options }) => {
+  return await birthdayReportPuppeteerService.generateBirthdayPDF(reportData, church, dateRange, options);
+});
+
 // Wedding Anniversary related IPC handlers
 ipcMain.handle('member-get-weddings-by-date-range', async (event, { churchId, fromDate, toDate, userId, areaId }) => {
   return await memberService.getWeddingsByDateRange(churchId, fromDate, toDate, userId, areaId);
@@ -515,6 +522,7 @@ app.on('ready', async () => {
   familyService = new FamilyService(db);
   memberService = new MemberService(db);
   sabaiJabithaService = new SabaiJabithaService(db);
+  birthdayReportPuppeteerService = new BirthdayReportPuppeteerService(db);
   
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

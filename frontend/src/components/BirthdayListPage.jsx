@@ -15,7 +15,7 @@ import {
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
-import { generateInDesignBirthdayReport } from '../utils/birthdayReportInDesign';
+import { generatePuppeteerBirthdayReport } from '../utils/birthdayReportPuppeteer';
 
 const useStyles = makeStyles({
   container: {
@@ -605,10 +605,10 @@ const BirthdayListPage = ({
 
       if (result.success) {
         const { church, reportData, dateRange } = result;
-        
-        // Generate PDF report
-        const reportResult = await generateInDesignBirthdayReport(reportData, church, dateRange, action);
-        
+
+        // Generate PDF report using Puppeteer
+        const reportResult = await generatePuppeteerBirthdayReport(reportData, church, dateRange, action);
+
         if (!reportResult.success) {
           alert(`Error ${action === 'download' ? 'saving' : 'printing'} report: ${reportResult.error}`);
         }
