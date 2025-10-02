@@ -269,6 +269,8 @@ const SabaiJabithaPage = ({
     }
   };
 
+  const handleViewReport = () => handleGenerateReport('view');
+  const handleDownloadReport = () => handleGenerateReport('download');
   const handlePrintReport = () => handleGenerateReport('print');
 
   // Get enhanced church data with proper settings
@@ -457,7 +459,7 @@ const SabaiJabithaPage = ({
       <div style={contentStyle}>
         {/* Statistics */}
         <div style={cardStyle}>
-          <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center' }}>
+          <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', fontFamily: 'Pavanam, Segoe UI, sans-serif' }}>
             <PeopleListRegular style={{ marginRight: '8px' }} />
             சபை ஜாபிதா Statistics
           </h3>
@@ -467,82 +469,85 @@ const SabaiJabithaPage = ({
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#B5316A' }}>
                 {statistics.totalFamilies}
               </div>
-              <div style={{ fontSize: '14px', color: '#605e5c' }}>மொத்த குடும்பங்கள்</div>
+              <div style={{ fontSize: '14px', color: '#605e5c', fontFamily: 'Pavanam, Segoe UI, sans-serif' }}>மொத்த குடும்பங்கள்</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#B5316A' }}>
                 {statistics.totalMembers}
               </div>
-              <div style={{ fontSize: '14px', color: '#605e5c' }}>மொத்த உறுப்பினர்கள்</div>
+              <div style={{ fontSize: '14px', color: '#605e5c', fontFamily: 'Pavanam, Segoe UI, sans-serif' }}>மொத்த உறுப்பினர்கள்</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#B5316A' }}>
                 {statistics.baptisedMembers}
               </div>
-              <div style={{ fontSize: '14px', color: '#605e5c' }}>ஞானஸ்நானகாரர்கள்</div>
+              <div style={{ fontSize: '14px', color: '#605e5c', fontFamily: 'Pavanam, Segoe UI, sans-serif' }}>ஞானஸ்நானகாரர்கள்</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#B5316A' }}>
                 {statistics.confirmedMembers}
               </div>
-              <div style={{ fontSize: '14px', color: '#605e5c' }}>நற்கருணைதாரர்கள்</div>
+              <div style={{ fontSize: '14px', color: '#605e5c', fontFamily: 'Pavanam, Segoe UI, sans-serif' }}>நற்கருணைதாரர்கள்</div>
             </div>
           </div>
         </div>
 
         {/* Controls */}
         <div style={cardStyle}>
-          <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center' }}>
+          <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', fontFamily: 'Pavanam, Segoe UI, sans-serif' }}>
             <FilterRegular style={{ marginRight: '8px' }} />
-            அறிக்கை உருவாக்கம்
+            Reports
           </h3>
-          
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600' }}>
-              Area / பகுதி:
-            </label>
-            <select
-              value={selectedArea}
-              onChange={(e) => setSelectedArea(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #8a8886',
-                borderRadius: '4px',
-                fontSize: '14px',
-                minWidth: '200px'
-              }}
-            >
-              <option value="">All Areas / அனைத்து பகுதிகள்</option>
-              {areas.map(area => (
-                <option key={area.id} value={area.id}>
-                  {area.area_name} ({area.area_identity})
-                </option>
-              ))}
-            </select>
-          </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600' }}>
-              Report Year / அறிக்கை ஆண்டு:
-            </label>
-            <input
-              type="number"
-              value={reportYear}
-              onChange={(e) => setReportYear(parseInt(e.target.value))}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #8a8886',
-                borderRadius: '4px',
-                fontSize: '14px',
-                width: '120px'
-              }}
-              min="2020"
-              max="2030"
-            />
+          <div style={{ display: 'flex', gap: '24px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontWeight: '600', whiteSpace: 'nowrap', fontFamily: 'Pavanam, Segoe UI, sans-serif' }}>
+                Area / பகுதி:
+              </label>
+              <select
+                value={selectedArea}
+                onChange={(e) => setSelectedArea(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #8a8886',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  minWidth: '200px',
+                  fontFamily: 'Pavanam, Segoe UI, sans-serif'
+                }}
+              >
+                <option value="">All Areas / அனைத்து பகுதிகள்</option>
+                {areas.map(area => (
+                  <option key={area.id} value={area.id}>
+                    {area.area_name} ({area.area_identity})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontWeight: '600', whiteSpace: 'nowrap', fontFamily: 'Pavanam, Segoe UI, sans-serif' }}>
+                Report Year / அறிக்கை ஆண்டு:
+              </label>
+              <input
+                type="number"
+                value={reportYear}
+                onChange={(e) => setReportYear(parseInt(e.target.value))}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid #8a8886',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  width: '120px'
+                }}
+                min="2020"
+                max="2030"
+              />
+            </div>
           </div>
 
           <div>
-            <button style={buttonStyle} onClick={handleGenerateReport} disabled={loading}>
+            <button style={buttonStyle} onClick={handleViewReport} disabled={loading}>
               <DocumentPdfRegular style={{ marginRight: '4px' }} />
               {loading ? 'Generating...' : 'Generate PDF'}
             </button>

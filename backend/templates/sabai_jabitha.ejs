@@ -67,10 +67,17 @@
 function formatRespect(respect) {
   if (!respect) return '';
   const respectMap = {
-    'mr': 'Mr.', 'mrs': 'Mrs.', 'ms': 'Ms.', 'master': 'Master',
-    'rev': 'Rev.', 'dr': 'Dr.', 'er': 'Er.', 'sis': 'Sis.', 'bishop': 'Bishop'
+    'mr': 'Mr', 'mrs': 'Mrs', 'ms': 'Ms', 'master': 'Master',
+    'rev': 'Rev', 'dr': 'Dr', 'er': 'Er', 'sis': 'Sis', 'bishop': 'Bishop'
   };
   return respectMap[respect.toLowerCase()] || respect;
+}
+
+// Remove leading zeros from family number
+function formatFamilyNumber(familyNumber) {
+  if (!familyNumber) return '';
+  // Remove leading zeros but keep the number
+  return familyNumber.replace(/^0+/, '') || '0';
 }
 
 // Check if text contains Tamil characters
@@ -259,10 +266,11 @@ for (let pageNum = 0; pageNum < totalPages; pageNum++) {
     const isFirstMemberOfFamily = previousFamilyId !== family.id;
     previousFamilyId = family.id;
 
-    // Family Number (combined area_identity + family_number)
-    const familyNumber = family.combined_family_number || `${area?.area_identity || ''}${family.family_number}`;
+    // Family Number (combined area_identity + family_number) - remove leading zeros
+    const rawFamilyNumber = family.combined_family_number || `${area?.area_identity || ''}${family.family_number}`;
+    const familyNumber = formatFamilyNumber(rawFamilyNumber);
 
-    // Member name with respect
+    // Member name with respect (no dot after respect since formatRespect doesn't include it)
     const memberName = `${formatRespect(member.respect)}. ${member.name}`;
     const nameClass = getFontClass(memberName);
     const nameFontSize = getFontSize(memberName, 12);
@@ -289,10 +297,10 @@ for (let pageNum = 0; pageNum < totalPages; pageNum++) {
     const relation = member.relation || '';
   %>
 
-  <!-- Family Number (only show for first member of family) -->
+  <!-- Family Number (only show for first member of family) - 70% font size -->
   <% if (isFirstMemberOfFamily) { %>
   <div class="text-frame" style="left: 12.70mm; top: <%= currentY %>mm; width: 8.60mm; height: <%= memberRowHeight %>mm;">
-    <div class="text-content english-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 11.0pt; color: #000000; text-align: center;"><%= familyNumber %></div>
+    <div class="text-content english-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 7.7pt; color: #000000; text-align: center;"><%= familyNumber %></div>
   </div>
   <% } %>
 
@@ -313,9 +321,14 @@ for (let pageNum = 0; pageNum < totalPages; pageNum++) {
   </div>
   <% } %>
 
+  <!-- Sangam (always 300) -->
+  <div class="text-frame" style="left: 116.38mm; top: <%= currentY + 4 %>mm; margin-left: -8.79mm; margin-top: -4.03mm; width: 17.58mm; height: 8.05mm; transform: rotate(-90deg); transform-origin: center center;">
+    <div class="text-content english-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 12.0pt; color: #000000; text-align: center;">300</div>
+  </div>
+
   <!-- Age (in appropriate column based on age range) -->
   <%
-  let ageColumnLeft = 116.38; // Default column
+  let ageColumnLeft = 124.86; // Default column for 1-15
   if (age <= 15) {
     ageColumnLeft = 124.86;
   } else if (age >= 16 && age <= 35) {
