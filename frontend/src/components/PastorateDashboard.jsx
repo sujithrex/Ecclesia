@@ -7,7 +7,8 @@ import {
   BuildingRegular,
   AddRegular,
   SearchRegular,
-  SettingsRegular
+  SettingsRegular,
+  DocumentRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
@@ -157,6 +158,37 @@ const useStyles = makeStyles({
     fontWeight: '700',
     color: '#B5316A',
   },
+  buttonRow: {
+    display: 'flex',
+    gap: '16px',
+    marginTop: '24px',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  actionButton: {
+    backgroundColor: '#B5316A',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '12px 20px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'all 0.2s ease',
+    minWidth: '180px',
+    justifyContent: 'center',
+    '&:hover': {
+      backgroundColor: '#A12B5E',
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(181, 49, 106, 0.3)',
+    },
+    '&:active': {
+      transform: 'translateY(0)',
+    },
+  },
 });
 
 const PastorateDashboard = ({
@@ -265,6 +297,10 @@ const PastorateDashboard = ({
     navigate('/pastorate-settings');
   };
 
+  const handleAdultBaptism = () => {
+    navigate('/adult-baptism');
+  };
+
   if (!currentPastorate) {
     return null;
   }
@@ -314,6 +350,18 @@ const PastorateDashboard = ({
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Action Buttons */}
+        <div className={styles.buttonRow}>
+          <button
+            className={styles.actionButton}
+            onClick={handleAdultBaptism}
+            type="button"
+          >
+            <DocumentRegular />
+            Certificate - Adult Bap
+          </button>
         </div>
       </div>
 

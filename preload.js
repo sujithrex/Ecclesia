@@ -123,5 +123,17 @@ contextBridge.exposeInMainWorld('electron', {
     getCongregationData: (data) => ipcRenderer.invoke('sabai-jabitha-get-congregation-data', data),
     generatePDF: (data) => ipcRenderer.invoke('sabai-jabitha-generate-pdf', data),
     generatePDFPuppeteer: (data) => ipcRenderer.invoke('sabai-jabitha-generate-pdf-puppeteer', data)
+  },
+
+  // Adult Baptism Certificate API
+  adultBaptism: {
+    createCertificate: (data) => ipcRenderer.invoke('adult-baptism-create-certificate', data),
+    getCertificates: (data) => ipcRenderer.invoke('adult-baptism-get-certificates', data),
+    getCertificateById: (data) => ipcRenderer.invoke('adult-baptism-get-certificate-by-id', data),
+    updateCertificate: (data) => ipcRenderer.invoke('adult-baptism-update-certificate', data),
+    deleteCertificate: (data) => ipcRenderer.invoke('adult-baptism-delete-certificate', data),
+    getNextCertificateNumber: (data) => ipcRenderer.invoke('adult-baptism-get-next-certificate-number', data),
+    getCertificateDataForPDF: (data) => ipcRenderer.invoke('adult-baptism-get-certificate-data-for-pdf', data),
+    generatePDFPuppeteer: (data) => ipcRenderer.invoke('adult-baptism-generate-pdf-puppeteer', data)
   }
 });

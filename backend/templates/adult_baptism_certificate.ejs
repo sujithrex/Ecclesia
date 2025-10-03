@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @font-face {
+      font-family: 'Vijaya';
+      src: url('file:///<%= fontPath.replace(/\\/g, '/') %>') format('truetype');
+    }
+    @font-face {
+      font-family: 'Times New Roman';
+      src: local('Times New Roman');
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      width: 297.00mm;
+      height: 210.00mm;
+      position: relative;
+      overflow: hidden;
+      font-family: 'Times New Roman', serif;
+    }
+    .text-frame {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .text-content {
+      width: 100%;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    .shape {
+      position: absolute;
+    }
+    .line {
+      position: absolute;
+    }
+    .table-cell {
+      position: absolute;
+      overflow: hidden;
+    }
+    .image-frame {
+      position: absolute;
+    }
+    .english-text {
+      font-family: 'Times New Roman', serif;
+    }
+    .tamil-text {
+      font-family: 'Vijaya', serif;
+    }
+  </style>
+</head>
+<body>
+<%
+// Helper function to check if text contains Tamil characters
+function isTamilText(text) {
+  if (!text) return false;
+  const tamilRegex = /[\u0B80-\u0BFF]/;
+  return tamilRegex.test(text);
+}
+
+// Get font class based on text content
+function getFontClass(text) {
+  return isTamilText(text) ? 'tamil-text' : 'english-text';
+}
+
+// Get font size based on text content (Tamil gets +1pt)
+function getFontSize(text, baseSize) {
+  return isTamilText(text) ? (baseSize + 1) : baseSize;
+}
+
+// Format date to DD-MM-YYYY
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date)) return dateStr;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
+// Certificate data
+const certNumber = certificate.certificate_number || '';
+const whenBaptised = formatDate(certificate.when_baptised);
+const christianName = certificate.christian_name || '';
+const formerName = certificate.former_name || '';
+const sex = certificate.sex === 'male' ? 'Male' : 'Female';
+const age = certificate.age || '';
+const abode = certificate.abode || '';
+const profession = certificate.profession || '';
+const fatherName = certificate.father_name || '';
+const motherName = certificate.mother_name || '';
+const witnessName1 = certificate.witness_name_1 || '';
+const witnessName2 = certificate.witness_name_2 || '';
+const witnessName3 = certificate.witness_name_3 || '';
+const whereBaptised = certificate.where_baptised || '';
+const signatureWhoBaptised = certificate.signature_who_baptised || '';
+const certifiedRevName = certificate.certified_rev_name || '';
+const holdingOffice = certificate.holding_office || '';
+const certDate = formatDate(certificate.certificate_date);
+const certPlace = certificate.certificate_place || '';
+
+// Build certification text
+const certificationText = `I Rev. ${certifiedRevName} hereby certify that the above is a true extract from the Register of Baptism kept at ${holdingOffice}.`;
+
+// Detect fonts for each field
+const certNumberFont = getFontClass(certNumber);
+const certNumberSize = getFontSize(certNumber, 12);
+const whenBaptisedFont = getFontClass(whenBaptised);
+const whenBaptisedSize = getFontSize(whenBaptised, 12);
+const christianNameFont = getFontClass(christianName);
+const christianNameSize = getFontSize(christianName, 12);
+const formerNameFont = getFontClass(formerName);
+const formerNameSize = getFontSize(formerName, 12);
+const sexFont = getFontClass(sex);
+const sexSize = getFontSize(sex, 12);
+const ageFont = getFontClass(age.toString());
+const ageSize = getFontSize(age.toString(), 12);
+const abodeFont = getFontClass(abode);
+const abodeSize = getFontSize(abode, 12);
+const professionFont = getFontClass(profession);
+const professionSize = getFontSize(profession, 12);
+const fatherNameFont = getFontClass(fatherName);
+const fatherNameSize = getFontSize(fatherName, 12);
+const motherNameFont = getFontClass(motherName);
+const motherNameSize = getFontSize(motherName, 12);
+const witnessName1Font = getFontClass(witnessName1);
+const witnessName1Size = getFontSize(witnessName1, 12);
+const witnessName2Font = getFontClass(witnessName2);
+const witnessName2Size = getFontSize(witnessName2, 12);
+const witnessName3Font = getFontClass(witnessName3);
+const witnessName3Size = getFontSize(witnessName3, 12);
+const whereBaptisedFont = getFontClass(whereBaptised);
+const whereBaptisedSize = getFontSize(whereBaptised, 10.4);
+const signatureFont = getFontClass(signatureWhoBaptised);
+const signatureSize = getFontSize(signatureWhoBaptised, 10.4);
+const certTextFont = getFontClass(certificationText);
+const certTextSize = getFontSize(certificationText, 11.4);
+const certPlaceFont = getFontClass(certPlace);
+const certPlaceSize = getFontSize(certPlace, 12);
+const certDateFont = getFontClass(certDate);
+const certDateSize = getFontSize(certDate, 12);
+
+// Pastorate name from pastorate table - convert to uppercase for display
+const pastorateNameRaw = pastorate ? `${pastorate.pastorate_name} Pastorate` : (church.church_name || 'Pastorate');
+const pastorateName = pastorateNameRaw.toUpperCase();
+const pastorateFont = getFontClass(pastorateName);
+const pastorateSize = getFontSize(pastorateName, 14.2);
+%>
+
+  <!-- Background Image (must be first/bottom layer) -->
+  <div class="image-frame" style="left: 0.19mm; top: 0.02mm; width: 297.00mm; height: 209.97mm; overflow: hidden; position: absolute; z-index: 0;">
+    <img src="<%= imageBase64 %>" style="width: 100%; height: 100%; object-fit: cover;" />
+  </div>
+
+  <!-- Header - Pastorate Name -->
+  <div class="text-frame" style="left: 13.38mm; top: 20.01mm; width: 271.03mm; height: 7.62mm;">
+    <div class="text-content <%= pastorateFont %> bold-text" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; font-size: <%= pastorateSize %>pt; color: #000000; text-align: center; line-height: 1.67; font-weight: bold; letter-spacing: 2px;"><%= pastorateName %></div>
+  </div>
+
+  <!-- Certificate Number (Rotated) -->
+  <div class="text-frame" style="left: 20.29mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -7.40mm; width: 68.00mm; height: 14.80mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= certNumberFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= certNumberSize %>pt; color: #000000; text-align: center;"><%= certNumber %></div>
+  </div>
+
+  <!-- When Baptised (Rotated) -->
+  <div class="text-frame" style="left: 39.49mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -11.80mm; width: 68.00mm; height: 23.60mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= whenBaptisedFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= whenBaptisedSize %>pt; color: #000000; text-align: center;"><%= whenBaptised %></div>
+  </div>
+
+  <!-- Baptised Name / Christian Name (Rotated) -->
+  <div class="text-frame" style="left: 65.69mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -14.40mm; width: 68.00mm; height: 28.80mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= christianNameFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= christianNameSize %>pt; color: #000000; text-align: center;"><%= christianName %></div>
+  </div>
+
+  <!-- Former Name (Rotated) -->
+  <div class="text-frame" style="left: 92.19mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -12.10mm; width: 68.00mm; height: 24.20mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= formerNameFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= formerNameSize %>pt; color: #000000; text-align: center;"><%= formerName %></div>
+  </div>
+
+  <!-- Sex (Rotated) -->
+  <div class="text-frame" style="left: 111.24mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -6.95mm; width: 68.00mm; height: 13.90mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= sexFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= sexSize %>pt; color: #000000; text-align: center;"><%= sex %></div>
+  </div>
+
+  <!-- Age (Rotated) -->
+  <div class="text-frame" style="left: 124.69mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -6.50mm; width: 68.00mm; height: 13.00mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= ageFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= ageSize %>pt; color: #000000; text-align: center;"><%= age %></div>
+  </div>
+
+  <!-- Abode (Rotated) -->
+  <div class="text-frame" style="left: 138.14mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -6.95mm; width: 68.00mm; height: 13.90mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= abodeFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= abodeSize %>pt; color: #000000; text-align: center;"><%= abode %></div>
+  </div>
+
+  <!-- Profession (Rotated) -->
+  <div class="text-frame" style="left: 155.64mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -10.55mm; width: 68.00mm; height: 21.10mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= professionFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= professionSize %>pt; color: #000000; text-align: center;"><%= profession %></div>
+  </div>
+
+  <!-- Father Name (Rotated) -->
+  <div class="text-frame" style="left: 172.69mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -6.50mm; width: 68.00mm; height: 13.00mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= fatherNameFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= fatherNameSize %>pt; color: #000000; text-align: center;"><%= fatherName %></div>
+  </div>
+
+  <!-- Mother Name (Rotated) -->
+  <div class="text-frame" style="left: 185.69mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -6.50mm; width: 68.00mm; height: 13.00mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= motherNameFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= motherNameSize %>pt; color: #000000; text-align: center;"><%= motherName %></div>
+  </div>
+
+  <!-- Witness 1 (Rotated) -->
+  <div class="text-frame" style="left: 198.69mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -6.50mm; width: 68.00mm; height: 13.00mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= witnessName1Font %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= witnessName1Size %>pt; color: #000000; text-align: center;"><%= witnessName1 %></div>
+  </div>
+
+  <!-- Witness 2 (Rotated) -->
+  <div class="text-frame" style="left: 211.69mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -6.50mm; width: 68.00mm; height: 13.00mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= witnessName2Font %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= witnessName2Size %>pt; color: #000000; text-align: center;"><%= witnessName2 %></div>
+  </div>
+
+  <!-- Witness 3 (Rotated) -->
+  <div class="text-frame" style="left: 224.69mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -6.50mm; width: 68.00mm; height: 13.00mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= witnessName3Font %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= witnessName3Size %>pt; color: #000000; text-align: center;"><%= witnessName3 %></div>
+  </div>
+
+  <!-- Where Baptised (Rotated) -->
+  <div class="text-frame" style="left: 243.29mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -12.10mm; width: 68.00mm; height: 24.20mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= whereBaptisedFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= whereBaptisedSize %>pt; color: #000000; text-align: center;"><%= whereBaptised %></div>
+  </div>
+
+  <!-- Signature Who Baptised (Rotated) -->
+  <div class="text-frame" style="left: 269.79mm; top: 120.77mm; margin-left: -34.00mm; margin-top: -14.40mm; width: 68.00mm; height: 28.80mm; transform: rotate(-90.0deg); transform-origin: center center;">
+    <div class="text-content <%= signatureFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= signatureSize %>pt; color: #000000; text-align: center;"><%= signatureWhoBaptised %></div>
+  </div>
+
+  <!-- Certification Text -->
+  <div class="text-frame" style="left: 12.70mm; top: 156.96mm; width: 271.49mm; height: 13.00mm;">
+    <div class="text-content <%= certTextFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; font-size: <%= certTextSize %>pt; color: #000000; text-align: left;"><%= certificationText %></div>
+  </div>
+
+  <!-- Certificate Place -->
+  <div class="text-frame" style="left: 27.69mm; top: 176.27mm; width: 69.50mm; height: 7.62mm;">
+    <div class="text-content <%= certPlaceFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; font-size: <%= certPlaceSize %>pt; color: #000000; text-align: left;"><%= certPlace %></div>
+  </div>
+
+  <!-- Certificate Date -->
+  <div class="text-frame" style="left: 27.69mm; top: 184.77mm; width: 69.50mm; height: 7.62mm;">
+    <div class="text-content <%= certDateFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; font-size: <%= certDateSize %>pt; color: #000000; text-align: left;"><%= certDate %></div>
+  </div>
+
+</body>
+</html>
+

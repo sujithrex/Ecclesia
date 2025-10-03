@@ -241,6 +241,39 @@ class DatabaseManager {
                         FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
                         UNIQUE(church_id)
                     )
+                `);
+
+                // Adult Baptism Certificates table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS adult_baptism_certificates (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        church_id INTEGER NOT NULL,
+                        certificate_number TEXT NOT NULL,
+                        when_baptised DATE NOT NULL,
+                        christian_name TEXT NOT NULL,
+                        former_name TEXT NOT NULL,
+                        sex TEXT NOT NULL CHECK (sex IN ('male', 'female')),
+                        age INTEGER NOT NULL,
+                        abode TEXT NOT NULL,
+                        profession TEXT,
+                        father_name TEXT NOT NULL,
+                        mother_name TEXT NOT NULL,
+                        witness_name_1 TEXT NOT NULL,
+                        witness_name_2 TEXT NOT NULL,
+                        witness_name_3 TEXT NOT NULL,
+                        where_baptised TEXT NOT NULL,
+                        signature_who_baptised TEXT NOT NULL,
+                        certified_rev_name TEXT NOT NULL,
+                        holding_office TEXT NOT NULL,
+                        certificate_date DATE NOT NULL,
+                        certificate_place TEXT NOT NULL,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(church_id, certificate_number)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);
@@ -257,7 +290,18 @@ class DatabaseManager {
     }
 
     async runMigrations() {
-        // Migration 1: Add spouse_id column to members table if it doesn't exist
+        try {
+            // Migration 1: Add spouse_id column to members table if it doesn't exist
+            await this.migrateSpouseId();
+
+            // Migration 2: Update adult_baptism_certificates table structure
+            await this.migrateAdultBaptismCertificates();
+        } catch (error) {
+            console.error('Migration error:', error);
+        }
+    }
+
+    async migrateSpouseId() {
         return new Promise((resolve) => {
             this.db.get("PRAGMA table_info(members)", (err, rows) => {
                 if (err) {
@@ -275,7 +319,7 @@ class DatabaseManager {
                     }
 
                     const hasSpouseId = columns.some(col => col.name === 'spouse_id');
-                    
+
                     if (!hasSpouseId) {
                         console.log('Adding spouse_id column to members table...');
                         this.db.run(`
@@ -294,6 +338,119 @@ class DatabaseManager {
                         resolve();
                     }
                 });
+            });
+        });
+    }
+
+    async migrateAdultBaptismCertificates() {
+        return new Promise((resolve) => {
+            // Check if table exists and has old structure
+            this.db.all("PRAGMA table_info(adult_baptism_certificates)", (err, columns) => {
+                if (err) {
+                    console.error('Error checking adult_baptism_certificates table:', err);
+                    resolve();
+                    return;
+                }
+
+                if (!columns || columns.length === 0) {
+                    console.log('adult_baptism_certificates table does not exist yet');
+                    resolve();
+                    return;
+                }
+
+                // Check if we need to migrate (check for old column names)
+                const hasOldStructure = columns.some(col => col.name === 'parents_name' || col.name === 'witness_name');
+                const hasNewStructure = columns.some(col => col.name === 'former_name');
+
+                if (hasOldStructure && !hasNewStructure) {
+                    console.log('Migrating adult_baptism_certificates table to new structure...');
+
+                    // Create new table with correct structure
+                    this.db.run(`
+                        CREATE TABLE adult_baptism_certificates_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            church_id INTEGER NOT NULL,
+                            certificate_number TEXT NOT NULL,
+                            when_baptised DATE NOT NULL,
+                            christian_name TEXT NOT NULL,
+                            former_name TEXT NOT NULL,
+                            sex TEXT NOT NULL CHECK (sex IN ('male', 'female')),
+                            age INTEGER NOT NULL,
+                            abode TEXT NOT NULL,
+                            profession TEXT,
+                            father_name TEXT NOT NULL,
+                            mother_name TEXT NOT NULL,
+                            witness_name_1 TEXT NOT NULL,
+                            witness_name_2 TEXT NOT NULL,
+                            witness_name_3 TEXT NOT NULL,
+                            where_baptised TEXT NOT NULL,
+                            signature_who_baptised TEXT NOT NULL,
+                            certified_rev_name TEXT NOT NULL,
+                            holding_office TEXT NOT NULL,
+                            certificate_date DATE NOT NULL,
+                            certificate_place TEXT NOT NULL,
+                            created_by INTEGER NOT NULL,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                            FOREIGN KEY (created_by) REFERENCES users (id),
+                            UNIQUE(church_id, certificate_number)
+                        )
+                    `, (createErr) => {
+                        if (createErr) {
+                            console.error('Error creating new adult_baptism_certificates table:', createErr);
+                            resolve();
+                            return;
+                        }
+
+                        // Copy data from old table to new table (if any data exists)
+                        this.db.run(`
+                            INSERT INTO adult_baptism_certificates_new
+                            (id, church_id, certificate_number, when_baptised, christian_name,
+                             former_name, sex, age, abode, profession, father_name, mother_name,
+                             witness_name_1, witness_name_2, witness_name_3, where_baptised,
+                             signature_who_baptised, certified_rev_name, holding_office,
+                             certificate_date, certificate_place, created_by, created_at, updated_at)
+                            SELECT
+                                id, church_id, certificate_number, when_baptised, christian_name,
+                                father_name as former_name, sex, age, abode, profession,
+                                parents_name as father_name, '' as mother_name,
+                                witness_name as witness_name_1, '' as witness_name_2, '' as witness_name_3,
+                                where_baptised, signature_who_baptised, certified_rev_name, holding_office,
+                                certificate_date, certificate_place, created_by, created_at, updated_at
+                            FROM adult_baptism_certificates
+                        `, (copyErr) => {
+                            if (copyErr) {
+                                console.log('No data to copy or copy error (this is OK for new tables):', copyErr.message);
+                            }
+
+                            // Drop old table
+                            this.db.run(`DROP TABLE IF EXISTS adult_baptism_certificates`, (dropErr) => {
+                                if (dropErr) {
+                                    console.error('Error dropping old table:', dropErr);
+                                    resolve();
+                                    return;
+                                }
+
+                                // Rename new table
+                                this.db.run(`ALTER TABLE adult_baptism_certificates_new RENAME TO adult_baptism_certificates`, (renameErr) => {
+                                    if (renameErr) {
+                                        console.error('Error renaming table:', renameErr);
+                                    } else {
+                                        console.log('adult_baptism_certificates table migrated successfully');
+                                    }
+                                    resolve();
+                                });
+                            });
+                        });
+                    });
+                } else if (hasNewStructure) {
+                    console.log('adult_baptism_certificates table already has new structure');
+                    resolve();
+                } else {
+                    console.log('adult_baptism_certificates table structure is unknown, skipping migration');
+                    resolve();
+                }
             });
         });
     }
@@ -536,6 +693,24 @@ class DatabaseManager {
                     reject(err);
                 } else {
                     resolve(row);
+                }
+            });
+        });
+    }
+
+    async getPastorateByChurchId(churchId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT p.*
+                FROM pastorates p
+                INNER JOIN churches c ON c.pastorate_id = p.id
+                WHERE c.id = ?
+            `;
+            this.db.get(query, [churchId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row || null);
                 }
             });
         });
@@ -2008,7 +2183,7 @@ class DatabaseManager {
             try {
                 const todaysWeddings = await this.getTodaysWeddings(churchId, areaId);
                 const thisWeekWeddings = await this.getThisWeekWeddings(churchId, areaId);
-                
+
                 resolve({
                     todayCount: todaysWeddings.length,
                     thisWeekCount: thisWeekWeddings.length
@@ -2016,6 +2191,176 @@ class DatabaseManager {
             } catch (error) {
                 reject(error);
             }
+        });
+    }
+
+    // Adult Baptism Certificate methods
+    async createAdultBaptismCertificate(certificateData) {
+        return new Promise((resolve, reject) => {
+            const {
+                church_id, certificate_number, when_baptised, christian_name, former_name,
+                sex, age, abode, profession, father_name, mother_name,
+                witness_name_1, witness_name_2, witness_name_3,
+                where_baptised, signature_who_baptised, certified_rev_name, holding_office,
+                certificate_date, certificate_place, created_by
+            } = certificateData;
+
+            const query = `
+                INSERT INTO adult_baptism_certificates (
+                    church_id, certificate_number, when_baptised, christian_name, former_name,
+                    sex, age, abode, profession, father_name, mother_name,
+                    witness_name_1, witness_name_2, witness_name_3,
+                    where_baptised, signature_who_baptised, certified_rev_name, holding_office,
+                    certificate_date, certificate_place, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            this.db.run(query, [
+                church_id, certificate_number, when_baptised, christian_name, former_name,
+                sex, age, abode, profession, father_name, mother_name,
+                witness_name_1, witness_name_2, witness_name_3,
+                where_baptised, signature_who_baptised, certified_rev_name, holding_office,
+                certificate_date, certificate_place, created_by
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getAdultBaptismCertificatesByChurch(churchId, limit = 8, offset = 0) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT abc.*, u.name as created_by_name
+                FROM adult_baptism_certificates abc
+                LEFT JOIN users u ON abc.created_by = u.id
+                WHERE abc.church_id = ?
+                ORDER BY abc.created_at DESC
+                LIMIT ? OFFSET ?
+            `;
+
+            this.db.all(query, [churchId, limit, offset], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getAdultBaptismCertificateById(certificateId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT abc.*, u.name as created_by_name
+                FROM adult_baptism_certificates abc
+                LEFT JOIN users u ON abc.created_by = u.id
+                WHERE abc.id = ?
+            `;
+
+            this.db.get(query, [certificateId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getAdultBaptismCertificatesCount(churchId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT COUNT(*) as count
+                FROM adult_baptism_certificates
+                WHERE church_id = ?
+            `;
+
+            this.db.get(query, [churchId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row ? row.count : 0);
+                }
+            });
+        });
+    }
+
+    async updateAdultBaptismCertificate(certificateId, certificateData) {
+        return new Promise((resolve, reject) => {
+            const {
+                certificate_number, when_baptised, christian_name, former_name,
+                sex, age, abode, profession, father_name, mother_name,
+                witness_name_1, witness_name_2, witness_name_3, where_baptised,
+                signature_who_baptised, certified_rev_name, holding_office, certificate_date,
+                certificate_place
+            } = certificateData;
+
+            const query = `
+                UPDATE adult_baptism_certificates
+                SET certificate_number = ?, when_baptised = ?, christian_name = ?, former_name = ?,
+                    sex = ?, age = ?, abode = ?, profession = ?, father_name = ?, mother_name = ?,
+                    witness_name_1 = ?, witness_name_2 = ?, witness_name_3 = ?, where_baptised = ?,
+                    signature_who_baptised = ?, certified_rev_name = ?, holding_office = ?,
+                    certificate_date = ?, certificate_place = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `;
+
+            this.db.run(query, [
+                certificate_number, when_baptised, christian_name, former_name,
+                sex, age, abode, profession, father_name, mother_name,
+                witness_name_1, witness_name_2, witness_name_3, where_baptised,
+                signature_who_baptised, certified_rev_name, holding_office, certificate_date,
+                certificate_place, certificateId
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deleteAdultBaptismCertificate(certificateId) {
+        return new Promise((resolve, reject) => {
+            const query = 'DELETE FROM adult_baptism_certificates WHERE id = ?';
+
+            this.db.run(query, [certificateId], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async getNextCertificateNumber(churchId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT certificate_number
+                FROM adult_baptism_certificates
+                WHERE church_id = ?
+                ORDER BY CAST(certificate_number AS INTEGER) DESC
+                LIMIT 1
+            `;
+
+            this.db.get(query, [churchId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    if (row && row.certificate_number) {
+                        const nextNumber = parseInt(row.certificate_number) + 1;
+                        resolve(String(nextNumber));
+                    } else {
+                        resolve('1');
+                    }
+                }
+            });
         });
     }
 
