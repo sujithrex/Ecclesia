@@ -18,6 +18,8 @@ const WeddingReportPuppeteerService = require('./backend/weddingReportPuppeteerS
 const SabaiJabithaReportPuppeteerService = require('./backend/sabaiJabithaReportPuppeteerService.js');
 const AdultBaptismService = require('./backend/adultBaptismService.js');
 const AdultBaptismReportPuppeteerService = require('./backend/adultBaptismReportPuppeteerService.js');
+const InfantBaptismService = require('./backend/infantBaptismService.js');
+const InfantBaptismReportPuppeteerService = require('./backend/infantBaptismReportPuppeteerService.js');
 
 let mainWindow;
 let db;
@@ -37,6 +39,8 @@ let weddingReportPuppeteerService;
 let sabaiJabithaReportPuppeteerService;
 let adultBaptismService;
 let adultBaptismReportPuppeteerService;
+let infantBaptismService;
+let infantBaptismReportPuppeteerService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -452,6 +456,39 @@ ipcMain.handle('adult-baptism-generate-pdf-puppeteer', async (event, { certifica
   return await adultBaptismReportPuppeteerService.generateCertificatePDF(certificate, church, options);
 });
 
+// Infant Baptism Certificate IPC handlers
+ipcMain.handle('infant-baptism-create-certificate', async (event, { certificateData, userId }) => {
+  return await infantBaptismService.createCertificate(certificateData, userId);
+});
+
+ipcMain.handle('infant-baptism-get-certificates', async (event, { churchId, userId, page, limit }) => {
+  return await infantBaptismService.getCertificatesByChurch(churchId, userId, page, limit);
+});
+
+ipcMain.handle('infant-baptism-get-certificate-by-id', async (event, { certificateId, userId }) => {
+  return await infantBaptismService.getCertificateById(certificateId, userId);
+});
+
+ipcMain.handle('infant-baptism-update-certificate', async (event, { certificateId, certificateData, userId }) => {
+  return await infantBaptismService.updateCertificate(certificateId, certificateData, userId);
+});
+
+ipcMain.handle('infant-baptism-delete-certificate', async (event, { certificateId, userId }) => {
+  return await infantBaptismService.deleteCertificate(certificateId, userId);
+});
+
+ipcMain.handle('infant-baptism-get-next-certificate-number', async (event, { churchId, userId }) => {
+  return await infantBaptismService.getNextCertificateNumber(churchId, userId);
+});
+
+ipcMain.handle('infant-baptism-get-certificate-data-for-pdf', async (event, { certificateId, userId }) => {
+  return await infantBaptismService.getCertificateDataForPDF(certificateId, userId);
+});
+
+ipcMain.handle('infant-baptism-generate-pdf-puppeteer', async (event, { certificate, church, options }) => {
+  return await infantBaptismReportPuppeteerService.generateCertificatePDF(certificate, church, options);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -583,6 +620,8 @@ app.on('ready', async () => {
   sabaiJabithaReportPuppeteerService = new SabaiJabithaReportPuppeteerService(db);
   adultBaptismService = new AdultBaptismService(db);
   adultBaptismReportPuppeteerService = new AdultBaptismReportPuppeteerService(db);
+  infantBaptismService = new InfantBaptismService(db);
+  infantBaptismReportPuppeteerService = new InfantBaptismReportPuppeteerService(db);
 
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

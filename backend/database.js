@@ -274,6 +274,38 @@ class DatabaseManager {
                         FOREIGN KEY (created_by) REFERENCES users (id),
                         UNIQUE(church_id, certificate_number)
                     )
+                `);
+
+                // Infant Baptism Certificates table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS infant_baptism_certificates (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        church_id INTEGER NOT NULL,
+                        certificate_number TEXT NOT NULL,
+                        when_baptised DATE NOT NULL,
+                        christian_name TEXT NOT NULL,
+                        date_of_birth DATE NOT NULL,
+                        sex TEXT NOT NULL CHECK (sex IN ('male', 'female')),
+                        abode TEXT NOT NULL,
+                        profession TEXT,
+                        father_name TEXT NOT NULL,
+                        mother_name TEXT NOT NULL,
+                        witness_name_1 TEXT NOT NULL,
+                        witness_name_2 TEXT NOT NULL,
+                        witness_name_3 TEXT NOT NULL,
+                        where_baptised TEXT NOT NULL,
+                        signature_who_baptised TEXT NOT NULL,
+                        certified_rev_name TEXT NOT NULL,
+                        holding_office TEXT NOT NULL,
+                        certificate_date DATE NOT NULL,
+                        certificate_place TEXT NOT NULL,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(church_id, certificate_number)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);
@@ -2344,6 +2376,176 @@ class DatabaseManager {
             const query = `
                 SELECT certificate_number
                 FROM adult_baptism_certificates
+                WHERE church_id = ?
+                ORDER BY CAST(certificate_number AS INTEGER) DESC
+                LIMIT 1
+            `;
+
+            this.db.get(query, [churchId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    if (row && row.certificate_number) {
+                        const nextNumber = parseInt(row.certificate_number) + 1;
+                        resolve(String(nextNumber));
+                    } else {
+                        resolve('1');
+                    }
+                }
+            });
+        });
+    }
+
+    // Infant Baptism Certificate methods
+    async createInfantBaptismCertificate(certificateData) {
+        return new Promise((resolve, reject) => {
+            const {
+                church_id, certificate_number, when_baptised, christian_name, date_of_birth,
+                sex, abode, profession, father_name, mother_name,
+                witness_name_1, witness_name_2, witness_name_3,
+                where_baptised, signature_who_baptised, certified_rev_name, holding_office,
+                certificate_date, certificate_place, created_by
+            } = certificateData;
+
+            const query = `
+                INSERT INTO infant_baptism_certificates (
+                    church_id, certificate_number, when_baptised, christian_name, date_of_birth,
+                    sex, abode, profession, father_name, mother_name,
+                    witness_name_1, witness_name_2, witness_name_3,
+                    where_baptised, signature_who_baptised, certified_rev_name, holding_office,
+                    certificate_date, certificate_place, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            this.db.run(query, [
+                church_id, certificate_number, when_baptised, christian_name, date_of_birth,
+                sex, abode, profession, father_name, mother_name,
+                witness_name_1, witness_name_2, witness_name_3,
+                where_baptised, signature_who_baptised, certified_rev_name, holding_office,
+                certificate_date, certificate_place, created_by
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getInfantBaptismCertificatesByChurch(churchId, limit = 8, offset = 0) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT ibc.*, u.name as created_by_name
+                FROM infant_baptism_certificates ibc
+                LEFT JOIN users u ON ibc.created_by = u.id
+                WHERE ibc.church_id = ?
+                ORDER BY ibc.created_at DESC
+                LIMIT ? OFFSET ?
+            `;
+
+            this.db.all(query, [churchId, limit, offset], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getInfantBaptismCertificateById(certificateId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT ibc.*, u.name as created_by_name
+                FROM infant_baptism_certificates ibc
+                LEFT JOIN users u ON ibc.created_by = u.id
+                WHERE ibc.id = ?
+            `;
+
+            this.db.get(query, [certificateId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getInfantBaptismCertificatesCount(churchId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT COUNT(*) as count
+                FROM infant_baptism_certificates
+                WHERE church_id = ?
+            `;
+
+            this.db.get(query, [churchId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row ? row.count : 0);
+                }
+            });
+        });
+    }
+
+    async updateInfantBaptismCertificate(certificateId, certificateData) {
+        return new Promise((resolve, reject) => {
+            const {
+                certificate_number, when_baptised, christian_name, date_of_birth,
+                sex, abode, profession, father_name, mother_name,
+                witness_name_1, witness_name_2, witness_name_3, where_baptised,
+                signature_who_baptised, certified_rev_name, holding_office, certificate_date,
+                certificate_place
+            } = certificateData;
+
+            const query = `
+                UPDATE infant_baptism_certificates
+                SET certificate_number = ?, when_baptised = ?, christian_name = ?, date_of_birth = ?,
+                    sex = ?, abode = ?, profession = ?, father_name = ?, mother_name = ?,
+                    witness_name_1 = ?, witness_name_2 = ?, witness_name_3 = ?, where_baptised = ?,
+                    signature_who_baptised = ?, certified_rev_name = ?, holding_office = ?,
+                    certificate_date = ?, certificate_place = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `;
+
+            this.db.run(query, [
+                certificate_number, when_baptised, christian_name, date_of_birth,
+                sex, abode, profession, father_name, mother_name,
+                witness_name_1, witness_name_2, witness_name_3, where_baptised,
+                signature_who_baptised, certified_rev_name, holding_office, certificate_date,
+                certificate_place, certificateId
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deleteInfantBaptismCertificate(certificateId) {
+        return new Promise((resolve, reject) => {
+            const query = 'DELETE FROM infant_baptism_certificates WHERE id = ?';
+
+            this.db.run(query, [certificateId], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async getNextInfantCertificateNumber(churchId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT certificate_number
+                FROM infant_baptism_certificates
                 WHERE church_id = ?
                 ORDER BY CAST(certificate_number AS INTEGER) DESC
                 LIMIT 1

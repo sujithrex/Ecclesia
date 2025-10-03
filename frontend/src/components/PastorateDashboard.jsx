@@ -301,6 +301,10 @@ const PastorateDashboard = ({
     navigate('/adult-baptism');
   };
 
+  const handleInfantBaptism = () => {
+    navigate('/infant-baptism');
+  };
+
   if (!currentPastorate) {
     return null;
   }
@@ -361,6 +365,14 @@ const PastorateDashboard = ({
           >
             <DocumentRegular />
             Certificate - Adult Bap
+          </button>
+          <button
+            className={styles.actionButton}
+            onClick={handleInfantBaptism}
+            type="button"
+          >
+            <DocumentRegular />
+            Certificate - Infant Bap
           </button>
         </div>
       </div>

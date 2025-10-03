@@ -28,6 +28,7 @@ import BirthdayListPage from './components/BirthdayListPage';
 import WeddingListPage from './components/WeddingListPage';
 import SabaiJabithaPage from './components/SabaiJabithaPage';
 import AdultBaptismPage from './components/AdultBaptismPage';
+import InfantBaptismPage from './components/InfantBaptismPage';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -862,6 +863,32 @@ function App() {
           element={
             user ? (
               <AdultBaptismPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/infant-baptism"
+          element={
+            user ? (
+              <InfantBaptismPage
                 user={user}
                 currentPastorate={currentPastorate}
                 userPastorates={userPastorates}
