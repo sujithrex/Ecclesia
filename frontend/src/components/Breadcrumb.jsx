@@ -15,7 +15,12 @@ const useStyles = makeStyles({
     color: 'white',
     margin: '20px 0 12px 0',
     lineHeight: '1.2',
+  },
+  pageTitleCenter: {
     textAlign: 'center',
+  },
+  pageTitleLeft: {
+    textAlign: 'left',
   },
   breadcrumbNav: {
     display: 'flex',
@@ -90,7 +95,8 @@ const Breadcrumb = ({
   pageTitle,
   breadcrumbs = [],
   actionButton,
-  onNavigate
+  onNavigate,
+  titleAlign = 'center' // 'center' or 'left'
 }) => {
   const styles = useStyles();
 
@@ -107,9 +113,13 @@ const Breadcrumb = ({
     }
   };
 
+  const titleClassName = `${styles.pageTitle} ${
+    titleAlign === 'left' ? styles.pageTitleLeft : styles.pageTitleCenter
+  }`;
+
   return (
     <div className={styles.container}>
-      <h1 className={styles.pageTitle}>{pageTitle}</h1>
+      <h1 className={titleClassName}>{pageTitle}</h1>
       {(breadcrumbs.length > 0 || actionButton) && (
         <nav className={styles.breadcrumbNav}>
           <div className={styles.breadcrumbItems}>

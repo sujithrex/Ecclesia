@@ -296,7 +296,8 @@ const StatusBar = ({
   onDeleteChurch,
   disablePastorateChurchChange = false,
   currentView = "church",
-  onPastorateDashboard
+  onPastorateDashboard,
+  disableChurchSelector = false
 }) => {
   const styles = useStyles();
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -686,20 +687,20 @@ const StatusBar = ({
                 <button
                   ref={churchButtonRef}
                   className={styles.pastorateSelector}
-                  onClick={handleChurchClick}
-                  onContextMenu={handleChurchRightClick}
-                  title={disablePastorateChurchChange ? currentChurch.church_name : "Click to switch church or right-click for options"}
+                  onClick={disableChurchSelector ? undefined : handleChurchClick}
+                  onContextMenu={disableChurchSelector ? undefined : handleChurchRightClick}
+                  title={disableChurchSelector ? "Pastorate Dashboard" : (disablePastorateChurchChange ? currentChurch.church_name : "Click to switch church or right-click for options")}
                   style={{
-                    cursor: disablePastorateChurchChange ? 'default' : 'pointer',
-                    opacity: disablePastorateChurchChange ? 0.7 : 1
+                    cursor: disableChurchSelector ? 'default' : (disablePastorateChurchChange ? 'default' : 'pointer'),
+                    opacity: disableChurchSelector ? 0.5 : (disablePastorateChurchChange ? 0.7 : 1)
                   }}
                 >
                   <BuildingRegular />
                   {currentView === "pastorate" ? "Pastorate Dashboard" : `Church: ${currentChurch.church_name}`}
-                  {!disablePastorateChurchChange && <ChevronUpRegular />}
+                  {!disablePastorateChurchChange && !disableChurchSelector && <ChevronUpRegular />}
                 </button>
-                
-                {showChurchDropdown && (
+
+                {showChurchDropdown && !disableChurchSelector && (
                   <div ref={churchDropdownRef} className={styles.pastorateDropdown}>
                     <div className={styles.dropdownHeader}>
                       <BuildingRegular />

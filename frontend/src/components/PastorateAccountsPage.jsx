@@ -5,6 +5,9 @@ import {
   HomeRegular,
   MoneyRegular,
   BuildingBankRegular,
+  DocumentRegular,
+  ReceiptMoneyRegular,
+  BuildingRegular,
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
@@ -28,6 +31,7 @@ const useStyles = makeStyles({
     overflowX: 'hidden',
     minHeight: '0',
   },
+
   statsContainer: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
@@ -66,6 +70,79 @@ const useStyles = makeStyles({
     fontSize: '28px',
     fontWeight: '700',
     color: '#B5316A',
+  },
+  bookSection: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    padding: '24px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+    border: '1px solid #e1dfdd',
+  },
+  bookSectionTitle: {
+    fontSize: '20px',
+    fontWeight: '600',
+    color: '#B5316A',
+    margin: '0 0 20px 0',
+    textAlign: 'left',
+  },
+  buttonRow: {
+    display: 'flex',
+    gap: '12px',
+    marginBottom: '12px',
+    flexWrap: 'wrap',
+  },
+  actionButton: {
+    backgroundColor: '#B5316A',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '10px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'all 0.2s ease',
+    minWidth: '140px',
+    justifyContent: 'center',
+    '&:hover': {
+      backgroundColor: '#A12B5E',
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(181, 49, 106, 0.3)',
+    },
+    '&:active': {
+      transform: 'translateY(0)',
+    },
+  },
+  actionButtonOutlined: {
+    backgroundColor: 'white',
+    color: '#B5316A',
+    border: '2px solid #B5316A',
+    borderRadius: '6px',
+    padding: '10px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'all 0.2s ease',
+    minWidth: '140px',
+    justifyContent: 'center',
+    '&:hover': {
+      backgroundColor: '#f8f8f8',
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(181, 49, 106, 0.2)',
+    },
+    '&:active': {
+      transform: 'translateY(0)',
+    },
+  },
+  twoColumnLayout: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '20px',
   },
 });
 
@@ -164,7 +241,8 @@ const PastorateAccountsPage = ({
     <div className={styles.container}>
       {/* Breadcrumb Navigation */}
       <Breadcrumb
-        pageTitle="Accounts"
+        pageTitle={`Accounts - ${currentPastorate.pastorate_name}`}
+        titleAlign="left"
         breadcrumbs={[
           {
             label: 'Pastorate Dashboard',
@@ -186,6 +264,7 @@ const PastorateAccountsPage = ({
 
       {/* Content */}
       <div className={styles.content}>
+
         {/* Balance Cards */}
         <div className={styles.statsContainer}>
           {balanceCards.map((card, index) => (
@@ -201,6 +280,144 @@ const PastorateAccountsPage = ({
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Pastorate Cash Book Section */}
+        <div className={styles.bookSection}>
+          <h2 className={styles.bookSectionTitle}>Pastorate Cash Book</h2>
+
+          {/* Row 1: Ledger Categories */}
+          <div className={styles.buttonRow}>
+            <button className={styles.actionButton}>
+              <DocumentRegular />
+              Ledger Categories
+            </button>
+            <button className={styles.actionButton}>
+              <DocumentRegular />
+              Ledger Sub Categories
+            </button>
+          </div>
+
+          {/* Row 2: All Transaction Buttons */}
+          <div className={styles.buttonRow}>
+            <button className={styles.actionButton}>
+              <ReceiptMoneyRegular />
+              Receipts
+            </button>
+            <button className={styles.actionButton}>
+              <BuildingRegular />
+              Offering
+            </button>
+            <button className={styles.actionButton}>
+              <MoneyRegular />
+              Other Credits
+            </button>
+            <button className={styles.actionButtonOutlined}>
+              <DocumentRegular />
+              Bills / Vouchers
+            </button>
+            <button className={styles.actionButtonOutlined}>
+              <DocumentRegular />
+              Aqudence
+            </button>
+            <button className={styles.actionButtonOutlined}>
+              <MoneyRegular />
+              Other Debits
+            </button>
+            <button className={styles.actionButton}>
+              <MoneyRegular />
+              Contra
+            </button>
+          </div>
+        </div>
+
+        {/* Two Column Layout for Bank and Diocese Books */}
+        <div className={styles.twoColumnLayout}>
+          {/* Pastorate Bank Book Section */}
+          <div className={styles.bookSection}>
+            <h2 className={styles.bookSectionTitle}>Pastorate Bank Book</h2>
+
+            {/* Row 1: Ledger Categories */}
+            <div className={styles.buttonRow}>
+              <button className={styles.actionButton}>
+                <DocumentRegular />
+                Ledger Categories
+              </button>
+              <button className={styles.actionButton}>
+                <DocumentRegular />
+                Ledger Sub Categories
+              </button>
+            </div>
+
+            {/* Row 2: All Transaction Buttons */}
+            <div className={styles.buttonRow}>
+              <button className={styles.actionButton}>
+                <ReceiptMoneyRegular />
+                Receipts
+              </button>
+              <button className={styles.actionButton}>
+                <MoneyRegular />
+                Other Credits
+              </button>
+              <button className={styles.actionButtonOutlined}>
+                <DocumentRegular />
+                Bills / Vouchers
+              </button>
+              <button className={styles.actionButtonOutlined}>
+                <DocumentRegular />
+                Aqudence
+              </button>
+              <button className={styles.actionButtonOutlined}>
+                <MoneyRegular />
+                Other Debits
+              </button>
+              <button className={styles.actionButton}>
+                <MoneyRegular />
+                Contra
+              </button>
+            </div>
+          </div>
+
+          {/* Diocese Book Section */}
+          <div className={styles.bookSection}>
+            <h2 className={styles.bookSectionTitle}>Diocese Book</h2>
+
+            {/* Row 1: Ledger Categories */}
+            <div className={styles.buttonRow}>
+              <button className={styles.actionButton}>
+                <DocumentRegular />
+                Ledger Categories
+              </button>
+              <button className={styles.actionButton}>
+                <DocumentRegular />
+                Ledger Sub Categories
+              </button>
+            </div>
+
+            {/* Row 2: All Transaction Buttons */}
+            <div className={styles.buttonRow}>
+              <button className={styles.actionButton}>
+                <ReceiptMoneyRegular />
+                Receipts
+              </button>
+              <button className={styles.actionButton}>
+                <MoneyRegular />
+                Other Credits
+              </button>
+              <button className={styles.actionButtonOutlined}>
+                <DocumentRegular />
+                Bills / Vouchers
+              </button>
+              <button className={styles.actionButtonOutlined}>
+                <MoneyRegular />
+                Other Debits
+              </button>
+              <button className={styles.actionButton}>
+                <MoneyRegular />
+                Contra
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -223,6 +440,7 @@ const PastorateAccountsPage = ({
         onDeleteChurch={onDeleteChurch}
         currentView="pastorate"
         disablePastorateChurchChange={false}
+        disableChurchSelector={true}
       />
     </div>
   );
