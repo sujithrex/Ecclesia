@@ -342,6 +342,25 @@ class DatabaseManager {
                         FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
                         UNIQUE(pastorate_id)
                     )
+                `);
+
+                // Offering transactions table for cash book offerings
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS offering_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        offering_type TEXT NOT NULL,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);

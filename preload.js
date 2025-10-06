@@ -161,5 +161,15 @@ contextBridge.exposeInMainWorld('electron', {
     generatePDF: (data) => ipcRenderer.invoke('letterpad-generate-pdf-puppeteer', data),
     getSettings: (data) => ipcRenderer.invoke('letterpad-get-settings', data),
     updateSettings: (data) => ipcRenderer.invoke('letterpad-update-settings', data)
+  },
+
+  // Offerings API
+  offerings: {
+    createTransaction: (data) => ipcRenderer.invoke('offerings-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('offerings-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('offerings-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('offerings-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('offerings-delete-transaction', data),
+    getStatistics: (data) => ipcRenderer.invoke('offerings-get-statistics', data)
   }
 });

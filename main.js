@@ -22,6 +22,7 @@ const InfantBaptismService = require('./backend/infantBaptismService.js');
 const InfantBaptismReportPuppeteerService = require('./backend/infantBaptismReportPuppeteerService.js');
 const LetterpadService = require('./backend/letterpadService.js');
 const LetterpadReportPuppeteerService = require('./backend/letterpadReportPuppeteerService.js');
+const OfferingsService = require('./backend/offeringsService.js');
 
 let mainWindow;
 let db;
@@ -45,6 +46,7 @@ let infantBaptismService;
 let infantBaptismReportPuppeteerService;
 let letterpadService;
 let letterpadReportPuppeteerService;
+let offeringsService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -535,6 +537,31 @@ ipcMain.handle('letterpad-update-settings', async (event, { pastorateId, setting
   return await letterpadService.updateLetterpadSettings(pastorateId, settingsData, userId);
 });
 
+// Offerings IPC handlers
+ipcMain.handle('offerings-create-transaction', async (event, transactionData) => {
+  return await offeringsService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('offerings-get-transactions', async (event, { pastorateId, userId, page, limit, filters }) => {
+  return await offeringsService.getTransactions(pastorateId, userId, page, limit, filters);
+});
+
+ipcMain.handle('offerings-get-transaction', async (event, { transactionId }) => {
+  return await offeringsService.getTransaction(transactionId);
+});
+
+ipcMain.handle('offerings-update-transaction', async (event, transactionData) => {
+  return await offeringsService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('offerings-delete-transaction', async (event, { transactionId, userId }) => {
+  return await offeringsService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('offerings-get-statistics', async (event, { pastorateId, userId }) => {
+  return await offeringsService.getStatistics(pastorateId, userId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -670,6 +697,7 @@ app.on('ready', async () => {
   infantBaptismReportPuppeteerService = new InfantBaptismReportPuppeteerService(db);
   letterpadService = new LetterpadService(db);
   letterpadReportPuppeteerService = new LetterpadReportPuppeteerService(db);
+  offeringsService = new OfferingsService(db);
 
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

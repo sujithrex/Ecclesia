@@ -11,6 +11,8 @@ import {
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
+import CreateLedgerCategoryModal from './CreateLedgerCategoryModal';
+import CreateLedgerSubCategoryModal from './CreateLedgerSubCategoryModal';
 
 const useStyles = makeStyles({
   container: {
@@ -173,10 +175,17 @@ const PastorateAccountsPage = ({
     totalAmount: 0
   });
 
-  // Load account balances when pastorate changes
+  // Modal states
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showSubCategoryModal, setShowSubCategoryModal] = useState(false);
+  const [currentBookType, setCurrentBookType] = useState('cash'); // 'cash', 'bank', 'diocese'
+  const [categories, setCategories] = useState([]);
+
+  // Load account balances and categories when pastorate changes
   useEffect(() => {
     if (currentPastorate && user) {
       loadAccountBalances();
+      loadCategories();
     }
   }, [currentPastorate?.id, user?.id]);
 
@@ -191,13 +200,49 @@ const PastorateAccountsPage = ({
         diocesanBalance: 75000,
         totalAmount: 275000
       };
-      
+
       setBalances(mockBalances);
     } catch (error) {
       console.error('Failed to load account balances:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadCategories = async () => {
+    try {
+      // TODO: Replace with actual API call
+      // const result = await window.electron.ledger.getCategories({
+      //   pastorateId: currentPastorate.id,
+      //   bookType: currentBookType
+      // });
+      // if (result.success) {
+      //   setCategories(result.categories);
+      // }
+      setCategories([]); // Placeholder
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  };
+
+  // Modal handlers
+  const handleOpenCategoryModal = (bookType) => {
+    setCurrentBookType(bookType);
+    setShowCategoryModal(true);
+  };
+
+  const handleOpenSubCategoryModal = (bookType) => {
+    setCurrentBookType(bookType);
+    setShowSubCategoryModal(true);
+  };
+
+  const handleCategoryCreated = (category) => {
+    setCategories(prev => [...prev, category]);
+    loadCategories(); // Reload to get fresh data
+  };
+
+  const handleSubCategoryCreated = (subCategory) => {
+    loadCategories(); // Reload to get fresh data
   };
 
   // Build balance cards array
@@ -288,11 +333,17 @@ const PastorateAccountsPage = ({
 
           {/* Row 1: Ledger Categories */}
           <div className={styles.buttonRow}>
-            <button className={styles.actionButton}>
+            <button
+              className={styles.actionButton}
+              onClick={() => handleOpenCategoryModal('cash')}
+            >
               <DocumentRegular />
               Ledger Categories
             </button>
-            <button className={styles.actionButton}>
+            <button
+              className={styles.actionButton}
+              onClick={() => handleOpenSubCategoryModal('cash')}
+            >
               <DocumentRegular />
               Ledger Sub Categories
             </button>
@@ -304,7 +355,10 @@ const PastorateAccountsPage = ({
               <ReceiptMoneyRegular />
               Receipts
             </button>
-            <button className={styles.actionButton}>
+            <button
+              className={styles.actionButton}
+              onClick={() => navigate('/offerings')}
+            >
               <BuildingRegular />
               Offering
             </button>
@@ -339,11 +393,17 @@ const PastorateAccountsPage = ({
 
             {/* Row 1: Ledger Categories */}
             <div className={styles.buttonRow}>
-              <button className={styles.actionButton}>
+              <button
+                className={styles.actionButton}
+                onClick={() => handleOpenCategoryModal('bank')}
+              >
                 <DocumentRegular />
                 Ledger Categories
               </button>
-              <button className={styles.actionButton}>
+              <button
+                className={styles.actionButton}
+                onClick={() => handleOpenSubCategoryModal('bank')}
+              >
                 <DocumentRegular />
                 Ledger Sub Categories
               </button>
@@ -384,11 +444,17 @@ const PastorateAccountsPage = ({
 
             {/* Row 1: Ledger Categories */}
             <div className={styles.buttonRow}>
-              <button className={styles.actionButton}>
+              <button
+                className={styles.actionButton}
+                onClick={() => handleOpenCategoryModal('diocese')}
+              >
                 <DocumentRegular />
                 Ledger Categories
               </button>
-              <button className={styles.actionButton}>
+              <button
+                className={styles.actionButton}
+                onClick={() => handleOpenSubCategoryModal('diocese')}
+              >
                 <DocumentRegular />
                 Ledger Sub Categories
               </button>
@@ -441,6 +507,26 @@ const PastorateAccountsPage = ({
         currentView="pastorate"
         disablePastorateChurchChange={false}
         disableChurchSelector={true}
+      />
+
+      {/* Modals */}
+      <CreateLedgerCategoryModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onSuccess={handleCategoryCreated}
+        user={user}
+        currentPastorate={currentPastorate}
+        bookType={currentBookType}
+      />
+
+      <CreateLedgerSubCategoryModal
+        isOpen={showSubCategoryModal}
+        onClose={() => setShowSubCategoryModal(false)}
+        onSuccess={handleSubCategoryCreated}
+        user={user}
+        currentPastorate={currentPastorate}
+        bookType={currentBookType}
+        categories={categories}
       />
     </div>
   );
