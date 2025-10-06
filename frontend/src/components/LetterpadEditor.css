@@ -1,0 +1,102 @@
+/* Font face definitions */
+@font-face {
+  font-family: 'Vijaya';
+  src: url('../assets/vijaya.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Vijaya Bold';
+  src: url('../assets/vijayab.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Times New Roman';
+  src: url('../assets/times.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Times New Roman Bold';
+  src: url('../assets/timesbd.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+/* Rich text editor styling for native contentEditable */
+.rich-text-editor {
+  min-height: 200px;
+  padding: 12px;
+  font-family: 'Times New Roman', serif;
+  font-size: 14px;
+  line-height: 1.6;
+  outline: none;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.rich-text-editor:empty::before {
+  content: 'Enter letter content here... Use toolbar above for formatting.';
+  color: #999;
+  font-style: italic;
+  pointer-events: none;
+}
+
+/* Font styles in editor */
+.font-times {
+  font-family: 'Times New Roman', serif !important;
+}
+
+.font-vijaya {
+  font-family: 'Vijaya', serif !important;
+  font-size: 16px !important; /* +1 font size for Tamil as requested */
+}
+
+/* Bold text styling */
+.rich-text-editor strong,
+.rich-text-editor b {
+  font-weight: bold;
+}
+
+.font-vijaya strong,
+.font-vijaya b {
+  font-family: 'Vijaya Bold', serif !important;
+}
+
+.font-times strong,
+.font-times b {
+  font-family: 'Times New Roman Bold', serif !important;
+}
+
+/* Table styling */
+.rich-text-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.rich-text-editor table td,
+.rich-text-editor table th {
+  border: 1px solid #000;
+  padding: 8px;
+  text-align: left;
+}
+
+.rich-text-editor table th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+/* List styling */
+.rich-text-editor ul,
+.rich-text-editor ol {
+  padding-left: 20px;
+}
+
+.rich-text-editor li {
+  margin-bottom: 5px;
+}

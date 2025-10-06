@@ -147,5 +147,19 @@ contextBridge.exposeInMainWorld('electron', {
     getNextCertificateNumber: (data) => ipcRenderer.invoke('infant-baptism-get-next-certificate-number', data),
     getCertificateDataForPDF: (data) => ipcRenderer.invoke('infant-baptism-get-certificate-data-for-pdf', data),
     generatePDFPuppeteer: (data) => ipcRenderer.invoke('infant-baptism-generate-pdf-puppeteer', data)
+  },
+
+  // Letterpad API
+  letterpad: {
+    create: (data) => ipcRenderer.invoke('letterpad-create', data),
+    getByPastorate: (data) => ipcRenderer.invoke('letterpad-get-by-pastorate', data),
+    getById: (data) => ipcRenderer.invoke('letterpad-get-by-id', data),
+    update: (data) => ipcRenderer.invoke('letterpad-update', data),
+    delete: (data) => ipcRenderer.invoke('letterpad-delete', data),
+    getNextNumber: (data) => ipcRenderer.invoke('letterpad-get-next-number', data),
+    getDataForPDF: (data) => ipcRenderer.invoke('letterpad-get-data-for-pdf', data),
+    generatePDF: (data) => ipcRenderer.invoke('letterpad-generate-pdf-puppeteer', data),
+    getSettings: (data) => ipcRenderer.invoke('letterpad-get-settings', data),
+    updateSettings: (data) => ipcRenderer.invoke('letterpad-update-settings', data)
   }
 });

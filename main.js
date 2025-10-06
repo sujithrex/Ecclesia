@@ -20,6 +20,8 @@ const AdultBaptismService = require('./backend/adultBaptismService.js');
 const AdultBaptismReportPuppeteerService = require('./backend/adultBaptismReportPuppeteerService.js');
 const InfantBaptismService = require('./backend/infantBaptismService.js');
 const InfantBaptismReportPuppeteerService = require('./backend/infantBaptismReportPuppeteerService.js');
+const LetterpadService = require('./backend/letterpadService.js');
+const LetterpadReportPuppeteerService = require('./backend/letterpadReportPuppeteerService.js');
 
 let mainWindow;
 let db;
@@ -41,6 +43,8 @@ let adultBaptismService;
 let adultBaptismReportPuppeteerService;
 let infantBaptismService;
 let infantBaptismReportPuppeteerService;
+let letterpadService;
+let letterpadReportPuppeteerService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -489,6 +493,48 @@ ipcMain.handle('infant-baptism-generate-pdf-puppeteer', async (event, { certific
   return await infantBaptismReportPuppeteerService.generateCertificatePDF(certificate, church, options);
 });
 
+// Letterpad IPC handlers
+ipcMain.handle('letterpad-create', async (event, { letterpadData, userId }) => {
+  return await letterpadService.createLetterpad(letterpadData, userId);
+});
+
+ipcMain.handle('letterpad-get-by-pastorate', async (event, { pastorateId, userId, page, limit }) => {
+  return await letterpadService.getLetterpadsByPastorate(pastorateId, userId, page, limit);
+});
+
+ipcMain.handle('letterpad-get-by-id', async (event, { letterpadId, userId }) => {
+  return await letterpadService.getLetterpadById(letterpadId, userId);
+});
+
+ipcMain.handle('letterpad-update', async (event, { letterpadId, letterpadData, userId }) => {
+  return await letterpadService.updateLetterpad(letterpadId, letterpadData, userId);
+});
+
+ipcMain.handle('letterpad-delete', async (event, { letterpadId, userId }) => {
+  return await letterpadService.deleteLetterpad(letterpadId, userId);
+});
+
+ipcMain.handle('letterpad-get-next-number', async (event, { pastorateId, userId }) => {
+  return await letterpadService.getNextLetterpadNumber(pastorateId, userId);
+});
+
+ipcMain.handle('letterpad-get-data-for-pdf', async (event, { letterpadId, userId }) => {
+  return await letterpadService.getLetterpadDataForPDF(letterpadId, userId);
+});
+
+ipcMain.handle('letterpad-generate-pdf-puppeteer', async (event, { letterpad, pastorate, pastorateSettings, options }) => {
+  return await letterpadReportPuppeteerService.generateLetterpadPDF(letterpad, pastorate, pastorateSettings, options);
+});
+
+// Letterpad Settings IPC handlers
+ipcMain.handle('letterpad-get-settings', async (event, { pastorateId, userId }) => {
+  return await letterpadService.getLetterpadSettings(pastorateId, userId);
+});
+
+ipcMain.handle('letterpad-update-settings', async (event, { pastorateId, settingsData, userId }) => {
+  return await letterpadService.updateLetterpadSettings(pastorateId, settingsData, userId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -622,6 +668,8 @@ app.on('ready', async () => {
   adultBaptismReportPuppeteerService = new AdultBaptismReportPuppeteerService(db);
   infantBaptismService = new InfantBaptismService(db);
   infantBaptismReportPuppeteerService = new InfantBaptismReportPuppeteerService(db);
+  letterpadService = new LetterpadService(db);
+  letterpadReportPuppeteerService = new LetterpadReportPuppeteerService(db);
 
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

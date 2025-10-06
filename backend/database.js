@@ -306,6 +306,42 @@ class DatabaseManager {
                         FOREIGN KEY (created_by) REFERENCES users (id),
                         UNIQUE(church_id, certificate_number)
                     )
+                `);
+
+                // Letterpad table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS letterpads (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        letterpad_number TEXT NOT NULL,
+                        letter_date DATE NOT NULL,
+                        subject TEXT,
+                        content TEXT NOT NULL,
+                        rev_name TEXT NOT NULL,
+                        rev_designation TEXT NOT NULL,
+                        chairman_details TEXT,
+                        parsonage_address TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(pastorate_id, letterpad_number)
+                    )
+                `);
+
+                // Letterpad settings table for storing default chairman and address info
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS letterpad_settings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        default_chairman_details TEXT,
+                        default_parsonage_address TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(pastorate_id)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);
@@ -328,6 +364,12 @@ class DatabaseManager {
 
             // Migration 2: Update adult_baptism_certificates table structure
             await this.migrateAdultBaptismCertificates();
+
+            // Migration 3: Update letterpad_settings table structure
+            await this.migrateLetterpadSettings();
+
+            // Migration 4: Update letterpads table structure
+            await this.migrateLetterpadTable();
         } catch (error) {
             console.error('Migration error:', error);
         }
@@ -481,6 +523,105 @@ class DatabaseManager {
                     resolve();
                 } else {
                     console.log('adult_baptism_certificates table structure is unknown, skipping migration');
+                    resolve();
+                }
+            });
+        });
+    }
+
+    async migrateLetterpadSettings() {
+        return new Promise((resolve) => {
+            // Check if letterpad_settings table exists and has old structure
+            this.db.all("PRAGMA table_info(letterpad_settings)", (err, columns) => {
+                if (err) {
+                    console.error('Error checking letterpad_settings table:', err);
+                    resolve();
+                    return;
+                }
+
+                if (!columns || columns.length === 0) {
+                    console.log('letterpad_settings table does not exist yet');
+                    resolve();
+                    return;
+                }
+
+                // Check if we need to migrate (check for old column names)
+                const hasOldStructure = columns.some(col => col.name === 'default_chairman_details');
+                const hasNewStructure = columns.some(col => col.name === 'default_rev_name');
+
+                if (hasOldStructure && !hasNewStructure) {
+                    console.log('Migrating letterpad_settings table to new structure...');
+
+                    // Add new columns
+                    this.db.run(`ALTER TABLE letterpad_settings ADD COLUMN default_rev_name TEXT`, (err1) => {
+                        if (err1 && !err1.message.includes('duplicate column')) {
+                            console.error('Error adding default_rev_name column:', err1);
+                        }
+
+                        this.db.run(`ALTER TABLE letterpad_settings ADD COLUMN default_rev_designation TEXT`, (err2) => {
+                            if (err2 && !err2.message.includes('duplicate column')) {
+                                console.error('Error adding default_rev_designation column:', err2);
+                            }
+
+                            console.log('letterpad_settings table migrated successfully');
+                            resolve();
+                        });
+                    });
+                } else if (hasNewStructure) {
+                    console.log('letterpad_settings table already has new structure');
+                    resolve();
+                } else {
+                    console.log('letterpad_settings table structure is unknown, skipping migration');
+                    resolve();
+                }
+            });
+        });
+    }
+
+    async migrateLetterpadTable() {
+        return new Promise((resolve) => {
+            // Check if letterpads table exists
+            this.db.all("PRAGMA table_info(letterpads)", (err, columns) => {
+                if (err) {
+                    console.error('Error checking letterpads table:', err);
+                    resolve();
+                    return;
+                }
+
+                if (!columns || columns.length === 0) {
+                    console.log('letterpads table does not exist yet');
+                    resolve();
+                    return;
+                }
+
+                // Check if columns already exist
+                const hasRevName = columns.some(col => col.name === 'rev_name');
+                const hasRevDesignation = columns.some(col => col.name === 'rev_designation');
+                const hasParsonageAddress = columns.some(col => col.name === 'parsonage_address');
+
+                if (!hasRevName || !hasRevDesignation || !hasParsonageAddress) {
+                    console.log('Migrating letterpads table to add rev_name, rev_designation, parsonage_address columns...');
+
+                    // Add columns one by one
+                    const addColumn = (columnName, columnDef, callback) => {
+                        this.db.run(`ALTER TABLE letterpads ADD COLUMN ${columnName} ${columnDef}`, (err) => {
+                            if (err && !err.message.includes('duplicate column')) {
+                                console.error(`Error adding ${columnName} column:`, err);
+                            }
+                            callback();
+                        });
+                    };
+
+                    addColumn('rev_name', 'TEXT', () => {
+                        addColumn('rev_designation', 'TEXT', () => {
+                            addColumn('parsonage_address', 'TEXT', () => {
+                                console.log('letterpads table migrated successfully');
+                                resolve();
+                            });
+                        });
+                    });
+                } else {
+                    console.log('letterpads table already has new columns');
                     resolve();
                 }
             });
@@ -2561,6 +2702,279 @@ class DatabaseManager {
                     } else {
                         resolve('1');
                     }
+                }
+            });
+        });
+    }
+
+    // Letterpad methods
+    async createLetterpad(letterpadData) {
+        return new Promise((resolve, reject) => {
+            const {
+                pastorate_id, letterpad_number, letter_date, subject, content,
+                rev_name, rev_designation, parsonage_address, created_by
+            } = letterpadData;
+
+            const query = `
+                INSERT INTO letterpads (
+                    pastorate_id, letterpad_number, letter_date, subject, content,
+                    rev_name, rev_designation, parsonage_address, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            this.db.run(query, [
+                pastorate_id, letterpad_number, letter_date, subject, content,
+                rev_name, rev_designation, parsonage_address, created_by
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getLetterpadsByPastorate(pastorateId, limit = 8, offset = 0) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT l.*, u.name as created_by_name
+                FROM letterpads l
+                LEFT JOIN users u ON l.created_by = u.id
+                WHERE l.pastorate_id = ?
+                ORDER BY l.created_at DESC
+                LIMIT ? OFFSET ?
+            `;
+
+            this.db.all(query, [pastorateId, limit, offset], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getLetterpadByNumber(pastorateId, letterpadNumber) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT l.*, u.name as created_by_name
+                FROM letterpads l
+                LEFT JOIN users u ON l.created_by = u.id
+                WHERE l.pastorate_id = ? AND l.letterpad_number = ?
+            `;
+
+            this.db.get(query, [pastorateId, letterpadNumber], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row || null);
+                }
+            });
+        });
+    }
+
+    async getLetterpadById(letterpadId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT l.*, u.name as created_by_name
+                FROM letterpads l
+                LEFT JOIN users u ON l.created_by = u.id
+                WHERE l.id = ?
+            `;
+
+            this.db.get(query, [letterpadId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getLetterpadCount(pastorateId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT COUNT(*) as count
+                FROM letterpads
+                WHERE pastorate_id = ?
+            `;
+
+            this.db.get(query, [pastorateId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row ? row.count : 0);
+                }
+            });
+        });
+    }
+
+    async updateLetterpad(letterpadId, letterpadData) {
+        return new Promise((resolve, reject) => {
+            const {
+                letterpad_number, letter_date, subject, content, rev_name, rev_designation, parsonage_address
+            } = letterpadData;
+
+            const query = `
+                UPDATE letterpads
+                SET letterpad_number = ?, letter_date = ?, subject = ?, content = ?, rev_name = ?, rev_designation = ?, parsonage_address = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `;
+
+            this.db.run(query, [
+                letterpad_number, letter_date, subject, content, rev_name, rev_designation, parsonage_address, letterpadId
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deleteLetterpad(letterpadId) {
+        return new Promise((resolve, reject) => {
+            const query = 'DELETE FROM letterpads WHERE id = ?';
+
+            this.db.run(query, [letterpadId], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async getNextLetterpadNumber(pastorateId) {
+        return new Promise((resolve, reject) => {
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1; // 1-12
+            const monthLetter = String.fromCharCode(64 + currentMonth); // A=Jan, B=Feb, etc.
+
+            const query = `
+                SELECT letterpad_number
+                FROM letterpads
+                WHERE pastorate_id = ? AND letterpad_number LIKE ?
+                ORDER BY CAST(SUBSTR(letterpad_number, -2) AS INTEGER) DESC
+                LIMIT 1
+            `;
+
+            const yearPrefix = `${currentYear}/${monthLetter}/%`;
+
+            this.db.get(query, [pastorateId, yearPrefix], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    let nextNumber = 1;
+                    if (row && row.letterpad_number) {
+                        const parts = row.letterpad_number.split('/');
+                        if (parts.length === 3) {
+                            const lastNumber = parseInt(parts[2]);
+                            nextNumber = lastNumber + 1;
+                        }
+                    }
+                    const formattedNumber = String(nextNumber).padStart(2, '0');
+                    resolve(`${currentYear}/${monthLetter}/${formattedNumber}`);
+                }
+            });
+        });
+    }
+
+    // Letterpad Settings methods
+    async getLetterpadSettings(pastorateId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT * FROM letterpad_settings
+                WHERE pastorate_id = ?
+            `;
+
+            this.db.get(query, [pastorateId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async createLetterpadSettings(pastorateId, settingsData) {
+        return new Promise((resolve, reject) => {
+            const { default_chairman_details, default_parsonage_address } = settingsData;
+
+            const query = `
+                INSERT INTO letterpad_settings (
+                    pastorate_id, default_chairman_details, default_parsonage_address
+                ) VALUES (?, ?, ?)
+            `;
+
+            this.db.run(query, [
+                pastorateId, default_chairman_details, default_parsonage_address
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async updateLetterpadSettings(pastorateId, settingsData) {
+        return new Promise((resolve, reject) => {
+            const { default_chairman_details, default_parsonage_address } = settingsData;
+
+            const query = `
+                UPDATE letterpad_settings
+                SET default_chairman_details = ?, default_parsonage_address = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE pastorate_id = ?
+            `;
+
+            this.db.run(query, [
+                default_chairman_details, default_parsonage_address, pastorateId
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async upsertLetterpadSettings(pastorateId, settingsData) {
+        return new Promise((resolve, reject) => {
+            const {
+                default_rev_name,
+                default_rev_designation,
+                default_parsonage_address,
+                // Legacy fields for backward compatibility
+                default_chairman_details
+            } = settingsData;
+
+            const query = `
+                INSERT INTO letterpad_settings (
+                    pastorate_id, default_rev_name, default_rev_designation, default_parsonage_address
+                ) VALUES (?, ?, ?, ?)
+                ON CONFLICT(pastorate_id) DO UPDATE SET
+                    default_rev_name = excluded.default_rev_name,
+                    default_rev_designation = excluded.default_rev_designation,
+                    default_parsonage_address = excluded.default_parsonage_address,
+                    updated_at = CURRENT_TIMESTAMP
+            `;
+
+            this.db.run(query, [
+                pastorateId, default_rev_name, default_rev_designation, default_parsonage_address
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ id: this.lastID, changes: this.changes });
                 }
             });
         });

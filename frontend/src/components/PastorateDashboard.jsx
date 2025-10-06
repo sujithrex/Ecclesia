@@ -8,7 +8,8 @@ import {
   AddRegular,
   SearchRegular,
   SettingsRegular,
-  DocumentRegular
+  DocumentRegular,
+  MoneyRegular
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
@@ -305,6 +306,14 @@ const PastorateDashboard = ({
     navigate('/infant-baptism');
   };
 
+  const handleLetterpad = () => {
+    navigate('/letterpad');
+  };
+
+  const handleAccounts = () => {
+    navigate('/pastorate-accounts');
+  };
+
   if (!currentPastorate) {
     return null;
   }
@@ -360,6 +369,14 @@ const PastorateDashboard = ({
         <div className={styles.buttonRow}>
           <button
             className={styles.actionButton}
+            onClick={handleAccounts}
+            type="button"
+          >
+            <MoneyRegular />
+            Accounts
+          </button>
+          <button
+            className={styles.actionButton}
             onClick={handleAdultBaptism}
             type="button"
           >
@@ -373,6 +390,14 @@ const PastorateDashboard = ({
           >
             <DocumentRegular />
             Certificate - Infant Bap
+          </button>
+          <button
+            className={styles.actionButton}
+            onClick={handleLetterpad}
+            type="button"
+          >
+            <DocumentRegular />
+            Letterpad
           </button>
         </div>
       </div>
