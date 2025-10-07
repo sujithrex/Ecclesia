@@ -383,15 +383,17 @@ const PastorateAccountsPage = ({
               <DocumentRegular />
               Bills / Vouchers
             </button>
-            <button className={styles.actionButtonOutlined}>
+            <button
+              className={styles.actionButtonOutlined}
+              onClick={() => navigate('/acquittance?bookType=cash')}
+            >
               <DocumentRegular />
-              Aqudence
+              Acquittance
             </button>
-            <button className={styles.actionButtonOutlined}>
-              <MoneyRegular />
-              Other Debits
-            </button>
-            <button className={styles.actionButton}>
+            <button
+              className={styles.actionButton}
+              onClick={() => navigate('/contra-vouchers?bookType=cash')}
+            >
               <MoneyRegular />
               Contra
             </button>
@@ -445,15 +447,17 @@ const PastorateAccountsPage = ({
                 <DocumentRegular />
                 Bills / Vouchers
               </button>
-              <button className={styles.actionButtonOutlined}>
+              <button
+                className={styles.actionButtonOutlined}
+                onClick={() => navigate('/acquittance?bookType=bank')}
+              >
                 <DocumentRegular />
-                Aqudence
+                Acquittance
               </button>
-              <button className={styles.actionButtonOutlined}>
-                <MoneyRegular />
-                Other Debits
-              </button>
-              <button className={styles.actionButton}>
+              <button
+                className={styles.actionButton}
+                onClick={() => navigate('/contra-vouchers?bookType=bank')}
+              >
                 <MoneyRegular />
                 Contra
               </button>
@@ -505,11 +509,17 @@ const PastorateAccountsPage = ({
                 <DocumentRegular />
                 Bills / Vouchers
               </button>
-              <button className={styles.actionButtonOutlined}>
-                <MoneyRegular />
-                Other Debits
+              <button
+                className={styles.actionButtonOutlined}
+                onClick={() => navigate('/acquittance?bookType=diocese')}
+              >
+                <DocumentRegular />
+                Acquittance
               </button>
-              <button className={styles.actionButton}>
+              <button
+                className={styles.actionButton}
+                onClick={() => navigate('/contra-vouchers?bookType=diocese')}
+              >
                 <MoneyRegular />
                 Contra
               </button>

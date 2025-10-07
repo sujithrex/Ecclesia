@@ -27,6 +27,8 @@ const ReceiptsService = require('./backend/receiptsService.js');
 const LedgerService = require('./backend/ledgerService.js');
 const OtherCreditsService = require('./backend/otherCreditsService.js');
 const BillVoucherService = require('./backend/billVoucherService.js');
+const AcquittanceService = require('./backend/acquittanceService.js');
+const ContraService = require('./backend/contraService.js');
 
 let mainWindow;
 let db;
@@ -55,6 +57,8 @@ let receiptsService;
 let ledgerService;
 let otherCreditsService;
 let billVoucherService;
+let acquittanceService;
+let contraService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -710,6 +714,80 @@ ipcMain.handle('bill-voucher-get-statistics', async (event, { pastorateId, bookT
   return await billVoucherService.getStatistics(pastorateId, bookType);
 });
 
+// Acquittance IPC handlers
+ipcMain.handle('acquittance-create-transaction', async (event, transactionData) => {
+  return await acquittanceService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('acquittance-get-transactions', async (event, { pastorateId, userId, bookType, page, limit, filters }) => {
+  return await acquittanceService.getTransactions(pastorateId, userId, bookType, page, limit, filters);
+});
+
+ipcMain.handle('acquittance-get-transaction', async (event, { transactionId }) => {
+  return await acquittanceService.getTransaction(transactionId);
+});
+
+ipcMain.handle('acquittance-update-transaction', async (event, transactionData) => {
+  return await acquittanceService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('acquittance-delete-transaction', async (event, { transactionId, userId }) => {
+  return await acquittanceService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('acquittance-get-next-voucher-number', async (event, { pastorateId, bookType }) => {
+  return await acquittanceService.getNextVoucherNumber(pastorateId, bookType);
+});
+
+ipcMain.handle('acquittance-generate-transaction-id', async (event) => {
+  return await acquittanceService.generateTransactionId();
+});
+
+ipcMain.handle('acquittance-get-statistics', async (event, { pastorateId, bookType }) => {
+  return await acquittanceService.getStatistics(pastorateId, bookType);
+});
+
+ipcMain.handle('acquittance-get-payees-by-category', async (event, { pastorateId, bookType, primaryCategoryId, secondaryCategoryId, searchTerm }) => {
+  return await acquittanceService.getPayeesByCategory(pastorateId, bookType, primaryCategoryId, secondaryCategoryId, searchTerm);
+});
+
+ipcMain.handle('acquittance-get-last-amount-for-payee', async (event, { pastorateId, bookType, primaryCategoryId, secondaryCategoryId, payeeName }) => {
+  return await acquittanceService.getLastAmountForPayee(pastorateId, bookType, primaryCategoryId, secondaryCategoryId, payeeName);
+});
+
+// Contra IPC handlers
+ipcMain.handle('contra-create-transaction', async (event, transactionData) => {
+  return await contraService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('contra-get-transactions', async (event, { pastorateId, userId, bookType, page, limit, filters }) => {
+  return await contraService.getTransactions(pastorateId, userId, bookType, page, limit, filters);
+});
+
+ipcMain.handle('contra-get-transaction', async (event, { transactionId }) => {
+  return await contraService.getTransaction(transactionId);
+});
+
+ipcMain.handle('contra-update-transaction', async (event, transactionData) => {
+  return await contraService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('contra-delete-transaction', async (event, { transactionId, userId }) => {
+  return await contraService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('contra-get-next-voucher-number', async (event, { pastorateId, bookType }) => {
+  return await contraService.getNextVoucherNumber(pastorateId, bookType);
+});
+
+ipcMain.handle('contra-generate-transaction-id', async (event) => {
+  return await contraService.generateTransactionId();
+});
+
+ipcMain.handle('contra-get-statistics', async (event, { pastorateId, bookType }) => {
+  return await contraService.getStatistics(pastorateId, bookType);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -850,6 +928,8 @@ app.on('ready', async () => {
   ledgerService = new LedgerService(db);
   otherCreditsService = new OtherCreditsService(db);
   billVoucherService = new BillVoucherService(db);
+  acquittanceService = new AcquittanceService(db);
+  contraService = new ContraService(db);
 
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

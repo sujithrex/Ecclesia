@@ -463,6 +463,57 @@ class DatabaseManager {
                         FOREIGN KEY (created_by) REFERENCES users (id),
                         UNIQUE(pastorate_id, book_type, voucher_number)
                     )
+                `);
+
+                // Acquittance transactions table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS acquittance_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank', 'diocese')),
+                        payee_name TEXT NOT NULL,
+                        primary_category_id INTEGER,
+                        secondary_category_id INTEGER,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (primary_category_id) REFERENCES ledger_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (secondary_category_id) REFERENCES ledger_sub_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(pastorate_id, book_type, voucher_number)
+                    )
+                `);
+
+                // Contra transactions table for transfers between accounts
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS contra_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank', 'diocese')),
+                        from_account_type TEXT NOT NULL CHECK (from_account_type IN ('cash', 'bank', 'diocese')),
+                        from_category_id INTEGER,
+                        to_account_type TEXT NOT NULL CHECK (to_account_type IN ('cash', 'bank', 'diocese')),
+                        to_category_id INTEGER,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (from_category_id) REFERENCES ledger_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (to_category_id) REFERENCES ledger_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(pastorate_id, book_type, voucher_number)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);

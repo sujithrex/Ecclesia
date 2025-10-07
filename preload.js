@@ -221,5 +221,31 @@ contextBridge.exposeInMainWorld('electron', {
     getNextVoucherNumber: (data) => ipcRenderer.invoke('bill-voucher-get-next-voucher-number', data),
     generateTransactionId: () => ipcRenderer.invoke('bill-voucher-generate-transaction-id'),
     getStatistics: (data) => ipcRenderer.invoke('bill-voucher-get-statistics', data)
+  },
+
+  // Acquittance API
+  acquittance: {
+    createTransaction: (data) => ipcRenderer.invoke('acquittance-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('acquittance-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('acquittance-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('acquittance-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('acquittance-delete-transaction', data),
+    getNextVoucherNumber: (data) => ipcRenderer.invoke('acquittance-get-next-voucher-number', data),
+    generateTransactionId: () => ipcRenderer.invoke('acquittance-generate-transaction-id'),
+    getStatistics: (data) => ipcRenderer.invoke('acquittance-get-statistics', data),
+    getPayeesByCategory: (data) => ipcRenderer.invoke('acquittance-get-payees-by-category', data),
+    getLastAmountForPayee: (data) => ipcRenderer.invoke('acquittance-get-last-amount-for-payee', data)
+  },
+
+  // Contra API
+  contra: {
+    createTransaction: (data) => ipcRenderer.invoke('contra-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('contra-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('contra-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('contra-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('contra-delete-transaction', data),
+    getNextVoucherNumber: (data) => ipcRenderer.invoke('contra-get-next-voucher-number', data),
+    generateTransactionId: () => ipcRenderer.invoke('contra-generate-transaction-id'),
+    getStatistics: (data) => ipcRenderer.invoke('contra-get-statistics', data)
   }
 });
