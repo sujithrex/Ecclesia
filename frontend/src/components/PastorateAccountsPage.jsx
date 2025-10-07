@@ -181,11 +181,11 @@ const PastorateAccountsPage = ({
   const [currentBookType, setCurrentBookType] = useState('cash'); // 'cash', 'bank', 'diocese'
   const [categories, setCategories] = useState([]);
 
-  // Load account balances and categories when pastorate changes
+  // Load account balances when pastorate changes
   useEffect(() => {
     if (currentPastorate && user) {
       loadAccountBalances();
-      loadCategories();
+      // Categories will be loaded when opening the sub-category modal
     }
   }, [currentPastorate?.id, user?.id]);
 
@@ -209,19 +209,21 @@ const PastorateAccountsPage = ({
     }
   };
 
-  const loadCategories = async () => {
+  const loadCategories = async (bookType) => {
     try {
-      // TODO: Replace with actual API call
-      // const result = await window.electron.ledger.getCategories({
-      //   pastorateId: currentPastorate.id,
-      //   bookType: currentBookType
-      // });
-      // if (result.success) {
-      //   setCategories(result.categories);
-      // }
-      setCategories([]); // Placeholder
+      const result = await window.electron.ledger.getCategories({
+        pastorateId: currentPastorate.id,
+        bookType: bookType
+      });
+      if (result.success) {
+        setCategories(result.categories || []);
+      } else {
+        console.error('Failed to load categories:', result.error);
+        setCategories([]);
+      }
     } catch (error) {
       console.error('Failed to load categories:', error);
+      setCategories([]);
     }
   };
 
@@ -231,18 +233,20 @@ const PastorateAccountsPage = ({
     setShowCategoryModal(true);
   };
 
-  const handleOpenSubCategoryModal = (bookType) => {
+  const handleOpenSubCategoryModal = async (bookType) => {
     setCurrentBookType(bookType);
+    // Load categories for this book type before opening the modal
+    await loadCategories(bookType);
     setShowSubCategoryModal(true);
   };
 
   const handleCategoryCreated = (category) => {
     setCategories(prev => [...prev, category]);
-    loadCategories(); // Reload to get fresh data
+    loadCategories(currentBookType); // Reload to get fresh data
   };
 
   const handleSubCategoryCreated = (subCategory) => {
-    loadCategories(); // Reload to get fresh data
+    loadCategories(currentBookType); // Reload to get fresh data
   };
 
   // Build balance cards array
@@ -351,7 +355,10 @@ const PastorateAccountsPage = ({
 
           {/* Row 2: All Transaction Buttons */}
           <div className={styles.buttonRow}>
-            <button className={styles.actionButton}>
+            <button
+              className={styles.actionButton}
+              onClick={() => navigate('/receipts?bookType=cash')}
+            >
               <ReceiptMoneyRegular />
               Receipts
             </button>
@@ -362,11 +369,17 @@ const PastorateAccountsPage = ({
               <BuildingRegular />
               Offering
             </button>
-            <button className={styles.actionButton}>
+            <button
+              className={styles.actionButton}
+              onClick={() => navigate('/other-credits?bookType=cash')}
+            >
               <MoneyRegular />
               Other Credits
             </button>
-            <button className={styles.actionButtonOutlined}>
+            <button
+              className={styles.actionButtonOutlined}
+              onClick={() => navigate('/bill-vouchers?bookType=cash')}
+            >
               <DocumentRegular />
               Bills / Vouchers
             </button>
@@ -411,15 +424,24 @@ const PastorateAccountsPage = ({
 
             {/* Row 2: All Transaction Buttons */}
             <div className={styles.buttonRow}>
-              <button className={styles.actionButton}>
+              <button
+                className={styles.actionButton}
+                onClick={() => navigate('/receipts?bookType=bank')}
+              >
                 <ReceiptMoneyRegular />
                 Receipts
               </button>
-              <button className={styles.actionButton}>
+              <button
+                className={styles.actionButton}
+                onClick={() => navigate('/other-credits?bookType=bank')}
+              >
                 <MoneyRegular />
                 Other Credits
               </button>
-              <button className={styles.actionButtonOutlined}>
+              <button
+                className={styles.actionButtonOutlined}
+                onClick={() => navigate('/bill-vouchers?bookType=bank')}
+              >
                 <DocumentRegular />
                 Bills / Vouchers
               </button>
@@ -462,15 +484,24 @@ const PastorateAccountsPage = ({
 
             {/* Row 2: All Transaction Buttons */}
             <div className={styles.buttonRow}>
-              <button className={styles.actionButton}>
+              <button
+                className={styles.actionButton}
+                onClick={() => navigate('/receipts?bookType=diocese')}
+              >
                 <ReceiptMoneyRegular />
                 Receipts
               </button>
-              <button className={styles.actionButton}>
+              <button
+                className={styles.actionButton}
+                onClick={() => navigate('/other-credits?bookType=diocese')}
+              >
                 <MoneyRegular />
                 Other Credits
               </button>
-              <button className={styles.actionButtonOutlined}>
+              <button
+                className={styles.actionButtonOutlined}
+                onClick={() => navigate('/bill-vouchers?bookType=diocese')}
+              >
                 <DocumentRegular />
                 Bills / Vouchers
               </button>

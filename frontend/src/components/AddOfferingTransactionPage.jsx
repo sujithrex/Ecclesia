@@ -21,6 +21,7 @@ const OFFERING_TYPES = [
   'Miscellaneous Collections',
   'Miscellaneous Income',
   'Miscellaneous offertory',
+  'Receipts',
   'Sangam (CW/DW)',
   'Sangam - Sabai',
   'Thanks offertory',
@@ -211,6 +212,7 @@ const AddOfferingTransactionPage = ({
   const navigate = useNavigate();
   const { transactionId } = useParams();
   const isEditMode = !!transactionId;
+  const churchDropdownRef = React.useRef(null); // Add ref for church dropdown
 
   const [formData, setFormData] = useState({
     id: null, // Store database ID for editing
@@ -367,6 +369,18 @@ const AddOfferingTransactionPage = ({
             });
             generateTransactionId();
             setNotification(null);
+
+            // Scroll to church dropdown
+            if (churchDropdownRef.current) {
+              churchDropdownRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+              });
+              // Focus on church dropdown after scroll
+              setTimeout(() => {
+                churchDropdownRef.current.focus();
+              }, 500);
+            }
           }, 1500);
         }
       } else {
@@ -471,6 +485,7 @@ const AddOfferingTransactionPage = ({
                 Church Name <span className={styles.required}>*</span>
               </label>
               <select
+                ref={churchDropdownRef}
                 className={`${styles.select} ${errors.church_id ? styles.errorInput : ''}`}
                 value={formData.church_id}
                 onChange={(e) => handleInputChange('church_id', e.target.value)}

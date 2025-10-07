@@ -23,6 +23,10 @@ const InfantBaptismReportPuppeteerService = require('./backend/infantBaptismRepo
 const LetterpadService = require('./backend/letterpadService.js');
 const LetterpadReportPuppeteerService = require('./backend/letterpadReportPuppeteerService.js');
 const OfferingsService = require('./backend/offeringsService.js');
+const ReceiptsService = require('./backend/receiptsService.js');
+const LedgerService = require('./backend/ledgerService.js');
+const OtherCreditsService = require('./backend/otherCreditsService.js');
+const BillVoucherService = require('./backend/billVoucherService.js');
 
 let mainWindow;
 let db;
@@ -47,6 +51,10 @@ let infantBaptismReportPuppeteerService;
 let letterpadService;
 let letterpadReportPuppeteerService;
 let offeringsService;
+let receiptsService;
+let ledgerService;
+let otherCreditsService;
+let billVoucherService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -562,6 +570,146 @@ ipcMain.handle('offerings-get-statistics', async (event, { pastorateId, userId }
   return await offeringsService.getStatistics(pastorateId, userId);
 });
 
+// Receipts IPC handlers
+ipcMain.handle('receipts-create-transaction', async (event, transactionData) => {
+  return await receiptsService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('receipts-get-transactions', async (event, { pastorateId, userId, page, limit, filters }) => {
+  return await receiptsService.getTransactions(pastorateId, userId, page, limit, filters);
+});
+
+ipcMain.handle('receipts-get-transaction', async (event, { transactionId }) => {
+  return await receiptsService.getTransaction(transactionId);
+});
+
+ipcMain.handle('receipts-update-transaction', async (event, transactionData) => {
+  return await receiptsService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('receipts-delete-transaction', async (event, { transactionId, userId }) => {
+  return await receiptsService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('receipts-get-next-receipt-number', async (event, { pastorateId, bookType }) => {
+  return await receiptsService.getNextReceiptNumber(pastorateId, bookType);
+});
+
+ipcMain.handle('receipts-generate-transaction-id', async (event) => {
+  return await receiptsService.generateTransactionId();
+});
+
+ipcMain.handle('receipts-search-families', async (event, { pastorateId, searchTerm }) => {
+  return await receiptsService.searchFamilies(pastorateId, searchTerm);
+});
+
+ipcMain.handle('receipts-get-statistics', async (event, { pastorateId }) => {
+  return await receiptsService.getStatistics(pastorateId);
+});
+
+// Ledger IPC handlers
+ipcMain.handle('ledger-create-category', async (event, categoryData) => {
+  return await ledgerService.createCategory(categoryData, categoryData.userId);
+});
+
+ipcMain.handle('ledger-get-categories', async (event, { pastorateId, bookType }) => {
+  return await ledgerService.getCategories(pastorateId, bookType);
+});
+
+ipcMain.handle('ledger-update-category', async (event, categoryData) => {
+  return await ledgerService.updateCategory(categoryData.categoryId, categoryData, categoryData.userId);
+});
+
+ipcMain.handle('ledger-delete-category', async (event, { categoryId, userId }) => {
+  return await ledgerService.deleteCategory(categoryId, userId);
+});
+
+ipcMain.handle('ledger-create-sub-category', async (event, subCategoryData) => {
+  return await ledgerService.createSubCategory(subCategoryData, subCategoryData.userId);
+});
+
+ipcMain.handle('ledger-get-sub-categories', async (event, { parentCategoryId }) => {
+  return await ledgerService.getSubCategories(parentCategoryId);
+});
+
+ipcMain.handle('ledger-update-sub-category', async (event, subCategoryData) => {
+  return await ledgerService.updateSubCategory(subCategoryData.subCategoryId, subCategoryData, subCategoryData.userId);
+});
+
+ipcMain.handle('ledger-delete-sub-category', async (event, { subCategoryId, userId }) => {
+  return await ledgerService.deleteSubCategory(subCategoryId, userId);
+});
+
+// Other Credits IPC handlers
+ipcMain.handle('other-credits-create-transaction', async (event, transactionData) => {
+  return await otherCreditsService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('other-credits-get-transactions', async (event, { pastorateId, userId, bookType, page, limit, filters }) => {
+  return await otherCreditsService.getTransactions(pastorateId, userId, bookType, page, limit, filters);
+});
+
+ipcMain.handle('other-credits-get-transaction', async (event, { transactionId }) => {
+  return await otherCreditsService.getTransaction(transactionId);
+});
+
+ipcMain.handle('other-credits-update-transaction', async (event, transactionData) => {
+  return await otherCreditsService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('other-credits-delete-transaction', async (event, { transactionId, userId }) => {
+  return await otherCreditsService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('other-credits-get-next-credit-number', async (event, { pastorateId, bookType }) => {
+  return await otherCreditsService.getNextCreditNumber(pastorateId, bookType);
+});
+
+ipcMain.handle('other-credits-generate-transaction-id', async (event) => {
+  return await otherCreditsService.generateTransactionId();
+});
+
+ipcMain.handle('other-credits-search-families', async (event, { pastorateId, searchTerm }) => {
+  return await otherCreditsService.searchFamilies(pastorateId, searchTerm);
+});
+
+ipcMain.handle('other-credits-get-statistics', async (event, { pastorateId, bookType }) => {
+  return await otherCreditsService.getStatistics(pastorateId, bookType);
+});
+
+// Bill Voucher IPC handlers
+ipcMain.handle('bill-voucher-create-transaction', async (event, transactionData) => {
+  return await billVoucherService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('bill-voucher-get-transactions', async (event, { pastorateId, userId, bookType, page, limit, filters }) => {
+  return await billVoucherService.getTransactions(pastorateId, userId, bookType, page, limit, filters);
+});
+
+ipcMain.handle('bill-voucher-get-transaction', async (event, { transactionId }) => {
+  return await billVoucherService.getTransaction(transactionId);
+});
+
+ipcMain.handle('bill-voucher-update-transaction', async (event, transactionData) => {
+  return await billVoucherService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('bill-voucher-delete-transaction', async (event, { transactionId, userId }) => {
+  return await billVoucherService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('bill-voucher-get-next-voucher-number', async (event, { pastorateId, bookType }) => {
+  return await billVoucherService.getNextVoucherNumber(pastorateId, bookType);
+});
+
+ipcMain.handle('bill-voucher-generate-transaction-id', async (event) => {
+  return await billVoucherService.generateTransactionId();
+});
+
+ipcMain.handle('bill-voucher-get-statistics', async (event, { pastorateId, bookType }) => {
+  return await billVoucherService.getStatistics(pastorateId, bookType);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -698,6 +846,10 @@ app.on('ready', async () => {
   letterpadService = new LetterpadService(db);
   letterpadReportPuppeteerService = new LetterpadReportPuppeteerService(db);
   offeringsService = new OfferingsService(db);
+  receiptsService = new ReceiptsService(db);
+  ledgerService = new LedgerService(db);
+  otherCreditsService = new OtherCreditsService(db);
+  billVoucherService = new BillVoucherService(db);
 
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

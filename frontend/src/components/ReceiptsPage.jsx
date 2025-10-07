@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { makeStyles } from '@fluentui/react-components';
 import {
   HomeRegular,
@@ -12,6 +12,7 @@ import {
   CheckmarkCircleRegular,
   DismissCircleRegular,
   InfoRegular,
+  ReceiptMoneyRegular,
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
@@ -69,19 +70,19 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     flex: 1,
-    minHeight: '500px', // Set minimum height for the table
-    maxHeight: 'calc(100vh - 300px)', // Prevent it from being too tall
+    minHeight: '500px',
+    maxHeight: 'calc(100vh - 300px)',
   },
   tableWrapper: {
     flex: 1,
     overflowX: 'auto',
     overflowY: 'auto',
-    minHeight: '400px', // Ensure scrollable area has good height
+    minHeight: '400px',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '800px', // Ensure minimum width for all columns
+    minWidth: '800px',
   },
   tableHeader: {
     backgroundColor: '#f8f8f8',
@@ -97,21 +98,20 @@ const useStyles = makeStyles({
     fontWeight: '600',
     color: '#323130',
     whiteSpace: 'nowrap',
-    backgroundColor: '#f8f8f8', // Ensure background color is set for sticky header
+    backgroundColor: '#f8f8f8',
   },
   td: {
     padding: '16px',
+    borderBottom: '1px solid #e1dfdd',
     fontSize: '14px',
     color: '#605e5c',
-    borderBottom: '1px solid #e1dfdd',
-    whiteSpace: 'nowrap',
   },
   actionButtons: {
     display: 'flex',
     gap: '8px',
   },
   iconButton: {
-    background: 'none',
+    backgroundColor: 'transparent',
     border: 'none',
     cursor: 'pointer',
     padding: '6px',
@@ -119,16 +119,16 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    transition: 'background-color 0.2s ease',
+    transition: 'background-color 0.2s',
     '&:hover': {
       backgroundColor: '#f3f2f1',
     },
   },
   editButton: {
-    color: '#B5316A',
+    color: '#0078d4',
   },
   deleteButton: {
-    color: '#D13438',
+    color: '#d13438',
   },
   pagination: {
     display: 'flex',
@@ -136,7 +136,7 @@ const useStyles = makeStyles({
     alignItems: 'center',
     padding: '16px',
     borderTop: '1px solid #e1dfdd',
-    backgroundColor: '#fafafa',
+    backgroundColor: 'white',
   },
   paginationInfo: {
     fontSize: '14px',
@@ -144,40 +144,78 @@ const useStyles = makeStyles({
   },
   paginationButtons: {
     display: 'flex',
-    alignItems: 'center',
     gap: '8px',
   },
-  paginationButton: {
-    border: '1px solid #8a8886',
-    borderRadius: '4px',
-    padding: '6px 8px',
+  pageButton: {
     backgroundColor: 'white',
-    color: '#323130',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
+    border: '1px solid #e1dfdd',
+    borderRadius: '4px',
+    padding: '6px 12px',
     fontSize: '14px',
-    transition: 'all 0.2s ease',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
     '&:hover:not(:disabled)': {
       backgroundColor: '#f3f2f1',
+      borderColor: '#c8c6c4',
     },
     '&:disabled': {
       opacity: 0.5,
       cursor: 'not-allowed',
     },
   },
+  activePageButton: {
+    backgroundColor: '#B5316A',
+    color: 'white',
+    borderColor: '#B5316A',
+    '&:hover': {
+      backgroundColor: '#A12B5E',
+      borderColor: '#A12B5E',
+    },
+  },
+  filterSection: {
+    display: 'flex',
+    gap: '16px',
+    alignItems: 'center',
+    padding: '16px',
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+    border: '1px solid #e1dfdd',
+  },
+  filterLabel: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#323130',
+  },
+  filterDropdown: {
+    padding: '8px 12px',
+    fontSize: '14px',
+    border: '1px solid #e1dfdd',
+    borderRadius: '4px',
+    backgroundColor: 'white',
+    cursor: 'pointer',
+    minWidth: '200px',
+    '&:focus': {
+      outline: 'none',
+      borderColor: '#B5316A',
+    },
+  },
   emptyState: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: '60px 20px',
-    textAlign: 'center',
     color: '#605e5c',
   },
   emptyStateIcon: {
     fontSize: '48px',
-    color: '#B5316A',
     marginBottom: '16px',
+    opacity: 0.5,
   },
   emptyStateText: {
-    fontSize: '16px',
+    fontSize: '18px',
+    fontWeight: '600',
     marginBottom: '8px',
   },
   emptyStateSubtext: {
@@ -189,43 +227,33 @@ const useStyles = makeStyles({
     top: '20px',
     right: '20px',
     padding: '16px 20px',
-    borderRadius: '4px',
+    borderRadius: '8px',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    zIndex: 1001,
-    maxWidth: '400px',
     fontSize: '14px',
     fontWeight: '500',
+    zIndex: 1000,
+    minWidth: '300px',
     animation: 'slideIn 0.3s ease-out',
   },
-  '@keyframes slideIn': {
-    from: {
-      transform: 'translateX(100%)',
-      opacity: 0,
-    },
-    to: {
-      transform: 'translateX(0)',
-      opacity: 1,
-    }
-  },
   notificationSuccess: {
-    backgroundColor: '#DFF6DD',
-    color: '#107C10',
-    border: '1px solid #92C353',
+    backgroundColor: '#dff6dd',
+    color: '#107c10',
+    border: '1px solid #107c10',
   },
   notificationError: {
-    backgroundColor: '#FDE7E9',
-    color: '#D13438',
-    border: '1px solid #F7B9B9',
+    backgroundColor: '#fde7e9',
+    color: '#d13438',
+    border: '1px solid #d13438',
   },
   notificationInfo: {
-    backgroundColor: '#F0F6FF',
-    color: '#0078D4',
-    border: '1px solid #B3D6FC',
+    backgroundColor: '#e6f2ff',
+    color: '#0078d4',
+    border: '1px solid #0078d4',
   },
-  confirmOverlay: {
+  deleteConfirmOverlay: {
     position: 'fixed',
     top: 0,
     left: 0,
@@ -236,111 +264,59 @@ const useStyles = makeStyles({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    animation: 'fadeIn 0.2s ease-out',
   },
-  '@keyframes fadeIn': {
-    from: {
-      opacity: 0,
-    },
-    to: {
-      opacity: 1,
-    }
-  },
-  confirmDialog: {
+  deleteConfirmDialog: {
     backgroundColor: 'white',
-    borderRadius: '4px',
-    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
+    borderRadius: '8px',
     padding: '24px',
     maxWidth: '400px',
-    width: '90%',
-    animation: 'scaleIn 0.2s ease-out',
+    boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
   },
-  '@keyframes scaleIn': {
-    from: {
-      transform: 'scale(0.9)',
-      opacity: 0,
-    },
-    to: {
-      transform: 'scale(1)',
-      opacity: 1,
-    }
-  },
-  confirmTitle: {
+  deleteConfirmTitle: {
     fontSize: '18px',
     fontWeight: '600',
-    color: '#323130',
     marginBottom: '12px',
+    color: '#323130',
   },
-  confirmMessage: {
+  deleteConfirmMessage: {
     fontSize: '14px',
     color: '#605e5c',
     marginBottom: '24px',
-    lineHeight: '1.5',
   },
-  confirmButtons: {
+  deleteConfirmButtons: {
     display: 'flex',
     gap: '12px',
     justifyContent: 'flex-end',
   },
-  confirmButton: {
-    padding: '8px 20px',
+  deleteConfirmButton: {
+    padding: '8px 16px',
+    borderRadius: '4px',
     fontSize: '14px',
     fontWeight: '600',
-    border: 'none',
-    borderRadius: '2px',
     cursor: 'pointer',
-    fontFamily: 'Segoe UI, sans-serif',
-    transition: 'all 0.2s ease',
+    border: 'none',
+    transition: 'all 0.2s',
   },
-  confirmButtonCancel: {
-    backgroundColor: 'white',
+  deleteConfirmButtonCancel: {
+    backgroundColor: '#f3f2f1',
     color: '#323130',
-    border: '1px solid #8a8886',
     '&:hover': {
-      backgroundColor: '#f3f2f1',
+      backgroundColor: '#e1dfdd',
     },
   },
-  confirmButtonDelete: {
-    backgroundColor: '#D13438',
+  deleteConfirmButtonDelete: {
+    backgroundColor: '#d13438',
     color: 'white',
     '&:hover': {
-      backgroundColor: '#A4262C',
-    },
-  },
-  filterSection: {
-    display: 'flex',
-    gap: '12px',
-    alignItems: 'center',
-    marginBottom: '20px',
-  },
-  filterLabel: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#323130',
-  },
-  filterDropdown: {
-    padding: '8px 12px',
-    fontSize: '14px',
-    border: '1px solid #8a8886',
-    borderRadius: '2px',
-    backgroundColor: 'white',
-    color: '#323130',
-    cursor: 'pointer',
-    fontFamily: 'Segoe UI, sans-serif',
-    minWidth: '200px',
-    '&:focus': {
-      outline: 'none',
-      borderColor: '#B5316A',
+      backgroundColor: '#a4262c',
     },
   },
   summarySection: {
-    marginTop: '24px',
-    marginBottom: '24px',
-    padding: '20px',
     backgroundColor: 'white',
     borderRadius: '8px',
-    border: '1px solid #e1dfdd',
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+    border: '1px solid #e1dfdd',
+    padding: '20px',
   },
   summaryHeader: {
     display: 'flex',
@@ -353,32 +329,52 @@ const useStyles = makeStyles({
     fontWeight: '600',
     color: '#323130',
   },
-  summaryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-    gap: '16px',
+  summaryTable: {
+    width: '100%',
+    borderCollapse: 'collapse',
   },
-  summaryCard: {
-    padding: '16px',
-    backgroundColor: '#f8f8f8',
-    borderRadius: '4px',
-    border: '1px solid #e1dfdd',
+  summaryRow: {
+    borderBottom: '1px solid #e1dfdd',
   },
-  summaryCardLabel: {
-    fontSize: '12px',
+  summaryCell: {
+    padding: '12px',
+    fontSize: '14px',
     color: '#605e5c',
-    marginBottom: '8px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
   },
-  summaryCardValue: {
-    fontSize: '24px',
+  summaryCellBold: {
     fontWeight: '600',
-    color: '#B5316A',
+    color: '#323130',
   },
 });
 
-const OfferingsPage = ({
+const getNotificationStyle = (type) => {
+  const styles = useStyles();
+  switch (type) {
+    case 'success':
+      return styles.notificationSuccess;
+    case 'error':
+      return styles.notificationError;
+    case 'info':
+      return styles.notificationInfo;
+    default:
+      return styles.notificationInfo;
+  }
+};
+
+const getNotificationIcon = (type) => {
+  switch (type) {
+    case 'success':
+      return <CheckmarkCircleRegular />;
+    case 'error':
+      return <DismissCircleRegular />;
+    case 'info':
+      return <InfoRegular />;
+    default:
+      return <InfoRegular />;
+  }
+};
+
+const ReceiptsPage = ({
   user,
   onLogout,
   onProfileClick,
@@ -397,67 +393,45 @@ const OfferingsPage = ({
 }) => {
   const styles = useStyles();
   const navigate = useNavigate();
-  const [allTransactions, setAllTransactions] = useState([]); // All transactions from server
+  const [searchParams] = useSearchParams();
+  const bookType = searchParams.get('bookType') || 'cash';
+  const [allTransactions, setAllTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [notification, setNotification] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState('all'); // Format: 'YYYY-MM' or 'all'
-  const [summaryMonth, setSummaryMonth] = useState(''); // For summary section
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [summaryMonth, setSummaryMonth] = useState(null);
+
   const itemsPerPage = 10;
 
-  const showNotification = (message, type = 'info') => {
-    setNotification({ message, type });
-    setTimeout(() => {
-      setNotification(null);
-    }, 4000);
-  };
-
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'success':
-        return <CheckmarkCircleRegular />;
-      case 'error':
-        return <DismissCircleRegular />;
-      case 'info':
-      default:
-        return <InfoRegular />;
-    }
-  };
-
-  const getNotificationStyle = (type) => {
-    switch (type) {
-      case 'success':
-        return styles.notificationSuccess;
-      case 'error':
-        return styles.notificationError;
-      case 'info':
-      default:
-        return styles.notificationInfo;
-    }
-  };
+  const bookTypeLabel = bookType.charAt(0).toUpperCase() + bookType.slice(1);
 
   useEffect(() => {
-    if (currentPastorate && user) {
+    if (currentPastorate) {
       loadAllTransactions();
     }
-  }, [currentPastorate?.id, user?.id]);
+  }, [currentPastorate, bookType]);
 
-  // Reset to first page when filter changes
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedMonth]);
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const loadAllTransactions = async () => {
     setLoading(true);
     try {
-      const result = await window.electron.offerings.getTransactions({
+      const result = await window.electron.receipts.getTransactions({
         pastorateId: currentPastorate.id,
         userId: user.id,
         page: 1,
-        limit: 10000, // Large limit to get all transactions
-        filters: {}
+        limit: 10000,
+        filters: { bookType }
       });
 
       if (result.success) {
@@ -475,86 +449,90 @@ const OfferingsPage = ({
   };
 
   const handleAddTransaction = () => {
-    navigate('/offerings/add');
+    navigate(`/receipts/add?bookType=${bookType}`);
   };
 
   const handleEditTransaction = (transaction) => {
-    navigate(`/offerings/edit/${transaction.id}`);
+    navigate(`/receipts/edit/${transaction.id}?bookType=${bookType}`);
   };
 
-  const handleDeleteTransaction = (transactionId) => {
-    setTransactionToDelete(transactionId);
+  const handleDeleteClick = (transaction) => {
+    setTransactionToDelete(transaction);
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = async () => {
+  const handleDeleteConfirm = async () => {
     if (!transactionToDelete) return;
 
-    setShowDeleteConfirm(false);
-
     try {
-      const result = await window.electron.offerings.deleteTransaction({
-        transactionId: transactionToDelete,
+      const result = await window.electron.receipts.deleteTransaction({
+        transactionId: transactionToDelete.id,
         userId: user.id
       });
 
       if (result.success) {
-        showNotification('Transaction deleted successfully!', 'success');
+        setNotification({
+          type: 'success',
+          message: 'Receipt transaction deleted successfully!'
+        });
         loadAllTransactions();
       } else {
-        console.error('Failed to delete transaction:', result.error);
-        showNotification('Failed to delete transaction: ' + result.error, 'error');
+        setNotification({
+          type: 'error',
+          message: result.error || 'Failed to delete transaction'
+        });
       }
     } catch (error) {
       console.error('Failed to delete transaction:', error);
-      showNotification('Failed to delete transaction: ' + error.message, 'error');
+      setNotification({
+        type: 'error',
+        message: 'Failed to delete transaction: ' + error.message
+      });
     } finally {
+      setShowDeleteConfirm(false);
       setTransactionToDelete(null);
     }
   };
 
-  const cancelDelete = () => {
+  const handleDeleteCancel = () => {
     setShowDeleteConfirm(false);
     setTransactionToDelete(null);
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
     });
   };
 
-  // Filter and paginate transactions (client-side like AreasDataGrid)
-  const filteredTransactions = React.useMemo(() => {
-    let filtered = [...allTransactions];
+  const formatAmount = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
 
-    // Filter by month
-    if (selectedMonth !== 'all') {
-      filtered = filtered.filter(t => {
+  const formatMonthDisplay = (monthKey) => {
+    if (monthKey === 'all') return 'All Months';
+    const [year, month] = monthKey.split('-');
+    const date = new Date(year, parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  // Filter transactions by selected month
+  const filteredTransactions = selectedMonth === 'all'
+    ? allTransactions
+    : allTransactions.filter(t => {
         const date = new Date(t.date);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         return monthKey === selectedMonth;
       });
-    }
 
-    // Sort by date (newest first)
-    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    return filtered;
-  }, [allTransactions, selectedMonth]);
-
-  // Pagination calculations (like AreasDataGrid)
+  // Pagination calculations
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
@@ -571,15 +549,7 @@ const OfferingsPage = ({
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       months.add(monthKey);
     });
-    return Array.from(months).sort().reverse(); // Newest first
-  };
-
-  // Format month for display
-  const formatMonthDisplay = (monthKey) => {
-    if (monthKey === 'all') return 'All Months';
-    const [year, month] = monthKey.split('-');
-    const date = new Date(year, parseInt(month) - 1);
-    return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    return Array.from(months).sort().reverse();
   };
 
   // Calculate summary by offering type for selected month
@@ -605,10 +575,10 @@ const OfferingsPage = ({
       byType[type] += parseFloat(t.amount || 0);
     });
 
-    // Convert to array, filter out zero amounts, and sort by amount (highest first)
+    // Convert to array, filter out zero amounts, and sort by amount
     const sortedTypes = Object.entries(byType)
       .map(([type, amount]) => ({ type, amount }))
-      .filter(item => item.amount > 0) // Only show if amount is not 0
+      .filter(item => item.amount > 0)
       .sort((a, b) => b.amount - a.amount);
 
     return sortedTypes;
@@ -633,22 +603,22 @@ const OfferingsPage = ({
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div className={styles.confirmOverlay} onClick={cancelDelete}>
-          <div className={styles.confirmDialog} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.confirmTitle}>Delete Transaction</div>
-            <div className={styles.confirmMessage}>
-              Are you sure you want to delete this transaction? This action cannot be undone.
+        <div className={styles.deleteConfirmOverlay} onClick={handleDeleteCancel}>
+          <div className={styles.deleteConfirmDialog} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.deleteConfirmTitle}>Delete Receipt Transaction</div>
+            <div className={styles.deleteConfirmMessage}>
+              Are you sure you want to delete this receipt transaction? This action cannot be undone.
             </div>
-            <div className={styles.confirmButtons}>
+            <div className={styles.deleteConfirmButtons}>
               <button
-                className={`${styles.confirmButton} ${styles.confirmButtonCancel}`}
-                onClick={cancelDelete}
+                className={`${styles.deleteConfirmButton} ${styles.deleteConfirmButtonCancel}`}
+                onClick={handleDeleteCancel}
               >
                 Cancel
               </button>
               <button
-                className={`${styles.confirmButton} ${styles.confirmButtonDelete}`}
-                onClick={confirmDelete}
+                className={`${styles.deleteConfirmButton} ${styles.deleteConfirmButtonDelete}`}
+                onClick={handleDeleteConfirm}
               >
                 Delete
               </button>
@@ -658,7 +628,7 @@ const OfferingsPage = ({
       )}
 
       <Breadcrumb
-        pageTitle={`Offerings - ${currentPastorate.pastorate_name}`}
+        pageTitle={`Receipts (${bookTypeLabel} Book) - ${currentPastorate.pastorate_name}`}
         titleAlign="left"
         breadcrumbs={[
           {
@@ -672,8 +642,8 @@ const OfferingsPage = ({
             onClick: () => navigate('/pastorate-accounts')
           },
           {
-            label: 'Offerings',
-            icon: <MoneyRegular />,
+            label: `Receipts (${bookTypeLabel} Book)`,
+            icon: <ReceiptMoneyRegular />,
             current: true
           }
         ]}
@@ -687,7 +657,7 @@ const OfferingsPage = ({
       <div className={styles.content}>
         <div className={styles.header}>
           <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#323130' }}>
-            Offering Transactions
+            Receipt Transactions
           </h2>
           <button className={styles.addButton} onClick={handleAddTransaction}>
             <AddRegular />
@@ -696,26 +666,24 @@ const OfferingsPage = ({
         </div>
 
         {/* Filter Section */}
-        {allTransactions.length > 0 && (
-          <div className={styles.filterSection}>
-            <span className={styles.filterLabel}>Filter by Month:</span>
-            <select
-              className={styles.filterDropdown}
-              value={selectedMonth}
-              onChange={(e) => {
-                setSelectedMonth(e.target.value);
-                setCurrentPage(1); // Reset to first page when filter changes
-              }}
-            >
-              <option value="all">All Months</option>
-              {availableMonths.map(month => (
-                <option key={month} value={month}>
-                  {formatMonthDisplay(month)}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div className={styles.filterSection}>
+          <span className={styles.filterLabel}>Filter by Month:</span>
+          <select
+            className={styles.filterDropdown}
+            value={selectedMonth}
+            onChange={(e) => {
+              setSelectedMonth(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <option value="all">All Months</option>
+            {availableMonths.map(month => (
+              <option key={month} value={month}>
+                {formatMonthDisplay(month)}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className={styles.tableContainer}>
           {loading ? (
@@ -725,17 +693,17 @@ const OfferingsPage = ({
           ) : allTransactions.length === 0 ? (
             <div className={styles.emptyState}>
               <div className={styles.emptyStateIcon}>
-                <MoneyRegular />
+                <ReceiptMoneyRegular />
               </div>
-              <div className={styles.emptyStateText}>No offering transactions yet</div>
+              <div className={styles.emptyStateText}>No receipt transactions yet</div>
               <div className={styles.emptyStateSubtext}>
-                Click "Add Transaction" to record your first offering
+                Click "Add Transaction" to record your first receipt
               </div>
             </div>
           ) : filteredTransactions.length === 0 ? (
             <div className={styles.emptyState}>
               <div className={styles.emptyStateIcon}>
-                <MoneyRegular />
+                <ReceiptMoneyRegular />
               </div>
               <div className={styles.emptyStateText}>No transactions found for selected month</div>
               <div className={styles.emptyStateSubtext}>
@@ -749,8 +717,8 @@ const OfferingsPage = ({
                   <thead className={styles.tableHeader}>
                     <tr>
                       <th className={styles.th}>Transaction ID</th>
-                      <th className={styles.th}>Church Name</th>
-                      <th className={styles.th}>Type of Offering</th>
+                      <th className={styles.th}>Receipt Number</th>
+                      <th className={styles.th}>Name of Giver</th>
                       <th className={styles.th}>Date</th>
                       <th className={styles.th}>Amount</th>
                       <th className={styles.th}>Actions</th>
@@ -760,10 +728,10 @@ const OfferingsPage = ({
                     {currentTransactions.map((transaction) => (
                       <tr key={transaction.id}>
                         <td className={styles.td}>{transaction.transaction_id}</td>
-                        <td className={styles.td}>{transaction.church_name}</td>
-                        <td className={styles.td}>{transaction.offering_type}</td>
+                        <td className={styles.td}>{transaction.receipt_number}</td>
+                        <td className={styles.td}>{transaction.giver_name}</td>
                         <td className={styles.td}>{formatDate(transaction.date)}</td>
-                        <td className={styles.td}>{formatCurrency(transaction.amount)}</td>
+                        <td className={styles.td}>{formatAmount(transaction.amount)}</td>
                         <td className={styles.td}>
                           <div className={styles.actionButtons}>
                             <button
@@ -775,7 +743,7 @@ const OfferingsPage = ({
                             </button>
                             <button
                               className={`${styles.iconButton} ${styles.deleteButton}`}
-                              onClick={() => handleDeleteTransaction(transaction.id)}
+                              onClick={() => handleDeleteClick(transaction)}
                               title="Delete"
                             >
                               <DeleteRegular />
@@ -787,30 +755,35 @@ const OfferingsPage = ({
                   </tbody>
                 </table>
               </div>
-              
-              {filteredTransactions.length > 0 && (
+
+              {/* Pagination */}
+              {totalPages > 1 && (
                 <div className={styles.pagination}>
                   <div className={styles.paginationInfo}>
                     Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} transactions
                   </div>
                   <div className={styles.paginationButtons}>
                     <button
-                      className={styles.paginationButton}
+                      className={styles.pageButton}
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
                     >
                       <ChevronLeftRegular />
-                      Previous
                     </button>
-                    <span style={{ fontSize: '14px', color: '#323130', margin: '0 8px' }}>
-                      Page {currentPage} of {totalPages}
-                    </span>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        className={`${styles.pageButton} ${page === currentPage ? styles.activePageButton : ''}`}
+                        onClick={() => handlePageChange(page)}
+                      >
+                        {page}
+                      </button>
+                    ))}
                     <button
-                      className={styles.paginationButton}
+                      className={styles.pageButton}
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
                     >
-                      Next
                       <ChevronRightRegular />
                     </button>
                   </div>
@@ -839,18 +812,35 @@ const OfferingsPage = ({
                 ))}
               </select>
             </div>
-            <div className={styles.summaryGrid}>
-              {summary.map((item, index) => (
-                <div key={index} className={styles.summaryCard}>
-                  <div className={styles.summaryCardLabel}>{item.type}</div>
-                  <div className={styles.summaryCardValue}>{formatCurrency(item.amount)}</div>
-                </div>
-              ))}
-            </div>
+            <table className={styles.summaryTable}>
+              <thead>
+                <tr className={styles.summaryRow}>
+                  <th className={`${styles.summaryCell} ${styles.summaryCellBold}`}>Category</th>
+                  <th className={`${styles.summaryCell} ${styles.summaryCellBold}`} style={{ textAlign: 'right' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.map((item, index) => (
+                  <tr key={index} className={styles.summaryRow}>
+                    <td className={styles.summaryCell}>{item.type}</td>
+                    <td className={styles.summaryCell} style={{ textAlign: 'right' }}>{formatAmount(item.amount)}</td>
+                  </tr>
+                ))}
+                {summary.length > 0 && (
+                  <tr className={styles.summaryRow}>
+                    <td className={`${styles.summaryCell} ${styles.summaryCellBold}`}>Total</td>
+                    <td className={`${styles.summaryCell} ${styles.summaryCellBold}`} style={{ textAlign: 'right' }}>
+                      {formatAmount(summary.reduce((sum, item) => sum + item.amount, 0))}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
 
+      {/* Status Bar */}
       <StatusBar
         user={user}
         onLogout={onLogout}
@@ -868,11 +858,13 @@ const OfferingsPage = ({
         onEditChurch={onEditChurch}
         onDeleteChurch={onDeleteChurch}
         currentView="pastorate"
+        disablePastorateChurchChange={false}
         disableChurchSelector={true}
       />
     </div>
   );
 };
 
-export default OfferingsPage;
+export default ReceiptsPage;
+
 

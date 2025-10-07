@@ -171,5 +171,55 @@ contextBridge.exposeInMainWorld('electron', {
     updateTransaction: (data) => ipcRenderer.invoke('offerings-update-transaction', data),
     deleteTransaction: (data) => ipcRenderer.invoke('offerings-delete-transaction', data),
     getStatistics: (data) => ipcRenderer.invoke('offerings-get-statistics', data)
+  },
+
+  // Receipts API
+  receipts: {
+    createTransaction: (data) => ipcRenderer.invoke('receipts-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('receipts-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('receipts-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('receipts-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('receipts-delete-transaction', data),
+    getNextReceiptNumber: (data) => ipcRenderer.invoke('receipts-get-next-receipt-number', data),
+    generateTransactionId: () => ipcRenderer.invoke('receipts-generate-transaction-id'),
+    searchFamilies: (data) => ipcRenderer.invoke('receipts-search-families', data),
+    getStatistics: (data) => ipcRenderer.invoke('receipts-get-statistics', data)
+  },
+
+  // Ledger API
+  ledger: {
+    createCategory: (data) => ipcRenderer.invoke('ledger-create-category', data),
+    getCategories: (data) => ipcRenderer.invoke('ledger-get-categories', data),
+    updateCategory: (data) => ipcRenderer.invoke('ledger-update-category', data),
+    deleteCategory: (data) => ipcRenderer.invoke('ledger-delete-category', data),
+    createSubCategory: (data) => ipcRenderer.invoke('ledger-create-sub-category', data),
+    getSubCategories: (data) => ipcRenderer.invoke('ledger-get-sub-categories', data),
+    updateSubCategory: (data) => ipcRenderer.invoke('ledger-update-sub-category', data),
+    deleteSubCategory: (data) => ipcRenderer.invoke('ledger-delete-sub-category', data)
+  },
+
+  // Other Credits API
+  otherCredits: {
+    createTransaction: (data) => ipcRenderer.invoke('other-credits-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('other-credits-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('other-credits-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('other-credits-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('other-credits-delete-transaction', data),
+    getNextCreditNumber: (data) => ipcRenderer.invoke('other-credits-get-next-credit-number', data),
+    generateTransactionId: () => ipcRenderer.invoke('other-credits-generate-transaction-id'),
+    searchFamilies: (data) => ipcRenderer.invoke('other-credits-search-families', data),
+    getStatistics: (data) => ipcRenderer.invoke('other-credits-get-statistics', data)
+  },
+
+  // Bill Voucher API
+  billVoucher: {
+    createTransaction: (data) => ipcRenderer.invoke('bill-voucher-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('bill-voucher-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('bill-voucher-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('bill-voucher-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('bill-voucher-delete-transaction', data),
+    getNextVoucherNumber: (data) => ipcRenderer.invoke('bill-voucher-get-next-voucher-number', data),
+    generateTransactionId: () => ipcRenderer.invoke('bill-voucher-generate-transaction-id'),
+    getStatistics: (data) => ipcRenderer.invoke('bill-voucher-get-statistics', data)
   }
 });

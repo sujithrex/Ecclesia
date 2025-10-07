@@ -361,6 +361,108 @@ class DatabaseManager {
                         FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
                         FOREIGN KEY (created_by) REFERENCES users (id)
                     )
+                `);
+
+                // Receipt transactions table for cash book receipts
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS receipt_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        receipt_number INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank', 'diocese')),
+                        family_id INTEGER,
+                        giver_name TEXT NOT NULL,
+                        offering_type TEXT NOT NULL DEFAULT 'Receipts',
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(pastorate_id, book_type, receipt_number)
+                    )
+                `);
+
+                // Ledger categories table for organizing income/expense categories
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS ledger_categories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank', 'diocese')),
+                        category_type TEXT NOT NULL CHECK (category_type IN ('income', 'expense')),
+                        category_name TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(pastorate_id, book_type, category_name)
+                    )
+                `);
+
+                // Ledger sub-categories table for detailed categorization
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS ledger_sub_categories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        parent_category_id INTEGER NOT NULL,
+                        sub_category_name TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (parent_category_id) REFERENCES ledger_categories (id) ON DELETE CASCADE,
+                        UNIQUE(parent_category_id, sub_category_name)
+                    )
+                `);
+
+                // Other credit transactions table for miscellaneous credits
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS other_credit_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        credit_number INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank', 'diocese')),
+                        family_id INTEGER,
+                        giver_name TEXT NOT NULL,
+                        primary_category_id INTEGER,
+                        secondary_category_id INTEGER,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE SET NULL,
+                        FOREIGN KEY (primary_category_id) REFERENCES ledger_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (secondary_category_id) REFERENCES ledger_sub_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(pastorate_id, book_type, credit_number)
+                    )
+                `);
+
+                // Bill voucher transactions table for expenses
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS bill_voucher_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank', 'diocese')),
+                        payee_name TEXT NOT NULL,
+                        primary_category_id INTEGER,
+                        secondary_category_id INTEGER,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (primary_category_id) REFERENCES ledger_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (secondary_category_id) REFERENCES ledger_sub_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(pastorate_id, book_type, voucher_number)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);
@@ -389,6 +491,12 @@ class DatabaseManager {
 
             // Migration 4: Update letterpads table structure
             await this.migrateLetterpadTable();
+
+            // Migration 5: Add book_type column to receipt_transactions table
+            await this.migrateReceiptTransactionsBookType();
+
+            // Migration 6: Add notes column to bill_voucher_transactions table
+            await this.migrateBillVoucherNotes();
         } catch (error) {
             console.error('Migration error:', error);
         }
@@ -641,6 +749,157 @@ class DatabaseManager {
                     });
                 } else {
                     console.log('letterpads table already has new columns');
+                    resolve();
+                }
+            });
+        });
+    }
+
+    async migrateReceiptTransactionsBookType() {
+        return new Promise((resolve) => {
+            // Check if receipt_transactions table exists
+            this.db.all("PRAGMA table_info(receipt_transactions)", (err, columns) => {
+                if (err) {
+                    console.error('Error checking receipt_transactions table:', err);
+                    resolve();
+                    return;
+                }
+
+                if (!columns || columns.length === 0) {
+                    console.log('receipt_transactions table does not exist yet');
+                    resolve();
+                    return;
+                }
+
+                // Check if book_type column exists
+                const hasBookType = columns.some(col => col.name === 'book_type');
+
+                if (!hasBookType) {
+                    console.log('Adding book_type column to receipt_transactions table...');
+
+                    // Add book_type column with default value 'cash'
+                    this.db.run(`
+                        ALTER TABLE receipt_transactions
+                        ADD COLUMN book_type TEXT NOT NULL DEFAULT 'cash' CHECK (book_type IN ('cash', 'bank', 'diocese'))
+                    `, (alterErr) => {
+                        if (alterErr && !alterErr.message.includes('duplicate column')) {
+                            console.error('Error adding book_type column:', alterErr);
+                            resolve();
+                        } else {
+                            console.log('book_type column added successfully');
+
+                            // Now we need to update the UNIQUE constraint
+                            // SQLite doesn't support DROP CONSTRAINT, so we need to recreate the table
+                            console.log('Updating UNIQUE constraint for receipt_transactions...');
+
+                            this.db.serialize(() => {
+                                // Create new table with updated constraint
+                                this.db.run(`
+                                    CREATE TABLE receipt_transactions_new (
+                                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        transaction_id TEXT UNIQUE NOT NULL,
+                                        receipt_number INTEGER NOT NULL,
+                                        pastorate_id INTEGER NOT NULL,
+                                        book_type TEXT NOT NULL DEFAULT 'cash' CHECK (book_type IN ('cash', 'bank', 'diocese')),
+                                        family_id INTEGER,
+                                        giver_name TEXT NOT NULL,
+                                        offering_type TEXT NOT NULL DEFAULT 'Receipts',
+                                        date DATE NOT NULL,
+                                        amount REAL NOT NULL,
+                                        created_by INTEGER NOT NULL,
+                                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                                        FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE SET NULL,
+                                        FOREIGN KEY (created_by) REFERENCES users (id),
+                                        UNIQUE(pastorate_id, book_type, receipt_number)
+                                    )
+                                `, (createErr) => {
+                                    if (createErr) {
+                                        console.error('Error creating new receipt_transactions table:', createErr);
+                                        resolve();
+                                        return;
+                                    }
+
+                                    // Copy data from old table to new table
+                                    this.db.run(`
+                                        INSERT INTO receipt_transactions_new
+                                        SELECT * FROM receipt_transactions
+                                    `, (copyErr) => {
+                                        if (copyErr) {
+                                            console.error('Error copying data to new table:', copyErr);
+                                            resolve();
+                                            return;
+                                        }
+
+                                        // Drop old table
+                                        this.db.run(`DROP TABLE receipt_transactions`, (dropErr) => {
+                                            if (dropErr) {
+                                                console.error('Error dropping old table:', dropErr);
+                                                resolve();
+                                                return;
+                                            }
+
+                                            // Rename new table to original name
+                                            this.db.run(`ALTER TABLE receipt_transactions_new RENAME TO receipt_transactions`, (renameErr) => {
+                                                if (renameErr) {
+                                                    console.error('Error renaming table:', renameErr);
+                                                } else {
+                                                    console.log('receipt_transactions table migrated successfully with new UNIQUE constraint');
+                                                }
+                                                resolve();
+                                            });
+                                        });
+                                    });
+                                });
+                            });
+                        }
+                    });
+                } else {
+                    console.log('book_type column already exists in receipt_transactions table');
+                    resolve();
+                }
+            });
+        });
+    }
+
+    async migrateBillVoucherNotes() {
+        return new Promise((resolve) => {
+            // Check if bill_voucher_transactions table exists
+            this.db.all("PRAGMA table_info(bill_voucher_transactions)", (err, columns) => {
+                if (err) {
+                    console.error('Error checking bill_voucher_transactions table:', err);
+                    resolve();
+                    return;
+                }
+
+                if (!columns || columns.length === 0) {
+                    console.log('bill_voucher_transactions table does not exist yet');
+                    resolve();
+                    return;
+                }
+
+                // Check if notes column exists
+                const hasNotes = columns.some(col => col.name === 'notes');
+
+                if (!hasNotes) {
+                    console.log('Adding notes column to bill_voucher_transactions table...');
+
+                    // Add notes column
+                    this.db.run(`
+                        ALTER TABLE bill_voucher_transactions
+                        ADD COLUMN notes TEXT
+                    `, (alterErr) => {
+                        if (alterErr && !alterErr.message.includes('duplicate column')) {
+                            console.error('Error adding notes column:', alterErr);
+                            resolve();
+                        } else {
+                            console.log('notes column added successfully to bill_voucher_transactions');
+                            resolve();
+                        }
+                    });
+                } else {
+                    console.log('notes column already exists in bill_voucher_transactions table');
                     resolve();
                 }
             });

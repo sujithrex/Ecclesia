@@ -33,6 +33,12 @@ import LetterpadPage from './components/LetterpadPage';
 import PastorateAccountsPage from './components/PastorateAccountsPage';
 import OfferingsPage from './components/OfferingsPage';
 import AddOfferingTransactionPage from './components/AddOfferingTransactionPage';
+import ReceiptsPage from './components/ReceiptsPage';
+import AddReceiptTransactionPage from './components/AddReceiptTransactionPage';
+import OtherCreditsPage from './components/OtherCreditsPage';
+import AddOtherCreditTransactionPage from './components/AddOtherCreditTransactionPage';
+import BillVouchersPage from './components/BillVouchersPage';
+import AddBillVoucherTransactionPage from './components/AddBillVoucherTransactionPage';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -1023,6 +1029,240 @@ function App() {
           element={
             user ? (
               <AddOfferingTransactionPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/receipts"
+          element={
+            user ? (
+              <ReceiptsPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/receipts/add"
+          element={
+            user ? (
+              <AddReceiptTransactionPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/receipts/edit/:transactionId"
+          element={
+            user ? (
+              <AddReceiptTransactionPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/other-credits"
+          element={
+            user ? (
+              <OtherCreditsPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/other-credits/add"
+          element={
+            user ? (
+              <AddOtherCreditTransactionPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/other-credits/edit/:transactionId"
+          element={
+            user ? (
+              <AddOtherCreditTransactionPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/bill-vouchers"
+          element={
+            user ? (
+              <BillVouchersPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/add-bill-voucher"
+          element={
+            user ? (
+              <AddBillVoucherTransactionPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/add-bill-voucher/:transactionId"
+          element={
+            user ? (
+              <AddBillVoucherTransactionPage
                 user={user}
                 currentPastorate={currentPastorate}
                 userPastorates={userPastorates}
