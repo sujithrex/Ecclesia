@@ -43,6 +43,7 @@ const CustomBookTransactionService = require('./backend/customBookTransactionSer
 const ChurchCustomBookTransactionService = require('./backend/churchCustomBookTransactionService.js');
 const CustomBookCategoryService = require('./backend/customBookCategoryService.js');
 const ChurchCustomBookCategoryService = require('./backend/churchCustomBookCategoryService.js');
+const AccountListService = require('./backend/accountListService.js');
 
 let mainWindow;
 let db;
@@ -87,6 +88,7 @@ let customBookTransactionService;
 let churchCustomBookTransactionService;
 let customBookCategoryService;
 let churchCustomBookCategoryService;
+let accountListService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -1336,6 +1338,15 @@ ipcMain.handle('church-custom-book-subcategory-delete', async (event, { subcateg
   return await churchCustomBookCategoryService.deleteSubcategory(subcategoryId);
 });
 
+// Account List IPC handlers
+ipcMain.handle('account-list-get-all-for-pastorate', async (event, { pastorateId }) => {
+  return await accountListService.getAllAccountsForPastorate(pastorateId);
+});
+
+ipcMain.handle('account-list-get-all-for-church', async (event, { churchId }) => {
+  return await accountListService.getAllAccountsForChurch(churchId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -1492,6 +1503,7 @@ app.on('ready', async () => {
   churchCustomBookTransactionService = new ChurchCustomBookTransactionService(db);
   customBookCategoryService = new CustomBookCategoryService(db);
   churchCustomBookCategoryService = new ChurchCustomBookCategoryService(db);
+  accountListService = new AccountListService(db);
 
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

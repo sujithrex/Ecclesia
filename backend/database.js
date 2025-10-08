@@ -9,7 +9,7 @@ class DatabaseManager {
         const dbPath = app.isPackaged
             ? path.join(app.getPath('userData'), 'ecclesia.db')
             : path.join(__dirname, 'ecclesia.db');
-            
+
         this.db = new sqlite3.Database(dbPath);
         this.initializeTables();
     }
@@ -781,8 +781,12 @@ class DatabaseManager {
                         pastorate_id INTEGER NOT NULL,
                         category_id INTEGER,
                         subcategory_id INTEGER,
-                        from_name TEXT NOT NULL,
-                        to_name TEXT NOT NULL,
+                        from_account_type TEXT,
+                        from_account_id INTEGER,
+                        to_account_type TEXT,
+                        to_account_id INTEGER,
+                        from_name TEXT,
+                        to_name TEXT,
                         date DATE NOT NULL,
                         amount REAL NOT NULL,
                         notes TEXT,
@@ -904,8 +908,12 @@ class DatabaseManager {
                         church_id INTEGER NOT NULL,
                         category_id INTEGER,
                         subcategory_id INTEGER,
-                        from_name TEXT NOT NULL,
-                        to_name TEXT NOT NULL,
+                        from_account_type TEXT,
+                        from_account_id INTEGER,
+                        to_account_type TEXT,
+                        to_account_id INTEGER,
+                        from_name TEXT,
+                        to_name TEXT,
                         date DATE NOT NULL,
                         amount REAL NOT NULL,
                         notes TEXT,
@@ -959,6 +967,9 @@ class DatabaseManager {
 
             // Migration 8: Add category_id and subcategory_id columns to custom book transaction tables
             await this.migrateCustomBookCategories();
+
+            // Migration 9: Add from_custom_book_id and to_custom_book_id to custom book contra transactions
+            await this.runMigrations();
         } catch (error) {
             console.error('Migration error:', error);
         }
@@ -1578,7 +1589,7 @@ class DatabaseManager {
         return new Promise((resolve) => {
             const allowedFields = ['username', 'name', 'email', 'phone', 'image'];
             const fields = Object.keys(userData).filter(key => allowedFields.includes(key));
-            
+
             if (fields.length === 0) {
                 resolve({ success: false, error: 'No valid fields to update' });
                 return;
@@ -2131,14 +2142,14 @@ class DatabaseManager {
                 WHERE uc.user_id = ? AND uc.last_selected_at IS NOT NULL
             `;
             let params = [userId];
-            
+
             if (pastorateId) {
                 query += ` AND c.pastorate_id = ?`;
                 params.push(pastorateId);
             }
-            
+
             query += ` ORDER BY uc.last_selected_at DESC LIMIT 1`;
-            
+
             this.db.get(query, params, (err, row) => {
                 if (err) {
                     reject(err);
@@ -2865,15 +2876,15 @@ class DatabaseManager {
                 JOIN areas a ON f.area_id = a.id
                 WHERE a.church_id = ? AND m.dob IS NOT NULL AND m.is_alive = 'alive'
             `;
-            
+
             let params = [churchId];
-            
+
             // Add area filter if specified
             if (areaId) {
                 query += ' AND a.id = ?';
                 params.push(areaId);
             }
-            
+
             // Add date range filter - handle year crossing
             if (fromDate && toDate) {
                 const fromParts = fromDate.split('-');
@@ -2882,7 +2893,7 @@ class DatabaseManager {
                 const fromMonth = parseInt(fromParts[1]);
                 const toDay = parseInt(toParts[0]);
                 const toMonth = parseInt(toParts[1]);
-                
+
                 if (fromMonth <= toMonth) {
                     // Same year range
                     query += ` AND (
@@ -2903,9 +2914,9 @@ class DatabaseManager {
                     params.push(fromMonth, fromMonth, fromDay, toMonth, toMonth, toDay);
                 }
             }
-            
+
             query += ' ORDER BY strftime("%m-%d", m.dob), m.name';
-            
+
             this.db.all(query, params, (err, rows) => {
                 if (err) {
                     reject(err);
@@ -2921,7 +2932,7 @@ class DatabaseManager {
             const today = new Date();
             const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
             const todayDay = String(today.getDate()).padStart(2, '0');
-            
+
             let query = `
                 SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
                        CASE
@@ -2940,16 +2951,16 @@ class DatabaseManager {
                 WHERE a.church_id = ? AND m.dob IS NOT NULL AND m.is_alive = 'alive'
                 AND strftime('%m', m.dob) = ? AND strftime('%d', m.dob) = ?
             `;
-            
+
             let params = [churchId, todayMonth, todayDay];
-            
+
             if (areaId) {
                 query += ' AND a.id = ?';
                 params.push(areaId);
             }
-            
+
             query += ' ORDER BY m.name';
-            
+
             this.db.all(query, params, (err, rows) => {
                 if (err) {
                     reject(err);
@@ -2964,20 +2975,20 @@ class DatabaseManager {
         return new Promise((resolve, reject) => {
             const today = new Date();
             const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-            
+
             // Calculate Sunday of current week
             const sunday = new Date(today);
             sunday.setDate(today.getDate() - currentDay);
-            
+
             // Calculate Saturday of current week
             const saturday = new Date(sunday);
             saturday.setDate(sunday.getDate() + 6);
-            
+
             const sundayMonth = String(sunday.getMonth() + 1).padStart(2, '0');
             const sundayDay = String(sunday.getDate()).padStart(2, '0');
             const saturdayMonth = String(saturday.getMonth() + 1).padStart(2, '0');
             const saturdayDay = String(saturday.getDate()).padStart(2, '0');
-            
+
             let query = `
                 SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
                        CASE
@@ -2995,14 +3006,14 @@ class DatabaseManager {
                 JOIN areas a ON f.area_id = a.id
                 WHERE a.church_id = ? AND m.dob IS NOT NULL AND m.is_alive = 'alive'
             `;
-            
+
             let params = [churchId];
-            
+
             if (areaId) {
                 query += ' AND a.id = ?';
                 params.push(areaId);
             }
-            
+
             // Handle week crossing month/year boundary
             if (sunday.getMonth() === saturday.getMonth()) {
                 // Same month
@@ -3017,9 +3028,9 @@ class DatabaseManager {
                 )`;
                 params.push(sundayMonth, parseInt(sundayDay), saturdayMonth, parseInt(saturdayDay));
             }
-            
+
             query += ' ORDER BY strftime("%m-%d", m.dob), m.name';
-            
+
             this.db.all(query, params, (err, rows) => {
                 if (err) {
                     reject(err);
@@ -3035,7 +3046,7 @@ class DatabaseManager {
             try {
                 const todaysBirthdays = await this.getTodaysBirthdays(churchId, areaId);
                 const thisWeekBirthdays = await this.getThisWeekBirthdays(churchId, areaId);
-                
+
                 resolve({
                     todayCount: todaysBirthdays.length,
                     thisWeekCount: thisWeekBirthdays.length
@@ -3072,15 +3083,15 @@ class DatabaseManager {
                 WHERE a.church_id = ? AND m.date_of_marriage IS NOT NULL AND m.is_married = 'yes' AND m.is_alive = 'alive'
                 AND m.sex = 'male'
             `;
-            
+
             let params = [churchId];
-            
+
             // Add area filter if specified
             if (areaId) {
                 query += ' AND a.id = ?';
                 params.push(areaId);
             }
-            
+
             // Add date range filter - handle year crossing
             if (fromDate && toDate) {
                 const fromParts = fromDate.split('-');
@@ -3089,7 +3100,7 @@ class DatabaseManager {
                 const fromMonth = parseInt(fromParts[1]);
                 const toDay = parseInt(toParts[0]);
                 const toMonth = parseInt(toParts[1]);
-                
+
                 if (fromMonth <= toMonth) {
                     // Same year range
                     query += ` AND (
@@ -3110,9 +3121,9 @@ class DatabaseManager {
                     params.push(fromMonth, fromMonth, fromDay, toMonth, toMonth, toDay);
                 }
             }
-            
+
             query += ' ORDER BY strftime("%m-%d", m.date_of_marriage), m.name';
-            
+
             this.db.all(query, params, (err, rows) => {
                 if (err) {
                     reject(err);
@@ -3128,7 +3139,7 @@ class DatabaseManager {
             const today = new Date();
             const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
             const todayDay = String(today.getDate()).padStart(2, '0');
-            
+
             let query = `
                 SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
                        spouse.name as spouse_name, spouse.respect as spouse_respect,
@@ -3150,16 +3161,16 @@ class DatabaseManager {
                 AND m.sex = 'male'
                 AND strftime('%m', m.date_of_marriage) = ? AND strftime('%d', m.date_of_marriage) = ?
             `;
-            
+
             let params = [churchId, todayMonth, todayDay];
-            
+
             if (areaId) {
                 query += ' AND a.id = ?';
                 params.push(areaId);
             }
-            
+
             query += ' ORDER BY m.name';
-            
+
             this.db.all(query, params, (err, rows) => {
                 if (err) {
                     reject(err);
@@ -3174,20 +3185,20 @@ class DatabaseManager {
         return new Promise((resolve, reject) => {
             const today = new Date();
             const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-            
+
             // Calculate Sunday of current week
             const sunday = new Date(today);
             sunday.setDate(today.getDate() - currentDay);
-            
+
             // Calculate Saturday of current week
             const saturday = new Date(sunday);
             saturday.setDate(sunday.getDate() + 6);
-            
+
             const sundayMonth = String(sunday.getMonth() + 1).padStart(2, '0');
             const sundayDay = String(sunday.getDate()).padStart(2, '0');
             const saturdayMonth = String(saturday.getMonth() + 1).padStart(2, '0');
             const saturdayDay = String(saturday.getDate()).padStart(2, '0');
-            
+
             let query = `
                 SELECT m.*, f.respect as family_respect, f.family_name, a.area_name,
                        spouse.name as spouse_name, spouse.respect as spouse_respect,
@@ -3208,14 +3219,14 @@ class DatabaseManager {
                 WHERE a.church_id = ? AND m.date_of_marriage IS NOT NULL AND m.is_married = 'yes' AND m.is_alive = 'alive'
                 AND m.sex = 'male'
             `;
-            
+
             let params = [churchId];
-            
+
             if (areaId) {
                 query += ' AND a.id = ?';
                 params.push(areaId);
             }
-            
+
             // Handle week crossing month/year boundary
             if (sunday.getMonth() === saturday.getMonth()) {
                 // Same month
@@ -3230,9 +3241,9 @@ class DatabaseManager {
                 )`;
                 params.push(sundayMonth, parseInt(sundayDay), saturdayMonth, parseInt(saturdayDay));
             }
-            
+
             query += ' ORDER BY strftime("%m-%d", m.date_of_marriage), m.name';
-            
+
             this.db.all(query, params, (err, rows) => {
                 if (err) {
                     reject(err);
@@ -3871,6 +3882,267 @@ class DatabaseManager {
             });
         });
     }
+
+    /**
+     * Run database migrations
+     */
+    async runMigrations() {
+        return new Promise((resolve, reject) => {
+            // Migration: Add account type and ID columns to contra transactions
+            this.db.serialize(() => {
+                // Check if columns exist in custom_book_contra_transactions
+                this.db.all("PRAGMA table_info(custom_book_contra_transactions)", (err, columns) => {
+                    if (err) {
+                        console.error('Error checking custom_book_contra_transactions schema:', err);
+                        return;
+                    }
+
+                    const hasFromAccountType = columns.some(col => col.name === 'from_account_type');
+                    const hasFromAccountId = columns.some(col => col.name === 'from_account_id');
+                    const hasToAccountType = columns.some(col => col.name === 'to_account_type');
+                    const hasToAccountId = columns.some(col => col.name === 'to_account_id');
+
+                    // Check if from_name and to_name are NOT NULL
+                    const fromNameCol = columns.find(col => col.name === 'from_name');
+                    const toNameCol = columns.find(col => col.name === 'to_name');
+                    const needsRecreate = (fromNameCol && fromNameCol.notnull === 1) || (toNameCol && toNameCol.notnull === 1);
+
+                    if (needsRecreate) {
+                        console.log('Recreating custom_book_contra_transactions table to make from_name and to_name nullable...');
+
+                        // Build column list from existing table
+                        const columnNames = columns.map(col => col.name);
+                        const commonColumns = columnNames.filter(name =>
+                            ['id', 'transaction_id', 'voucher_number', 'custom_book_id', 'pastorate_id',
+                             'category_id', 'subcategory_id', 'from_name', 'to_name', 'date', 'amount',
+                             'notes', 'created_by', 'created_at', 'updated_at'].includes(name)
+                        );
+
+                        // Recreate table with nullable from_name and to_name
+                        this.db.run(`
+                            CREATE TABLE IF NOT EXISTS custom_book_contra_transactions_new (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                transaction_id TEXT UNIQUE NOT NULL,
+                                voucher_number INTEGER NOT NULL,
+                                custom_book_id INTEGER NOT NULL,
+                                pastorate_id INTEGER NOT NULL,
+                                category_id INTEGER,
+                                subcategory_id INTEGER,
+                                from_account_type TEXT,
+                                from_account_id INTEGER,
+                                to_account_type TEXT,
+                                to_account_id INTEGER,
+                                from_name TEXT,
+                                to_name TEXT,
+                                date DATE NOT NULL,
+                                amount REAL NOT NULL,
+                                notes TEXT,
+                                created_by INTEGER NOT NULL,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (custom_book_id) REFERENCES custom_books (id) ON DELETE CASCADE,
+                                FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                                FOREIGN KEY (category_id) REFERENCES custom_book_categories (id) ON DELETE SET NULL,
+                                FOREIGN KEY (subcategory_id) REFERENCES custom_book_subcategories (id) ON DELETE SET NULL,
+                                FOREIGN KEY (created_by) REFERENCES users (id),
+                                UNIQUE(custom_book_id, voucher_number)
+                            )
+                        `, (err) => {
+                            if (err) {
+                                console.error('Error creating new table:', err);
+                                return;
+                            }
+
+                            // Copy data from old table using only common columns
+                            const columnList = commonColumns.join(', ');
+                            this.db.run(`
+                                INSERT INTO custom_book_contra_transactions_new (${columnList})
+                                SELECT ${columnList} FROM custom_book_contra_transactions
+                            `, (err) => {
+                                if (err) {
+                                    console.error('Error copying data:', err);
+                                    return;
+                                }
+
+                                // Drop old table
+                                this.db.run(`DROP TABLE custom_book_contra_transactions`, (err) => {
+                                    if (err) {
+                                        console.error('Error dropping old table:', err);
+                                        return;
+                                    }
+
+                                    // Rename new table
+                                    this.db.run(`ALTER TABLE custom_book_contra_transactions_new RENAME TO custom_book_contra_transactions`, (err) => {
+                                        if (err) {
+                                            console.error('Error renaming table:', err);
+                                        } else {
+                                            console.log('Successfully recreated custom_book_contra_transactions table');
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                    } else {
+                        // Just add missing columns
+                        if (!hasFromAccountType) {
+                            this.db.run(`ALTER TABLE custom_book_contra_transactions ADD COLUMN from_account_type TEXT`, (err) => {
+                                if (err) console.error('Error adding from_account_type:', err);
+                                else console.log('Added from_account_type to custom_book_contra_transactions');
+                            });
+                        }
+
+                        if (!hasFromAccountId) {
+                            this.db.run(`ALTER TABLE custom_book_contra_transactions ADD COLUMN from_account_id INTEGER`, (err) => {
+                                if (err) console.error('Error adding from_account_id:', err);
+                                else console.log('Added from_account_id to custom_book_contra_transactions');
+                            });
+                        }
+
+                        if (!hasToAccountType) {
+                            this.db.run(`ALTER TABLE custom_book_contra_transactions ADD COLUMN to_account_type TEXT`, (err) => {
+                                if (err) console.error('Error adding to_account_type:', err);
+                                else console.log('Added to_account_type to custom_book_contra_transactions');
+                            });
+                        }
+
+                        if (!hasToAccountId) {
+                            this.db.run(`ALTER TABLE custom_book_contra_transactions ADD COLUMN to_account_id INTEGER`, (err) => {
+                                if (err) console.error('Error adding to_account_id:', err);
+                                else console.log('Added to_account_id to custom_book_contra_transactions');
+                            });
+                        }
+                    }
+                });
+
+                // Check if columns exist in church_custom_book_contra_transactions
+                this.db.all("PRAGMA table_info(church_custom_book_contra_transactions)", (err, columns) => {
+                    if (err) {
+                        console.error('Error checking church_custom_book_contra_transactions schema:', err);
+                        return;
+                    }
+
+                    const hasFromAccountType = columns.some(col => col.name === 'from_account_type');
+                    const hasFromAccountId = columns.some(col => col.name === 'from_account_id');
+                    const hasToAccountType = columns.some(col => col.name === 'to_account_type');
+                    const hasToAccountId = columns.some(col => col.name === 'to_account_id');
+
+                    // Check if from_name and to_name are NOT NULL
+                    const fromNameCol = columns.find(col => col.name === 'from_name');
+                    const toNameCol = columns.find(col => col.name === 'to_name');
+                    const needsRecreate = (fromNameCol && fromNameCol.notnull === 1) || (toNameCol && toNameCol.notnull === 1);
+
+                    if (needsRecreate) {
+                        console.log('Recreating church_custom_book_contra_transactions table to make from_name and to_name nullable...');
+
+                        // Build column list from existing table
+                        const columnNames = columns.map(col => col.name);
+                        const commonColumns = columnNames.filter(name =>
+                            ['id', 'transaction_id', 'voucher_number', 'custom_book_id', 'church_id',
+                             'category_id', 'subcategory_id', 'from_name', 'to_name', 'date', 'amount',
+                             'notes', 'created_by', 'created_at', 'updated_at'].includes(name)
+                        );
+
+                        // Recreate table with nullable from_name and to_name
+                        this.db.run(`
+                            CREATE TABLE IF NOT EXISTS church_custom_book_contra_transactions_new (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                transaction_id TEXT UNIQUE NOT NULL,
+                                voucher_number INTEGER NOT NULL,
+                                custom_book_id INTEGER NOT NULL,
+                                church_id INTEGER NOT NULL,
+                                category_id INTEGER,
+                                subcategory_id INTEGER,
+                                from_account_type TEXT,
+                                from_account_id INTEGER,
+                                to_account_type TEXT,
+                                to_account_id INTEGER,
+                                from_name TEXT,
+                                to_name TEXT,
+                                date DATE NOT NULL,
+                                amount REAL NOT NULL,
+                                notes TEXT,
+                                created_by INTEGER NOT NULL,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (custom_book_id) REFERENCES church_custom_books (id) ON DELETE CASCADE,
+                                FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                                FOREIGN KEY (category_id) REFERENCES church_custom_book_categories (id) ON DELETE SET NULL,
+                                FOREIGN KEY (subcategory_id) REFERENCES church_custom_book_subcategories (id) ON DELETE SET NULL,
+                                FOREIGN KEY (created_by) REFERENCES users (id),
+                                UNIQUE(custom_book_id, voucher_number)
+                            )
+                        `, (err) => {
+                            if (err) {
+                                console.error('Error creating new table:', err);
+                                return;
+                            }
+
+                            // Copy data from old table using only common columns
+                            const columnList = commonColumns.join(', ');
+                            this.db.run(`
+                                INSERT INTO church_custom_book_contra_transactions_new (${columnList})
+                                SELECT ${columnList} FROM church_custom_book_contra_transactions
+                            `, (err) => {
+                                if (err) {
+                                    console.error('Error copying data:', err);
+                                    return;
+                                }
+
+                                // Drop old table
+                                this.db.run(`DROP TABLE church_custom_book_contra_transactions`, (err) => {
+                                    if (err) {
+                                        console.error('Error dropping old table:', err);
+                                        return;
+                                    }
+
+                                    // Rename new table
+                                    this.db.run(`ALTER TABLE church_custom_book_contra_transactions_new RENAME TO church_custom_book_contra_transactions`, (err) => {
+                                        if (err) {
+                                            console.error('Error renaming table:', err);
+                                        } else {
+                                            console.log('Successfully recreated church_custom_book_contra_transactions table');
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                    } else {
+                        // Just add missing columns
+                        if (!hasFromAccountType) {
+                            this.db.run(`ALTER TABLE church_custom_book_contra_transactions ADD COLUMN from_account_type TEXT`, (err) => {
+                                if (err) console.error('Error adding from_account_type:', err);
+                                else console.log('Added from_account_type to church_custom_book_contra_transactions');
+                            });
+                        }
+
+                        if (!hasFromAccountId) {
+                            this.db.run(`ALTER TABLE church_custom_book_contra_transactions ADD COLUMN from_account_id INTEGER`, (err) => {
+                                if (err) console.error('Error adding from_account_id:', err);
+                                else console.log('Added from_account_id to church_custom_book_contra_transactions');
+                            });
+                        }
+
+                        if (!hasToAccountType) {
+                            this.db.run(`ALTER TABLE church_custom_book_contra_transactions ADD COLUMN to_account_type TEXT`, (err) => {
+                                if (err) console.error('Error adding to_account_type:', err);
+                                else console.log('Added to_account_type to church_custom_book_contra_transactions');
+                            });
+                        }
+
+                        if (!hasToAccountId) {
+                            this.db.run(`ALTER TABLE church_custom_book_contra_transactions ADD COLUMN to_account_id INTEGER`, (err) => {
+                                if (err) console.error('Error adding to_account_id:', err);
+                                else console.log('Added to_account_id to church_custom_book_contra_transactions');
+                            });
+                        }
+                    }
+                });
+
+                resolve();
+            });
+        });
+    }
+
 
     close() {
         if (this.db) {

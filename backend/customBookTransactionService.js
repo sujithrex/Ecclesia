@@ -153,15 +153,15 @@ class CustomBookTransactionService {
    * Create a contra transaction
    */
   async createContraTransaction(transactionData, userId) {
-    const { transactionId, voucherNumber, customBookId, pastorateId, fromName, toName, date, amount, notes } = transactionData;
+    const { transactionId, voucherNumber, customBookId, pastorateId, fromAccountType, fromAccountId, toAccountType, toAccountId, fromName, toName, date, amount, notes, categoryId, subcategoryId } = transactionData;
 
     return new Promise((resolve) => {
       try {
         this.db.db.run(
           `INSERT INTO custom_book_contra_transactions
-           (transaction_id, voucher_number, custom_book_id, pastorate_id, from_name, to_name, date, amount, notes, created_by, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-          [transactionId, voucherNumber, customBookId, pastorateId, fromName, toName, date, amount, notes || null, userId],
+           (transaction_id, voucher_number, custom_book_id, pastorate_id, category_id, subcategory_id, from_account_type, from_account_id, to_account_type, to_account_id, from_name, to_name, date, amount, notes, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+          [transactionId, voucherNumber, customBookId, pastorateId, categoryId || null, subcategoryId || null, fromAccountType || null, fromAccountId || null, toAccountType || null, toAccountId || null, fromName || null, toName || null, date, amount, notes || null, userId],
           function(err) {
             if (err) {
               console.error('Error creating contra transaction:', err);
@@ -396,10 +396,10 @@ class CustomBookTransactionService {
   async updateContraTransaction(transactionId, transactionData, userId) {
     return new Promise((resolve) => {
       try {
-        const { transactionId: txId, voucherNumber, fromName, toName, date, amount, notes } = transactionData;
+        const { transactionId: txId, voucherNumber, fromAccountType, fromAccountId, toAccountType, toAccountId, fromName, toName, date, amount, notes, categoryId, subcategoryId } = transactionData;
 
         // Validate required fields
-        if (!txId || !voucherNumber || !fromName || !toName || !date || !amount) {
+        if (!txId || !voucherNumber || !date || !amount) {
           resolve({
             success: false,
             error: 'All required fields must be filled'
@@ -409,9 +409,9 @@ class CustomBookTransactionService {
 
         this.db.db.run(
           `UPDATE custom_book_contra_transactions
-           SET transaction_id = ?, voucher_number = ?, from_name = ?, to_name = ?, date = ?, amount = ?, notes = ?, updated_at = datetime('now')
+           SET transaction_id = ?, voucher_number = ?, category_id = ?, subcategory_id = ?, from_account_type = ?, from_account_id = ?, to_account_type = ?, to_account_id = ?, from_name = ?, to_name = ?, date = ?, amount = ?, notes = ?, updated_at = datetime('now')
            WHERE id = ?`,
-          [txId, voucherNumber, fromName, toName, date, amount, notes || null, transactionId],
+          [txId, voucherNumber, categoryId || null, subcategoryId || null, fromAccountType || null, fromAccountId || null, toAccountType || null, toAccountId || null, fromName || null, toName || null, date, amount, notes || null, transactionId],
           function(err) {
             if (err) {
               console.error('Error updating contra transaction:', err);

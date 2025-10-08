@@ -437,5 +437,11 @@ contextBridge.exposeInMainWorld('electron', {
     getSubcategories: (data) => ipcRenderer.invoke('church-custom-book-subcategory-get-all', data),
     updateSubcategory: (data) => ipcRenderer.invoke('church-custom-book-subcategory-update', data),
     deleteSubcategory: (data) => ipcRenderer.invoke('church-custom-book-subcategory-delete', data)
+  },
+
+  // Account List API
+  accountList: {
+    getAllForPastorate: (data) => ipcRenderer.invoke('account-list-get-all-for-pastorate', data),
+    getAllForChurch: (data) => ipcRenderer.invoke('account-list-get-all-for-church', data)
   }
 });

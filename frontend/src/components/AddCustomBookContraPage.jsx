@@ -185,6 +185,10 @@ const AddCustomBookContraPage = ({
   const [book, setBook] = useState(null);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
+    fromAccountType: '',
+    fromAccountId: '',
+    toAccountType: '',
+    toAccountId: '',
     fromName: '',
     toName: '',
     amount: '',
@@ -198,11 +202,13 @@ const AddCustomBookContraPage = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
+  const [allAccounts, setAllAccounts] = useState([]);
 
   useEffect(() => {
     if (bookId) {
       loadBookDetails();
       loadCategories();
+      loadAllAccounts();
       if (isEditMode) {
         loadTransactionData();
       } else {
@@ -256,6 +262,20 @@ const AddCustomBookContraPage = ({
     }
   };
 
+  const loadAllAccounts = async () => {
+    try {
+      const result = isChurchLevel
+        ? await window.electron.accountList.getAllForChurch({ churchId: currentChurch?.id })
+        : await window.electron.accountList.getAllForPastorate({ pastorateId: currentPastorate?.id });
+
+      if (result.success) {
+        setAllAccounts(result.accounts || []);
+      }
+    } catch (error) {
+      console.error('Failed to load accounts:', error);
+    }
+  };
+
   const loadNextVoucherNumber = async () => {
     try {
       const result = isChurchLevel
@@ -288,8 +308,12 @@ const AddCustomBookContraPage = ({
         setVoucherNumber(tx.voucher_number.toString());
         setFormData({
           date: tx.date,
-          fromName: tx.from_name,
-          toName: tx.to_name,
+          fromAccountType: tx.from_account_type || '',
+          fromAccountId: tx.from_account_id?.toString() || '',
+          toAccountType: tx.to_account_type || '',
+          toAccountId: tx.to_account_id?.toString() || '',
+          fromName: tx.from_name || '',
+          toName: tx.to_name || '',
           amount: tx.amount.toString(),
           remarks: tx.notes || '',
           categoryId: tx.category_id?.toString() || '',
@@ -303,7 +327,7 @@ const AddCustomBookContraPage = ({
             setSubcategories(category.subcategories || []);
           }
         }
-      } else {
+      } else{
         showAlert('Failed to load transaction data', 'error');
       }
     } catch (error) {
@@ -334,13 +358,13 @@ const AddCustomBookContraPage = ({
   };
 
   const handleSubmit = async (closeAfter = false) => {
-    if (!formData.fromName.trim()) {
-      showAlert('From Name is required', 'error');
+    if (!formData.fromAccountType || !formData.fromAccountId) {
+      showAlert('From Account is required', 'error');
       return;
     }
 
-    if (!formData.toName.trim()) {
-      showAlert('To Name is required', 'error');
+    if (!formData.toAccountType || !formData.toAccountId) {
+      showAlert('To Account is required', 'error');
       return;
     }
 
@@ -362,8 +386,12 @@ const AddCustomBookContraPage = ({
         transactionId: txId,
         voucherNumber: parseInt(voucherNumber),
         date: formData.date,
-        fromName: formData.fromName.trim(),
-        toName: formData.toName.trim(),
+        fromAccountType: formData.fromAccountType,
+        fromAccountId: parseInt(formData.fromAccountId),
+        toAccountType: formData.toAccountType,
+        toAccountId: parseInt(formData.toAccountId),
+        fromName: formData.fromName.trim() || null,
+        toName: formData.toName.trim() || null,
         amount: parseFloat(formData.amount),
         notes: formData.remarks.trim(),
         categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
@@ -417,6 +445,10 @@ const AddCustomBookContraPage = ({
           // Reset form for another entry
           setFormData({
             date: new Date().toISOString().split('T')[0],
+            fromAccountType: '',
+            fromAccountId: '',
+            toAccountType: '',
+            toAccountId: '',
             fromName: '',
             toName: '',
             amount: '',
@@ -582,30 +614,54 @@ const AddCustomBookContraPage = ({
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                From Name <span className={styles.required}>*</span>
+                From Account <span className={styles.required}>*</span>
               </label>
-              <input
-                type="text"
-                name="fromName"
-                value={formData.fromName}
-                onChange={handleInputChange}
-                placeholder="Enter from name"
+              <select
+                name="fromAccount"
+                value={formData.fromAccountType && formData.fromAccountId ? `${formData.fromAccountType}|${formData.fromAccountId}` : ''}
+                onChange={(e) => {
+                  const [type, id] = e.target.value.split('|');
+                  setFormData(prev => ({
+                    ...prev,
+                    fromAccountType: type || '',
+                    fromAccountId: id || ''
+                  }));
+                }}
                 className={styles.input}
-              />
+              >
+                <option value="">Select From Account</option>
+                {allAccounts.map((account, index) => (
+                  <option key={index} value={`${account.type}|${account.id}`}>
+                    {account.displayName}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                To Name <span className={styles.required}>*</span>
+                To Account <span className={styles.required}>*</span>
               </label>
-              <input
-                type="text"
-                name="toName"
-                value={formData.toName}
-                onChange={handleInputChange}
-                placeholder="Enter to name"
+              <select
+                name="toAccount"
+                value={formData.toAccountType && formData.toAccountId ? `${formData.toAccountType}|${formData.toAccountId}` : ''}
+                onChange={(e) => {
+                  const [type, id] = e.target.value.split('|');
+                  setFormData(prev => ({
+                    ...prev,
+                    toAccountType: type || '',
+                    toAccountId: id || ''
+                  }));
+                }}
                 className={styles.input}
-              />
+              >
+                <option value="">Select To Account</option>
+                {allAccounts.map((account, index) => (
+                  <option key={index} value={`${account.type}|${account.id}`}>
+                    {account.displayName}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className={`${styles.formGroup} ${styles.formGroupFull}`}>
