@@ -186,8 +186,20 @@ contextBridge.exposeInMainWorld('electron', {
     getStatistics: (data) => ipcRenderer.invoke('receipts-get-statistics', data)
   },
 
-  // Ledger API
+  // Ledger API (Pastorate)
   ledger: {
+    createCategory: (data) => ipcRenderer.invoke('ledger-create-category', data),
+    getCategories: (data) => ipcRenderer.invoke('ledger-get-categories', data),
+    updateCategory: (data) => ipcRenderer.invoke('ledger-update-category', data),
+    deleteCategory: (data) => ipcRenderer.invoke('ledger-delete-category', data),
+    createSubCategory: (data) => ipcRenderer.invoke('ledger-create-sub-category', data),
+    getSubCategories: (data) => ipcRenderer.invoke('ledger-get-sub-categories', data),
+    updateSubCategory: (data) => ipcRenderer.invoke('ledger-update-sub-category', data),
+    deleteSubCategory: (data) => ipcRenderer.invoke('ledger-delete-sub-category', data)
+  },
+
+  // Pastorate Ledger API (alias for ledger)
+  pastorateLedger: {
     createCategory: (data) => ipcRenderer.invoke('ledger-create-category', data),
     getCategories: (data) => ipcRenderer.invoke('ledger-get-categories', data),
     updateCategory: (data) => ipcRenderer.invoke('ledger-update-category', data),
@@ -247,5 +259,183 @@ contextBridge.exposeInMainWorld('electron', {
     getNextVoucherNumber: (data) => ipcRenderer.invoke('contra-get-next-voucher-number', data),
     generateTransactionId: () => ipcRenderer.invoke('contra-generate-transaction-id'),
     getStatistics: (data) => ipcRenderer.invoke('contra-get-statistics', data)
+  },
+
+  // ========== CHURCH ACCOUNTS APIs ==========
+
+  // Church Ledger API
+  churchLedger: {
+    createCategory: (data) => ipcRenderer.invoke('church-ledger-create-category', data),
+    getCategories: (data) => ipcRenderer.invoke('church-ledger-get-categories', data),
+    updateCategory: (data) => ipcRenderer.invoke('church-ledger-update-category', data),
+    deleteCategory: (data) => ipcRenderer.invoke('church-ledger-delete-category', data),
+    createSubCategory: (data) => ipcRenderer.invoke('church-ledger-create-sub-category', data),
+    getSubCategories: (data) => ipcRenderer.invoke('church-ledger-get-sub-categories', data),
+    updateSubCategory: (data) => ipcRenderer.invoke('church-ledger-update-sub-category', data),
+    deleteSubCategory: (data) => ipcRenderer.invoke('church-ledger-delete-sub-category', data)
+  },
+
+  // Church Receipts API
+  churchReceipts: {
+    createTransaction: (data) => ipcRenderer.invoke('church-receipts-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('church-receipts-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('church-receipts-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('church-receipts-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('church-receipts-delete-transaction', data),
+    getNextReceiptNumber: (data) => ipcRenderer.invoke('church-receipts-get-next-receipt-number', data),
+    generateTransactionId: () => ipcRenderer.invoke('church-receipts-generate-transaction-id'),
+    searchFamilies: (data) => ipcRenderer.invoke('church-receipts-search-families', data),
+    getStatistics: (data) => ipcRenderer.invoke('church-receipts-get-statistics', data)
+  },
+
+  // Church Other Credits API
+  churchOtherCredits: {
+    createTransaction: (data) => ipcRenderer.invoke('church-other-credits-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('church-other-credits-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('church-other-credits-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('church-other-credits-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('church-other-credits-delete-transaction', data),
+    getNextCreditNumber: (data) => ipcRenderer.invoke('church-other-credits-get-next-credit-number', data),
+    generateTransactionId: () => ipcRenderer.invoke('church-other-credits-generate-transaction-id'),
+    searchFamilies: (data) => ipcRenderer.invoke('church-other-credits-search-families', data),
+    getStatistics: (data) => ipcRenderer.invoke('church-other-credits-get-statistics', data)
+  },
+
+  // Church Bill Voucher API
+  churchBillVoucher: {
+    createTransaction: (data) => ipcRenderer.invoke('church-bill-vouchers-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('church-bill-vouchers-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('church-bill-vouchers-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('church-bill-vouchers-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('church-bill-vouchers-delete-transaction', data),
+    getNextVoucherNumber: (data) => ipcRenderer.invoke('church-bill-vouchers-get-next-voucher-number', data),
+    generateTransactionId: () => ipcRenderer.invoke('church-bill-vouchers-generate-transaction-id'),
+    getStatistics: (data) => ipcRenderer.invoke('church-bill-vouchers-get-statistics', data)
+  },
+
+  // Church Acquittance API
+  churchAcquittance: {
+    createTransaction: (data) => ipcRenderer.invoke('church-acquittance-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('church-acquittance-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('church-acquittance-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('church-acquittance-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('church-acquittance-delete-transaction', data),
+    getNextVoucherNumber: (data) => ipcRenderer.invoke('church-acquittance-get-next-voucher-number', data),
+    generateTransactionId: () => ipcRenderer.invoke('church-acquittance-generate-transaction-id'),
+    getStatistics: (data) => ipcRenderer.invoke('church-acquittance-get-statistics', data)
+  },
+
+  // Church Contra API
+  churchContra: {
+    createTransaction: (data) => ipcRenderer.invoke('church-contra-create-transaction', data),
+    getTransactions: (data) => ipcRenderer.invoke('church-contra-get-transactions', data),
+    getTransaction: (data) => ipcRenderer.invoke('church-contra-get-transaction', data),
+    updateTransaction: (data) => ipcRenderer.invoke('church-contra-update-transaction', data),
+    deleteTransaction: (data) => ipcRenderer.invoke('church-contra-delete-transaction', data),
+    getNextVoucherNumber: (data) => ipcRenderer.invoke('church-contra-get-next-voucher-number', data),
+    generateTransactionId: () => ipcRenderer.invoke('church-contra-generate-transaction-id'),
+    getStatistics: (data) => ipcRenderer.invoke('church-contra-get-statistics', data)
+  },
+
+  // Account Balance API (Pastorate)
+  accountBalance: {
+    getAllBalances: (data) => ipcRenderer.invoke('account-balance-get-all', data),
+    getBalanceByBookType: (data) => ipcRenderer.invoke('account-balance-get-by-book-type', data)
+  },
+
+  // Church Account Balance API
+  churchAccountBalance: {
+    getAllBalances: (data) => ipcRenderer.invoke('church-account-balance-get-all', data),
+    getBalanceByBookType: (data) => ipcRenderer.invoke('church-account-balance-get-by-book-type', data)
+  },
+
+  // Custom Book API (Pastorate)
+  customBook: {
+    create: (data) => ipcRenderer.invoke('custom-book-create', data),
+    getByPastorate: (data) => ipcRenderer.invoke('custom-book-get-by-pastorate', data),
+    getById: (data) => ipcRenderer.invoke('custom-book-get-by-id', data),
+    update: (data) => ipcRenderer.invoke('custom-book-update', data),
+    delete: (data) => ipcRenderer.invoke('custom-book-delete', data),
+    getBalance: (data) => ipcRenderer.invoke('custom-book-get-balance', data)
+  },
+
+  // Custom Book Transaction API (Pastorate)
+  customBookTransaction: {
+    generateTransactionId: () => ipcRenderer.invoke('custom-book-transaction-generate-id'),
+    getNextVoucherNumber: (data) => ipcRenderer.invoke('custom-book-transaction-get-next-voucher', data),
+    createCredit: (data) => ipcRenderer.invoke('custom-book-transaction-create-credit', data),
+    createDebit: (data) => ipcRenderer.invoke('custom-book-transaction-create-debit', data),
+    createContra: (data) => ipcRenderer.invoke('custom-book-transaction-create-contra', data),
+    getTransactions: (data) => ipcRenderer.invoke('custom-book-transaction-get', data),
+    searchFamilies: (data) => ipcRenderer.invoke('custom-book-transaction-search-families', data),
+    getContraTransaction: (data) => ipcRenderer.invoke('custom-book-transaction-get-contra', data),
+    updateContraTransaction: (data) => ipcRenderer.invoke('custom-book-transaction-update-contra', data),
+    deleteContraTransaction: (data) => ipcRenderer.invoke('custom-book-transaction-delete-contra', data),
+    getCreditTransaction: (data) => ipcRenderer.invoke('custom-book-transaction-get-credit', data),
+    updateCreditTransaction: (data) => ipcRenderer.invoke('custom-book-transaction-update-credit', data),
+    deleteCreditTransaction: (data) => ipcRenderer.invoke('custom-book-transaction-delete-credit', data),
+    getDebitTransaction: (data) => ipcRenderer.invoke('custom-book-transaction-get-debit', data),
+    updateDebitTransaction: (data) => ipcRenderer.invoke('custom-book-transaction-update-debit', data),
+    deleteDebitTransaction: (data) => ipcRenderer.invoke('custom-book-transaction-delete-debit', data)
+  },
+
+  // Custom Book Category API (Pastorate)
+  customBookCategory: {
+    create: (data) => ipcRenderer.invoke('custom-book-category-create', data),
+    getAll: (data) => ipcRenderer.invoke('custom-book-category-get-all', data),
+    getByType: (data) => ipcRenderer.invoke('custom-book-category-get-by-type', data),
+    getWithSubcategories: (data) => ipcRenderer.invoke('custom-book-category-get-with-subcategories', data),
+    getWithSubcategoriesByType: (data) => ipcRenderer.invoke('custom-book-category-get-with-subcategories-by-type', data),
+    update: (data) => ipcRenderer.invoke('custom-book-category-update', data),
+    delete: (data) => ipcRenderer.invoke('custom-book-category-delete', data),
+    createSubcategory: (data) => ipcRenderer.invoke('custom-book-subcategory-create', data),
+    getSubcategories: (data) => ipcRenderer.invoke('custom-book-subcategory-get-all', data),
+    updateSubcategory: (data) => ipcRenderer.invoke('custom-book-subcategory-update', data),
+    deleteSubcategory: (data) => ipcRenderer.invoke('custom-book-subcategory-delete', data)
+  },
+
+  // Church Custom Book API
+  churchCustomBook: {
+    create: (data) => ipcRenderer.invoke('church-custom-book-create', data),
+    getByChurch: (data) => ipcRenderer.invoke('church-custom-book-get-by-church', data),
+    getById: (data) => ipcRenderer.invoke('church-custom-book-get-by-id', data),
+    update: (data) => ipcRenderer.invoke('church-custom-book-update', data),
+    delete: (data) => ipcRenderer.invoke('church-custom-book-delete', data),
+    getBalance: (data) => ipcRenderer.invoke('church-custom-book-get-balance', data)
+  },
+
+  // Church Custom Book Transaction API
+  churchCustomBookTransaction: {
+    generateTransactionId: () => ipcRenderer.invoke('church-custom-book-transaction-generate-id'),
+    getNextVoucherNumber: (data) => ipcRenderer.invoke('church-custom-book-transaction-get-next-voucher', data),
+    createCredit: (data) => ipcRenderer.invoke('church-custom-book-transaction-create-credit', data),
+    createDebit: (data) => ipcRenderer.invoke('church-custom-book-transaction-create-debit', data),
+    createContra: (data) => ipcRenderer.invoke('church-custom-book-transaction-create-contra', data),
+    getTransactions: (data) => ipcRenderer.invoke('church-custom-book-transaction-get', data),
+    searchFamilies: (data) => ipcRenderer.invoke('church-custom-book-transaction-search-families', data),
+    getContraTransaction: (data) => ipcRenderer.invoke('church-custom-book-transaction-get-contra', data),
+    updateContraTransaction: (data) => ipcRenderer.invoke('church-custom-book-transaction-update-contra', data),
+    deleteContraTransaction: (data) => ipcRenderer.invoke('church-custom-book-transaction-delete-contra', data),
+    getCreditTransaction: (data) => ipcRenderer.invoke('church-custom-book-transaction-get-credit', data),
+    updateCreditTransaction: (data) => ipcRenderer.invoke('church-custom-book-transaction-update-credit', data),
+    deleteCreditTransaction: (data) => ipcRenderer.invoke('church-custom-book-transaction-delete-credit', data),
+    getDebitTransaction: (data) => ipcRenderer.invoke('church-custom-book-transaction-get-debit', data),
+    updateDebitTransaction: (data) => ipcRenderer.invoke('church-custom-book-transaction-update-debit', data),
+    deleteDebitTransaction: (data) => ipcRenderer.invoke('church-custom-book-transaction-delete-debit', data)
+  },
+
+  // Church Custom Book Category API
+  churchCustomBookCategory: {
+    create: (data) => ipcRenderer.invoke('church-custom-book-category-create', data),
+    getAll: (data) => ipcRenderer.invoke('church-custom-book-category-get-all', data),
+    getByType: (data) => ipcRenderer.invoke('church-custom-book-category-get-by-type', data),
+    getWithSubcategories: (data) => ipcRenderer.invoke('church-custom-book-category-get-with-subcategories', data),
+    getWithSubcategoriesByType: (data) => ipcRenderer.invoke('church-custom-book-category-get-with-subcategories-by-type', data),
+    update: (data) => ipcRenderer.invoke('church-custom-book-category-update', data),
+    delete: (data) => ipcRenderer.invoke('church-custom-book-category-delete', data),
+    createSubcategory: (data) => ipcRenderer.invoke('church-custom-book-subcategory-create', data),
+    getSubcategories: (data) => ipcRenderer.invoke('church-custom-book-subcategory-get-all', data),
+    updateSubcategory: (data) => ipcRenderer.invoke('church-custom-book-subcategory-update', data),
+    deleteSubcategory: (data) => ipcRenderer.invoke('church-custom-book-subcategory-delete', data)
   }
 });

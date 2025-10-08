@@ -514,6 +514,411 @@ class DatabaseManager {
                         FOREIGN KEY (created_by) REFERENCES users (id),
                         UNIQUE(pastorate_id, book_type, voucher_number)
                     )
+                `);
+
+                // ========== CHURCH-LEVEL ACCOUNTS TABLES ==========
+
+                // Church ledger categories table for organizing income/expense categories
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_ledger_categories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        church_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank')),
+                        category_type TEXT NOT NULL CHECK (category_type IN ('income', 'expense')),
+                        category_name TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        UNIQUE(church_id, book_type, category_name)
+                    )
+                `);
+
+                // Church ledger sub-categories table for detailed categorization
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_ledger_sub_categories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        parent_category_id INTEGER NOT NULL,
+                        sub_category_name TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (parent_category_id) REFERENCES church_ledger_categories (id) ON DELETE CASCADE,
+                        UNIQUE(parent_category_id, sub_category_name)
+                    )
+                `);
+
+                // Church receipt transactions table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_receipt_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        receipt_number INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank')),
+                        family_id INTEGER,
+                        giver_name TEXT NOT NULL,
+                        offering_type TEXT NOT NULL DEFAULT 'Receipts',
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(church_id, book_type, receipt_number)
+                    )
+                `);
+
+                // Church other credit transactions table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_other_credit_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        credit_number INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank')),
+                        family_id INTEGER,
+                        giver_name TEXT NOT NULL,
+                        primary_category_id INTEGER,
+                        secondary_category_id INTEGER,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (family_id) REFERENCES families (id) ON DELETE SET NULL,
+                        FOREIGN KEY (primary_category_id) REFERENCES church_ledger_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (secondary_category_id) REFERENCES church_ledger_sub_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(church_id, book_type, credit_number)
+                    )
+                `);
+
+                // Church bill voucher transactions table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_bill_voucher_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank')),
+                        payee_name TEXT NOT NULL,
+                        primary_category_id INTEGER,
+                        secondary_category_id INTEGER,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (primary_category_id) REFERENCES church_ledger_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (secondary_category_id) REFERENCES church_ledger_sub_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(church_id, book_type, voucher_number)
+                    )
+                `);
+
+                // Church acquittance transactions table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_acquittance_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank')),
+                        payee_name TEXT NOT NULL,
+                        primary_category_id INTEGER,
+                        secondary_category_id INTEGER,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (primary_category_id) REFERENCES church_ledger_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (secondary_category_id) REFERENCES church_ledger_sub_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(church_id, book_type, voucher_number)
+                    )
+                `);
+
+                // Church contra transactions table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_contra_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank')),
+                        from_account_level TEXT NOT NULL CHECK (from_account_level IN ('church', 'pastorate')),
+                        from_account_type TEXT NOT NULL CHECK (from_account_type IN ('cash', 'bank', 'diocese')),
+                        from_category_id INTEGER,
+                        to_account_level TEXT NOT NULL CHECK (to_account_level IN ('church', 'pastorate')),
+                        to_account_type TEXT NOT NULL CHECK (to_account_type IN ('cash', 'bank', 'diocese')),
+                        to_category_id INTEGER,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(church_id, book_type, voucher_number)
+                    )
+                `);
+
+                // ========== CUSTOM BOOKS TABLES ==========
+
+                // Custom books table for pastorate
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS custom_books (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        book_name TEXT NOT NULL,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(pastorate_id, book_name)
+                    )
+                `);
+
+                // Custom book categories
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS custom_book_categories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        custom_book_id INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        category_name TEXT NOT NULL,
+                        category_type TEXT NOT NULL CHECK(category_type IN ('income', 'expense')),
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (custom_book_id) REFERENCES custom_books (id) ON DELETE CASCADE,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(custom_book_id, category_name)
+                    )
+                `);
+
+                // Custom book subcategories
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS custom_book_subcategories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        category_id INTEGER NOT NULL,
+                        subcategory_name TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (category_id) REFERENCES custom_book_categories (id) ON DELETE CASCADE,
+                        UNIQUE(category_id, subcategory_name)
+                    )
+                `);
+
+                // Custom book credit transactions
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS custom_book_credit_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        custom_book_id INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        category_id INTEGER,
+                        subcategory_id INTEGER,
+                        name TEXT NOT NULL,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (custom_book_id) REFERENCES custom_books (id) ON DELETE CASCADE,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (category_id) REFERENCES custom_book_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (subcategory_id) REFERENCES custom_book_subcategories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(custom_book_id, voucher_number)
+                    )
+                `);
+
+                // Custom book debit transactions
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS custom_book_debit_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        custom_book_id INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        category_id INTEGER,
+                        subcategory_id INTEGER,
+                        name TEXT NOT NULL,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (custom_book_id) REFERENCES custom_books (id) ON DELETE CASCADE,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (category_id) REFERENCES custom_book_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (subcategory_id) REFERENCES custom_book_subcategories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(custom_book_id, voucher_number)
+                    )
+                `);
+
+                // Custom book contra transactions
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS custom_book_contra_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        custom_book_id INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        category_id INTEGER,
+                        subcategory_id INTEGER,
+                        from_name TEXT NOT NULL,
+                        to_name TEXT NOT NULL,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (custom_book_id) REFERENCES custom_books (id) ON DELETE CASCADE,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (category_id) REFERENCES custom_book_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (subcategory_id) REFERENCES custom_book_subcategories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(custom_book_id, voucher_number)
+                    )
+                `);
+
+                // Church custom books table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_custom_books (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        church_id INTEGER NOT NULL,
+                        book_name TEXT NOT NULL,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(church_id, book_name)
+                    )
+                `);
+
+                // Church custom book categories
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_custom_book_categories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        custom_book_id INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        category_name TEXT NOT NULL,
+                        category_type TEXT NOT NULL CHECK(category_type IN ('income', 'expense')),
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (custom_book_id) REFERENCES church_custom_books (id) ON DELETE CASCADE,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        UNIQUE(custom_book_id, category_name)
+                    )
+                `);
+
+                // Church custom book subcategories
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_custom_book_subcategories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        category_id INTEGER NOT NULL,
+                        subcategory_name TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (category_id) REFERENCES church_custom_book_categories (id) ON DELETE CASCADE,
+                        UNIQUE(category_id, subcategory_name)
+                    )
+                `);
+
+                // Church custom book credit transactions
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_custom_book_credit_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        custom_book_id INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        category_id INTEGER,
+                        subcategory_id INTEGER,
+                        name TEXT NOT NULL,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (custom_book_id) REFERENCES church_custom_books (id) ON DELETE CASCADE,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (category_id) REFERENCES church_custom_book_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (subcategory_id) REFERENCES church_custom_book_subcategories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(custom_book_id, voucher_number)
+                    )
+                `);
+
+                // Church custom book debit transactions
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_custom_book_debit_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        custom_book_id INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        category_id INTEGER,
+                        subcategory_id INTEGER,
+                        name TEXT NOT NULL,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (custom_book_id) REFERENCES church_custom_books (id) ON DELETE CASCADE,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (category_id) REFERENCES church_custom_book_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (subcategory_id) REFERENCES church_custom_book_subcategories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(custom_book_id, voucher_number)
+                    )
+                `);
+
+                // Church custom book contra transactions
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS church_custom_book_contra_transactions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        transaction_id TEXT UNIQUE NOT NULL,
+                        voucher_number INTEGER NOT NULL,
+                        custom_book_id INTEGER NOT NULL,
+                        church_id INTEGER NOT NULL,
+                        category_id INTEGER,
+                        subcategory_id INTEGER,
+                        from_name TEXT NOT NULL,
+                        to_name TEXT NOT NULL,
+                        date DATE NOT NULL,
+                        amount REAL NOT NULL,
+                        notes TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (custom_book_id) REFERENCES church_custom_books (id) ON DELETE CASCADE,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (category_id) REFERENCES church_custom_book_categories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (subcategory_id) REFERENCES church_custom_book_subcategories (id) ON DELETE SET NULL,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(custom_book_id, voucher_number)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);
@@ -548,6 +953,12 @@ class DatabaseManager {
 
             // Migration 6: Add notes column to bill_voucher_transactions table
             await this.migrateBillVoucherNotes();
+
+            // Migration 7: Add account level columns to church_contra_transactions table
+            await this.migrateChurchContraAccountLevels();
+
+            // Migration 8: Add category_id and subcategory_id columns to custom book transaction tables
+            await this.migrateCustomBookCategories();
         } catch (error) {
             console.error('Migration error:', error);
         }
@@ -954,6 +1365,158 @@ class DatabaseManager {
                     resolve();
                 }
             });
+        });
+    }
+
+    async migrateChurchContraAccountLevels() {
+        return new Promise((resolve) => {
+            // Check if the columns already exist
+            this.db.all("PRAGMA table_info(church_contra_transactions)", (err, columns) => {
+                if (err) {
+                    console.error('Error checking church_contra_transactions table info:', err);
+                    resolve();
+                    return;
+                }
+
+                const hasFromAccountLevel = columns.some(col => col.name === 'from_account_level');
+                const hasToAccountLevel = columns.some(col => col.name === 'to_account_level');
+                const hasPastorateId = columns.some(col => col.name === 'pastorate_id');
+
+                if (!hasFromAccountLevel || !hasToAccountLevel || !hasPastorateId) {
+                    console.log('Adding account level columns to church_contra_transactions table...');
+
+                    // SQLite doesn't support adding multiple columns or modifying constraints in one statement
+                    // We need to recreate the table
+                    this.db.serialize(() => {
+                        // Create a temporary table with the new structure
+                        this.db.run(`
+                            CREATE TABLE church_contra_transactions_new (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                transaction_id TEXT UNIQUE NOT NULL,
+                                voucher_number INTEGER NOT NULL,
+                                church_id INTEGER NOT NULL,
+                                pastorate_id INTEGER,
+                                book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank')),
+                                from_account_level TEXT DEFAULT 'church' CHECK (from_account_level IN ('church', 'pastorate')),
+                                from_account_type TEXT NOT NULL CHECK (from_account_type IN ('cash', 'bank', 'diocese')),
+                                from_category_id INTEGER,
+                                to_account_level TEXT DEFAULT 'church' CHECK (to_account_level IN ('church', 'pastorate')),
+                                to_account_type TEXT NOT NULL CHECK (to_account_type IN ('cash', 'bank', 'diocese')),
+                                to_category_id INTEGER,
+                                date DATE NOT NULL,
+                                amount REAL NOT NULL,
+                                notes TEXT,
+                                created_by INTEGER NOT NULL,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                                FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                                FOREIGN KEY (created_by) REFERENCES users (id),
+                                UNIQUE(church_id, book_type, voucher_number)
+                            )
+                        `);
+
+                        // Copy data from old table, setting default values for new columns
+                        this.db.run(`
+                            INSERT INTO church_contra_transactions_new
+                            (id, transaction_id, voucher_number, church_id, pastorate_id, book_type,
+                             from_account_level, from_account_type, from_category_id,
+                             to_account_level, to_account_type, to_category_id,
+                             date, amount, notes, created_by, created_at, updated_at)
+                            SELECT
+                                id, transaction_id, voucher_number, church_id,
+                                (SELECT pastorate_id FROM churches WHERE id = church_id) as pastorate_id,
+                                book_type,
+                                'church' as from_account_level, from_account_type, from_category_id,
+                                'church' as to_account_level, to_account_type, to_category_id,
+                                date, amount, notes, created_by, created_at, updated_at
+                            FROM church_contra_transactions
+                        `);
+
+                        // Drop old table
+                        this.db.run(`DROP TABLE church_contra_transactions`);
+
+                        // Rename new table
+                        this.db.run(`ALTER TABLE church_contra_transactions_new RENAME TO church_contra_transactions`, (renameErr) => {
+                            if (renameErr) {
+                                console.error('Error renaming table:', renameErr);
+                            } else {
+                                console.log('church_contra_transactions table migrated successfully');
+                            }
+                            resolve();
+                        });
+                    });
+                } else {
+                    console.log('Account level columns already exist in church_contra_transactions table');
+                    resolve();
+                }
+            });
+        });
+    }
+
+    async migrateCustomBookCategories() {
+        return new Promise(async (resolve) => {
+            try {
+                // Tables to migrate
+                const tables = [
+                    'custom_book_credit_transactions',
+                    'custom_book_debit_transactions',
+                    'custom_book_contra_transactions',
+                    'church_custom_book_credit_transactions',
+                    'church_custom_book_debit_transactions',
+                    'church_custom_book_contra_transactions'
+                ];
+
+                for (const tableName of tables) {
+                    await new Promise((resolveTable) => {
+                        this.db.all(`PRAGMA table_info(${tableName})`, (err, columns) => {
+                            if (err) {
+                                console.error(`Error checking ${tableName} table info:`, err);
+                                resolveTable();
+                                return;
+                            }
+
+                            const hasCategoryId = columns.some(col => col.name === 'category_id');
+                            const hasSubcategoryId = columns.some(col => col.name === 'subcategory_id');
+
+                            if (!hasCategoryId || !hasSubcategoryId) {
+                                console.log(`Adding category columns to ${tableName} table...`);
+
+                                this.db.serialize(() => {
+                                    if (!hasCategoryId) {
+                                        this.db.run(`ALTER TABLE ${tableName} ADD COLUMN category_id INTEGER`, (alterErr) => {
+                                            if (alterErr) {
+                                                console.error(`Error adding category_id to ${tableName}:`, alterErr);
+                                            }
+                                        });
+                                    }
+
+                                    if (!hasSubcategoryId) {
+                                        this.db.run(`ALTER TABLE ${tableName} ADD COLUMN subcategory_id INTEGER`, (alterErr) => {
+                                            if (alterErr) {
+                                                console.error(`Error adding subcategory_id to ${tableName}:`, alterErr);
+                                            } else {
+                                                console.log(`Category columns added to ${tableName} successfully`);
+                                            }
+                                            resolveTable();
+                                        });
+                                    } else {
+                                        resolveTable();
+                                    }
+                                });
+                            } else {
+                                console.log(`Category columns already exist in ${tableName} table`);
+                                resolveTable();
+                            }
+                        });
+                    });
+                }
+
+                resolve();
+            } catch (error) {
+                console.error('Error in migrateCustomBookCategories:', error);
+                resolve();
+            }
         });
     }
 

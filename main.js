@@ -29,6 +29,20 @@ const OtherCreditsService = require('./backend/otherCreditsService.js');
 const BillVoucherService = require('./backend/billVoucherService.js');
 const AcquittanceService = require('./backend/acquittanceService.js');
 const ContraService = require('./backend/contraService.js');
+const ChurchLedgerService = require('./backend/churchLedgerService.js');
+const ChurchReceiptsService = require('./backend/churchReceiptsService.js');
+const ChurchOtherCreditsService = require('./backend/churchOtherCreditsService.js');
+const ChurchBillVoucherService = require('./backend/churchBillVoucherService.js');
+const ChurchAcquittanceService = require('./backend/churchAcquittanceService.js');
+const ChurchContraService = require('./backend/churchContraService.js');
+const AccountBalanceService = require('./backend/accountBalanceService.js');
+const ChurchAccountBalanceService = require('./backend/churchAccountBalanceService.js');
+const CustomBookService = require('./backend/customBookService.js');
+const ChurchCustomBookService = require('./backend/churchCustomBookService.js');
+const CustomBookTransactionService = require('./backend/customBookTransactionService.js');
+const ChurchCustomBookTransactionService = require('./backend/churchCustomBookTransactionService.js');
+const CustomBookCategoryService = require('./backend/customBookCategoryService.js');
+const ChurchCustomBookCategoryService = require('./backend/churchCustomBookCategoryService.js');
 
 let mainWindow;
 let db;
@@ -59,6 +73,20 @@ let otherCreditsService;
 let billVoucherService;
 let acquittanceService;
 let contraService;
+let churchLedgerService;
+let churchReceiptsService;
+let churchOtherCreditsService;
+let churchBillVoucherService;
+let churchAcquittanceService;
+let churchContraService;
+let accountBalanceService;
+let churchAccountBalanceService;
+let customBookService;
+let churchCustomBookService;
+let customBookTransactionService;
+let churchCustomBookTransactionService;
+let customBookCategoryService;
+let churchCustomBookCategoryService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -788,6 +816,526 @@ ipcMain.handle('contra-get-statistics', async (event, { pastorateId, bookType })
   return await contraService.getStatistics(pastorateId, bookType);
 });
 
+// ========== CHURCH ACCOUNTS IPC HANDLERS ==========
+
+// Church Ledger IPC handlers
+ipcMain.handle('church-ledger-create-category', async (event, categoryData) => {
+  return await churchLedgerService.createCategory(categoryData, categoryData.userId);
+});
+
+ipcMain.handle('church-ledger-get-categories', async (event, { churchId, bookType }) => {
+  return await churchLedgerService.getCategories(churchId, bookType);
+});
+
+ipcMain.handle('church-ledger-update-category', async (event, categoryData) => {
+  return await churchLedgerService.updateCategory(categoryData.categoryId, categoryData, categoryData.userId);
+});
+
+ipcMain.handle('church-ledger-delete-category', async (event, { categoryId, userId }) => {
+  return await churchLedgerService.deleteCategory(categoryId, userId);
+});
+
+ipcMain.handle('church-ledger-create-sub-category', async (event, subCategoryData) => {
+  return await churchLedgerService.createSubCategory(subCategoryData, subCategoryData.userId);
+});
+
+ipcMain.handle('church-ledger-get-sub-categories', async (event, { parentCategoryId }) => {
+  return await churchLedgerService.getSubCategories(parentCategoryId);
+});
+
+ipcMain.handle('church-ledger-update-sub-category', async (event, subCategoryData) => {
+  return await churchLedgerService.updateSubCategory(subCategoryData.subCategoryId, subCategoryData, subCategoryData.userId);
+});
+
+ipcMain.handle('church-ledger-delete-sub-category', async (event, { subCategoryId, userId }) => {
+  return await churchLedgerService.deleteSubCategory(subCategoryId, userId);
+});
+
+// Church Receipts IPC handlers
+ipcMain.handle('church-receipts-create-transaction', async (event, transactionData) => {
+  return await churchReceiptsService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('church-receipts-get-transactions', async (event, { churchId, userId, bookType, page, limit, filters }) => {
+  return await churchReceiptsService.getTransactions(churchId, userId, page, limit, filters);
+});
+
+ipcMain.handle('church-receipts-get-transaction', async (event, { transactionId }) => {
+  return await churchReceiptsService.getTransaction(transactionId);
+});
+
+ipcMain.handle('church-receipts-update-transaction', async (event, transactionData) => {
+  return await churchReceiptsService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('church-receipts-delete-transaction', async (event, { transactionId, userId }) => {
+  return await churchReceiptsService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('church-receipts-get-next-receipt-number', async (event, { churchId, bookType }) => {
+  return await churchReceiptsService.getNextReceiptNumber(churchId, bookType);
+});
+
+ipcMain.handle('church-receipts-generate-transaction-id', async (event) => {
+  return await churchReceiptsService.generateTransactionId();
+});
+
+ipcMain.handle('church-receipts-search-families', async (event, { churchId, searchTerm }) => {
+  return await churchReceiptsService.searchFamilies(churchId, searchTerm);
+});
+
+ipcMain.handle('church-receipts-get-statistics', async (event, { churchId }) => {
+  return await churchReceiptsService.getStatistics(churchId);
+});
+
+// Church Other Credits IPC handlers
+ipcMain.handle('church-other-credits-create-transaction', async (event, transactionData) => {
+  return await churchOtherCreditsService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('church-other-credits-get-transactions', async (event, { churchId, userId, bookType, page, limit, filters }) => {
+  return await churchOtherCreditsService.getTransactions(churchId, userId, bookType, page, limit, filters);
+});
+
+ipcMain.handle('church-other-credits-get-transaction', async (event, { transactionId }) => {
+  return await churchOtherCreditsService.getTransaction(transactionId);
+});
+
+ipcMain.handle('church-other-credits-update-transaction', async (event, transactionData) => {
+  return await churchOtherCreditsService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('church-other-credits-delete-transaction', async (event, { transactionId, userId }) => {
+  return await churchOtherCreditsService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('church-other-credits-get-next-credit-number', async (event, { churchId, bookType }) => {
+  return await churchOtherCreditsService.getNextCreditNumber(churchId, bookType);
+});
+
+ipcMain.handle('church-other-credits-generate-transaction-id', async (event) => {
+  return await churchOtherCreditsService.generateTransactionId();
+});
+
+ipcMain.handle('church-other-credits-search-families', async (event, { churchId, searchTerm }) => {
+  return await churchOtherCreditsService.searchFamilies(churchId, searchTerm);
+});
+
+ipcMain.handle('church-other-credits-get-statistics', async (event, { churchId, bookType }) => {
+  return await churchOtherCreditsService.getStatistics(churchId, bookType);
+});
+
+// Church Bill Voucher IPC handlers
+ipcMain.handle('church-bill-vouchers-create-transaction', async (event, transactionData) => {
+  return await churchBillVoucherService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('church-bill-vouchers-get-transactions', async (event, { churchId, userId, bookType, page, limit, filters }) => {
+  return await churchBillVoucherService.getTransactions(churchId, userId, bookType, page, limit, filters);
+});
+
+ipcMain.handle('church-bill-vouchers-get-transaction', async (event, { transactionId }) => {
+  return await churchBillVoucherService.getTransaction(transactionId);
+});
+
+ipcMain.handle('church-bill-vouchers-update-transaction', async (event, transactionData) => {
+  return await churchBillVoucherService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('church-bill-vouchers-delete-transaction', async (event, { transactionId, userId }) => {
+  return await churchBillVoucherService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('church-bill-vouchers-get-next-voucher-number', async (event, { churchId, bookType }) => {
+  return await churchBillVoucherService.getNextVoucherNumber(churchId, bookType);
+});
+
+ipcMain.handle('church-bill-vouchers-generate-transaction-id', async (event) => {
+  return await churchBillVoucherService.generateTransactionId();
+});
+
+ipcMain.handle('church-bill-vouchers-get-statistics', async (event, { churchId, bookType }) => {
+  return await churchBillVoucherService.getStatistics(churchId, bookType);
+});
+
+// Church Acquittance IPC handlers
+ipcMain.handle('church-acquittance-create-transaction', async (event, transactionData) => {
+  return await churchAcquittanceService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('church-acquittance-get-transactions', async (event, { churchId, userId, bookType, page, limit, filters }) => {
+  return await churchAcquittanceService.getTransactions(churchId, userId, bookType, page, limit, filters);
+});
+
+ipcMain.handle('church-acquittance-get-transaction', async (event, { transactionId }) => {
+  return await churchAcquittanceService.getTransaction(transactionId);
+});
+
+ipcMain.handle('church-acquittance-update-transaction', async (event, transactionData) => {
+  return await churchAcquittanceService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('church-acquittance-delete-transaction', async (event, { transactionId, userId }) => {
+  return await churchAcquittanceService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('church-acquittance-get-next-voucher-number', async (event, { churchId, bookType }) => {
+  return await churchAcquittanceService.getNextVoucherNumber(churchId, bookType);
+});
+
+ipcMain.handle('church-acquittance-generate-transaction-id', async (event) => {
+  return await churchAcquittanceService.generateTransactionId();
+});
+
+ipcMain.handle('church-acquittance-get-statistics', async (event, { churchId, bookType }) => {
+  return await churchAcquittanceService.getStatistics(churchId, bookType);
+});
+
+// Church Contra IPC handlers
+ipcMain.handle('church-contra-create-transaction', async (event, transactionData) => {
+  return await churchContraService.createTransaction(transactionData, transactionData.userId);
+});
+
+ipcMain.handle('church-contra-get-transactions', async (event, { churchId, userId, bookType, page, limit, filters }) => {
+  return await churchContraService.getTransactions(churchId, userId, bookType, page, limit, filters);
+});
+
+ipcMain.handle('church-contra-get-transaction', async (event, { transactionId }) => {
+  return await churchContraService.getTransaction(transactionId);
+});
+
+ipcMain.handle('church-contra-update-transaction', async (event, transactionData) => {
+  return await churchContraService.updateTransaction(transactionData.id, transactionData, transactionData.userId);
+});
+
+ipcMain.handle('church-contra-delete-transaction', async (event, { transactionId, userId }) => {
+  return await churchContraService.deleteTransaction(transactionId, userId);
+});
+
+ipcMain.handle('church-contra-get-next-voucher-number', async (event, { churchId, bookType }) => {
+  return await churchContraService.getNextVoucherNumber(churchId, bookType);
+});
+
+ipcMain.handle('church-contra-generate-transaction-id', async (event) => {
+  return await churchContraService.generateTransactionId();
+});
+
+ipcMain.handle('church-contra-get-statistics', async (event, { churchId, bookType }) => {
+  return await churchContraService.getStatistics(churchId, bookType);
+});
+
+// Account Balance IPC handlers
+ipcMain.handle('account-balance-get-all', async (event, { pastorateId }) => {
+  return await accountBalanceService.getAllAccountBalances(pastorateId);
+});
+
+ipcMain.handle('account-balance-get-by-book-type', async (event, { pastorateId, bookType }) => {
+  return await accountBalanceService.getAccountBalance(pastorateId, bookType);
+});
+
+// Church Account Balance IPC handlers
+ipcMain.handle('church-account-balance-get-all', async (event, { churchId }) => {
+  return await churchAccountBalanceService.getAllAccountBalances(churchId);
+});
+
+ipcMain.handle('church-account-balance-get-by-book-type', async (event, { churchId, bookType }) => {
+  return await churchAccountBalanceService.getAccountBalance(churchId, bookType);
+});
+
+// Custom Book IPC handlers (Pastorate)
+ipcMain.handle('custom-book-create', async (event, { bookData, userId }) => {
+  return await customBookService.createBook(bookData, userId);
+});
+
+ipcMain.handle('custom-book-get-by-pastorate', async (event, { pastorateId, userId }) => {
+  return await customBookService.getBooksByPastorate(pastorateId, userId);
+});
+
+ipcMain.handle('custom-book-get-by-id', async (event, { bookId, userId }) => {
+  return await customBookService.getBookById(bookId, userId);
+});
+
+ipcMain.handle('custom-book-update', async (event, { bookId, bookData, userId }) => {
+  return await customBookService.updateBook(bookId, bookData, userId);
+});
+
+ipcMain.handle('custom-book-delete', async (event, { bookId, userId }) => {
+  return await customBookService.deleteBook(bookId, userId);
+});
+
+ipcMain.handle('custom-book-get-balance', async (event, { bookId }) => {
+  return await customBookService.getBookBalance(bookId);
+});
+
+// Custom Book Transaction IPC handlers (Pastorate)
+ipcMain.handle('custom-book-transaction-generate-id', async (event) => {
+  return await customBookTransactionService.generateTransactionId();
+});
+
+ipcMain.handle('custom-book-transaction-get-next-voucher', async (event, { customBookId, transactionType }) => {
+  return await customBookTransactionService.getNextVoucherNumber(customBookId, transactionType);
+});
+
+ipcMain.handle('custom-book-transaction-create-credit', async (event, { transactionData, userId }) => {
+  return await customBookTransactionService.createCreditTransaction(transactionData, userId);
+});
+
+ipcMain.handle('custom-book-transaction-create-debit', async (event, { transactionData, userId }) => {
+  return await customBookTransactionService.createDebitTransaction(transactionData, userId);
+});
+
+ipcMain.handle('custom-book-transaction-create-contra', async (event, { transactionData, userId }) => {
+  return await customBookTransactionService.createContraTransaction(transactionData, userId);
+});
+
+ipcMain.handle('custom-book-transaction-get', async (event, { customBookId, transactionType, page, limit, filters }) => {
+  return await customBookTransactionService.getTransactions(customBookId, transactionType, page, limit, filters);
+});
+
+ipcMain.handle('custom-book-transaction-search-families', async (event, { pastorateId, searchTerm }) => {
+  return await customBookTransactionService.searchFamilies(pastorateId, searchTerm);
+});
+
+ipcMain.handle('custom-book-transaction-get-contra', async (event, { transactionId }) => {
+  return await customBookTransactionService.getContraTransaction(transactionId);
+});
+
+ipcMain.handle('custom-book-transaction-update-contra', async (event, { transactionId, transactionData, userId }) => {
+  return await customBookTransactionService.updateContraTransaction(transactionId, transactionData, userId);
+});
+
+ipcMain.handle('custom-book-transaction-delete-contra', async (event, { transactionId, userId }) => {
+  return await customBookTransactionService.deleteContraTransaction(transactionId, userId);
+});
+
+ipcMain.handle('custom-book-transaction-get-credit', async (event, { transactionId }) => {
+  return await customBookTransactionService.getCreditTransaction(transactionId);
+});
+
+ipcMain.handle('custom-book-transaction-update-credit', async (event, { transactionId, transactionData, userId }) => {
+  return await customBookTransactionService.updateCreditTransaction(transactionId, transactionData, userId);
+});
+
+ipcMain.handle('custom-book-transaction-delete-credit', async (event, { transactionId, userId }) => {
+  return await customBookTransactionService.deleteCreditTransaction(transactionId, userId);
+});
+
+ipcMain.handle('custom-book-transaction-get-debit', async (event, { transactionId }) => {
+  return await customBookTransactionService.getDebitTransaction(transactionId);
+});
+
+ipcMain.handle('custom-book-transaction-update-debit', async (event, { transactionId, transactionData, userId }) => {
+  return await customBookTransactionService.updateDebitTransaction(transactionId, transactionData, userId);
+});
+
+ipcMain.handle('custom-book-transaction-delete-debit', async (event, { transactionId, userId }) => {
+  return await customBookTransactionService.deleteDebitTransaction(transactionId, userId);
+});
+
+// Custom Book Category IPC handlers (Pastorate)
+ipcMain.handle('custom-book-category-create', async (event, { customBookId, pastorateId, categoryData }) => {
+  try {
+    const result = await customBookCategoryService.createCategory(customBookId, pastorateId, categoryData);
+    return { success: true, ...result };
+  } catch (error) {
+    console.error('Error creating custom book category:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('custom-book-category-get-all', async (event, { customBookId, pastorateId }) => {
+  return await customBookCategoryService.getCategories(customBookId, pastorateId);
+});
+
+ipcMain.handle('custom-book-category-get-by-type', async (event, { customBookId, pastorateId, categoryType }) => {
+  return await customBookCategoryService.getCategoriesByType(customBookId, pastorateId, categoryType);
+});
+
+ipcMain.handle('custom-book-category-get-with-subcategories', async (event, { customBookId, pastorateId }) => {
+  return await customBookCategoryService.getCategoriesWithSubcategories(customBookId, pastorateId);
+});
+
+ipcMain.handle('custom-book-category-get-with-subcategories-by-type', async (event, { customBookId, pastorateId, categoryType }) => {
+  return await customBookCategoryService.getCategoriesWithSubcategoriesByType(customBookId, pastorateId, categoryType);
+});
+
+ipcMain.handle('custom-book-category-update', async (event, { categoryId, categoryData }) => {
+  return await customBookCategoryService.updateCategory(categoryId, categoryData);
+});
+
+ipcMain.handle('custom-book-category-delete', async (event, { categoryId }) => {
+  return await customBookCategoryService.deleteCategory(categoryId);
+});
+
+ipcMain.handle('custom-book-subcategory-create', async (event, { categoryId, subcategoryData }) => {
+  try {
+    const result = await customBookCategoryService.createSubcategory(categoryId, subcategoryData);
+    return { success: true, ...result };
+  } catch (error) {
+    console.error('Error creating custom book subcategory:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('custom-book-subcategory-get-all', async (event, { categoryId }) => {
+  return await customBookCategoryService.getSubcategories(categoryId);
+});
+
+ipcMain.handle('custom-book-subcategory-update', async (event, { subcategoryId, subcategoryData }) => {
+  return await customBookCategoryService.updateSubcategory(subcategoryId, subcategoryData);
+});
+
+ipcMain.handle('custom-book-subcategory-delete', async (event, { subcategoryId }) => {
+  return await customBookCategoryService.deleteSubcategory(subcategoryId);
+});
+
+// Church Custom Book IPC handlers
+ipcMain.handle('church-custom-book-create', async (event, { bookData, userId }) => {
+  return await churchCustomBookService.createBook(bookData, userId);
+});
+
+ipcMain.handle('church-custom-book-get-by-church', async (event, { churchId, userId }) => {
+  return await churchCustomBookService.getBooksByChurch(churchId, userId);
+});
+
+ipcMain.handle('church-custom-book-get-by-id', async (event, { bookId, userId }) => {
+  return await churchCustomBookService.getBookById(bookId, userId);
+});
+
+ipcMain.handle('church-custom-book-update', async (event, { bookId, bookData, userId }) => {
+  return await churchCustomBookService.updateBook(bookId, bookData, userId);
+});
+
+ipcMain.handle('church-custom-book-delete', async (event, { bookId, userId }) => {
+  return await churchCustomBookService.deleteBook(bookId, userId);
+});
+
+ipcMain.handle('church-custom-book-get-balance', async (event, { bookId }) => {
+  return await churchCustomBookService.getBookBalance(bookId);
+});
+
+// Church Custom Book Transaction IPC handlers
+ipcMain.handle('church-custom-book-transaction-generate-id', async (event) => {
+  return await churchCustomBookTransactionService.generateTransactionId();
+});
+
+ipcMain.handle('church-custom-book-transaction-get-next-voucher', async (event, { customBookId, transactionType }) => {
+  return await churchCustomBookTransactionService.getNextVoucherNumber(customBookId, transactionType);
+});
+
+ipcMain.handle('church-custom-book-transaction-create-credit', async (event, { transactionData, userId }) => {
+  return await churchCustomBookTransactionService.createCreditTransaction(transactionData, userId);
+});
+
+ipcMain.handle('church-custom-book-transaction-create-debit', async (event, { transactionData, userId }) => {
+  return await churchCustomBookTransactionService.createDebitTransaction(transactionData, userId);
+});
+
+ipcMain.handle('church-custom-book-transaction-create-contra', async (event, { transactionData, userId }) => {
+  return await churchCustomBookTransactionService.createContraTransaction(transactionData, userId);
+});
+
+ipcMain.handle('church-custom-book-transaction-get', async (event, { customBookId, transactionType, page, limit, filters }) => {
+  return await churchCustomBookTransactionService.getTransactions(customBookId, transactionType, page, limit, filters);
+});
+
+ipcMain.handle('church-custom-book-transaction-search-families', async (event, { churchId, searchTerm }) => {
+  return await churchCustomBookTransactionService.searchFamilies(churchId, searchTerm);
+});
+
+ipcMain.handle('church-custom-book-transaction-get-contra', async (event, { transactionId }) => {
+  return await churchCustomBookTransactionService.getContraTransaction(transactionId);
+});
+
+ipcMain.handle('church-custom-book-transaction-update-contra', async (event, { transactionId, transactionData, userId }) => {
+  return await churchCustomBookTransactionService.updateContraTransaction(transactionId, transactionData, userId);
+});
+
+ipcMain.handle('church-custom-book-transaction-delete-contra', async (event, { transactionId, userId }) => {
+  return await churchCustomBookTransactionService.deleteContraTransaction(transactionId, userId);
+});
+
+ipcMain.handle('church-custom-book-transaction-get-credit', async (event, { transactionId }) => {
+  return await churchCustomBookTransactionService.getCreditTransaction(transactionId);
+});
+
+ipcMain.handle('church-custom-book-transaction-update-credit', async (event, { transactionId, transactionData, userId }) => {
+  return await churchCustomBookTransactionService.updateCreditTransaction(transactionId, transactionData, userId);
+});
+
+ipcMain.handle('church-custom-book-transaction-delete-credit', async (event, { transactionId, userId }) => {
+  return await churchCustomBookTransactionService.deleteCreditTransaction(transactionId, userId);
+});
+
+ipcMain.handle('church-custom-book-transaction-get-debit', async (event, { transactionId }) => {
+  return await churchCustomBookTransactionService.getDebitTransaction(transactionId);
+});
+
+ipcMain.handle('church-custom-book-transaction-update-debit', async (event, { transactionId, transactionData, userId }) => {
+  return await churchCustomBookTransactionService.updateDebitTransaction(transactionId, transactionData, userId);
+});
+
+ipcMain.handle('church-custom-book-transaction-delete-debit', async (event, { transactionId, userId }) => {
+  return await churchCustomBookTransactionService.deleteDebitTransaction(transactionId, userId);
+});
+
+// Church Custom Book Category IPC handlers
+ipcMain.handle('church-custom-book-category-create', async (event, { customBookId, churchId, categoryData }) => {
+  try {
+    const result = await churchCustomBookCategoryService.createCategory(customBookId, churchId, categoryData);
+    return { success: true, ...result };
+  } catch (error) {
+    console.error('Error creating church custom book category:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('church-custom-book-category-get-all', async (event, { customBookId, churchId }) => {
+  return await churchCustomBookCategoryService.getCategories(customBookId, churchId);
+});
+
+ipcMain.handle('church-custom-book-category-get-by-type', async (event, { customBookId, churchId, categoryType }) => {
+  return await churchCustomBookCategoryService.getCategoriesByType(customBookId, churchId, categoryType);
+});
+
+ipcMain.handle('church-custom-book-category-get-with-subcategories', async (event, { customBookId, churchId }) => {
+  return await churchCustomBookCategoryService.getCategoriesWithSubcategories(customBookId, churchId);
+});
+
+ipcMain.handle('church-custom-book-category-get-with-subcategories-by-type', async (event, { customBookId, churchId, categoryType }) => {
+  return await churchCustomBookCategoryService.getCategoriesWithSubcategoriesByType(customBookId, churchId, categoryType);
+});
+
+ipcMain.handle('church-custom-book-category-update', async (event, { categoryId, categoryData }) => {
+  return await churchCustomBookCategoryService.updateCategory(categoryId, categoryData);
+});
+
+ipcMain.handle('church-custom-book-category-delete', async (event, { categoryId }) => {
+  return await churchCustomBookCategoryService.deleteCategory(categoryId);
+});
+
+ipcMain.handle('church-custom-book-subcategory-create', async (event, { categoryId, subcategoryData }) => {
+  try {
+    const result = await churchCustomBookCategoryService.createSubcategory(categoryId, subcategoryData);
+    return { success: true, ...result };
+  } catch (error) {
+    console.error('Error creating church custom book subcategory:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('church-custom-book-subcategory-get-all', async (event, { categoryId }) => {
+  return await churchCustomBookCategoryService.getSubcategories(categoryId);
+});
+
+ipcMain.handle('church-custom-book-subcategory-update', async (event, { subcategoryId, subcategoryData }) => {
+  return await churchCustomBookCategoryService.updateSubcategory(subcategoryId, subcategoryData);
+});
+
+ipcMain.handle('church-custom-book-subcategory-delete', async (event, { subcategoryId }) => {
+  return await churchCustomBookCategoryService.deleteSubcategory(subcategoryId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -930,6 +1478,20 @@ app.on('ready', async () => {
   billVoucherService = new BillVoucherService(db);
   acquittanceService = new AcquittanceService(db);
   contraService = new ContraService(db);
+  churchLedgerService = new ChurchLedgerService(db);
+  churchReceiptsService = new ChurchReceiptsService(db);
+  churchOtherCreditsService = new ChurchOtherCreditsService(db);
+  churchBillVoucherService = new ChurchBillVoucherService(db);
+  churchAcquittanceService = new ChurchAcquittanceService(db);
+  churchContraService = new ChurchContraService(db);
+  accountBalanceService = new AccountBalanceService(db);
+  churchAccountBalanceService = new ChurchAccountBalanceService(db);
+  customBookService = new CustomBookService(db);
+  churchCustomBookService = new ChurchCustomBookService(db);
+  customBookTransactionService = new CustomBookTransactionService(db);
+  churchCustomBookTransactionService = new ChurchCustomBookTransactionService(db);
+  customBookCategoryService = new CustomBookCategoryService(db);
+  churchCustomBookCategoryService = new ChurchCustomBookCategoryService(db);
 
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

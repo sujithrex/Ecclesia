@@ -37,7 +37,7 @@ const useStyles = makeStyles({
 
   statsContainer: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
+    gridTemplateColumns: 'repeat(3, 1fr)',
     gap: '20px',
     marginBottom: '24px',
   },
@@ -187,17 +187,17 @@ const useStyles = makeStyles({
   },
 });
 
-const PastorateAccountsPage = ({
+const ChurchAccountsPage = ({
   user,
   onLogout,
   onProfileClick,
   currentPastorate,
+  currentChurch,
   userPastorates,
   onPastorateChange,
   onCreatePastorate,
   onEditPastorate,
   onDeletePastorate,
-  currentChurch,
   userChurches,
   onChurchChange,
   onCreateChurch,
@@ -210,7 +210,6 @@ const PastorateAccountsPage = ({
   const [balances, setBalances] = useState({
     cash: { totalIncome: 0, totalExpense: 0, balance: 0 },
     bank: { totalIncome: 0, totalExpense: 0, balance: 0 },
-    diocese: { totalIncome: 0, totalExpense: 0, balance: 0 },
     total: { totalIncome: 0, totalExpense: 0, balance: 0 }
   });
 
@@ -224,18 +223,18 @@ const PastorateAccountsPage = ({
 
   // Load account balances when pastorate changes
   useEffect(() => {
-    if (currentPastorate && user) {
+    if (currentChurch && user) {
       loadAccountBalances();
       loadCustomBooks();
       // Categories will be loaded when opening the sub-category modal
     }
-  }, [currentPastorate?.id, user?.id]);
+  }, [currentChurch?.id, user?.id]);
 
   const loadAccountBalances = async () => {
     setLoading(true);
     try {
-      const result = await window.electron.accountBalance.getAllBalances({
-        pastorateId: currentPastorate.id
+      const result = await window.electron.churchAccountBalance.getAllBalances({
+        churchId: currentChurch.id
       });
 
       if (result.success) {
@@ -253,8 +252,8 @@ const PastorateAccountsPage = ({
   const loadCustomBooks = async () => {
     try {
       const userId = localStorage.getItem('userId');
-      const result = await window.electron.customBook.getByPastorate({
-        pastorateId: currentPastorate.id,
+      const result = await window.electron.churchCustomBook.getByChurch({
+        churchId: currentChurch.id,
         userId: parseInt(userId)
       });
 
@@ -262,7 +261,7 @@ const PastorateAccountsPage = ({
         // Load balances for each custom book
         const booksWithBalances = await Promise.all(
           result.books.map(async (book) => {
-            const balanceResult = await window.electron.customBook.getBalance({
+            const balanceResult = await window.electron.churchCustomBook.getBalance({
               bookId: book.id
             });
             return {
@@ -282,8 +281,8 @@ const PastorateAccountsPage = ({
 
   const loadCategories = async (bookType) => {
     try {
-      const result = await window.electron.ledger.getCategories({
-        pastorateId: currentPastorate.id,
+      const result = await window.electron.churchLedger.getCategories({
+        churchId: currentChurch.id,
         bookType: bookType
       });
       if (result.success) {
@@ -324,18 +323,13 @@ const PastorateAccountsPage = ({
   const balanceCards = [
     {
       icon: <MoneyRegular />,
-      label: 'Pastorate Cash',
+      label: 'Church Cash',
       data: balances.cash,
     },
     {
       icon: <BuildingBankRegular />,
-      label: 'Pastorate Bank',
+      label: 'Church Bank',
       data: balances.bank,
-    },
-    {
-      icon: <BuildingBankRegular />,
-      label: 'Diocesan',
-      data: balances.diocese,
     },
     {
       icon: <MoneyRegular />,
@@ -353,7 +347,7 @@ const PastorateAccountsPage = ({
     }).format(amount);
   };
 
-  if (!currentPastorate) {
+  if (!currentChurch) {
     return null;
   }
 
@@ -361,13 +355,13 @@ const PastorateAccountsPage = ({
     <div className={styles.container}>
       {/* Breadcrumb Navigation */}
       <Breadcrumb
-        pageTitle={`Accounts - ${currentPastorate.pastorate_name}`}
+        pageTitle={`Accounts - ${currentChurch.church_name}`}
         titleAlign="left"
         breadcrumbs={[
           {
-            label: 'Pastorate Dashboard',
+            label: 'Church Dashboard',
             icon: <HomeRegular />,
-            onClick: () => navigate('/pastorate-dashboard')
+            onClick: () => navigate('/church-dashboard')
           },
           {
             label: 'Accounts',
@@ -419,9 +413,9 @@ const PastorateAccountsPage = ({
           ))}
         </div>
 
-        {/* Pastorate Cash Book Section */}
+        {/* Church Cash Book Section */}
         <div className={styles.bookSection}>
-          <h2 className={styles.bookSectionTitle}>Pastorate Cash Book</h2>
+          <h2 className={styles.bookSectionTitle}>Church Cash Book</h2>
 
           {/* Row 1: Ledger Categories */}
           <div className={styles.buttonRow}>
@@ -445,42 +439,35 @@ const PastorateAccountsPage = ({
           <div className={styles.buttonRow}>
             <button
               className={styles.actionButton}
-              onClick={() => navigate('/receipts?bookType=cash')}
+              onClick={() => navigate('/church-receipts?bookType=cash')}
             >
               <ReceiptMoneyRegular />
               Receipts
             </button>
             <button
               className={styles.actionButton}
-              onClick={() => navigate('/offerings')}
-            >
-              <BuildingRegular />
-              Offering
-            </button>
-            <button
-              className={styles.actionButton}
-              onClick={() => navigate('/other-credits?bookType=cash')}
+              onClick={() => navigate('/church-other-credits?bookType=cash')}
             >
               <MoneyRegular />
               Other Credits
             </button>
             <button
               className={styles.actionButtonOutlined}
-              onClick={() => navigate('/bill-vouchers?bookType=cash')}
+              onClick={() => navigate('/church-bill-vouchers?bookType=cash')}
             >
               <DocumentRegular />
               Bills / Vouchers
             </button>
             <button
               className={styles.actionButtonOutlined}
-              onClick={() => navigate('/acquittance?bookType=cash')}
+              onClick={() => navigate('/church-acquittance?bookType=cash')}
             >
               <DocumentRegular />
               Acquittance
             </button>
             <button
               className={styles.actionButton}
-              onClick={() => navigate('/contra-vouchers?bookType=cash')}
+              onClick={() => navigate('/church-contra-vouchers?bookType=cash')}
             >
               <MoneyRegular />
               Contra
@@ -488,11 +475,9 @@ const PastorateAccountsPage = ({
           </div>
         </div>
 
-        {/* Two Column Layout for Bank and Diocese Books */}
-        <div className={styles.twoColumnLayout}>
-          {/* Pastorate Bank Book Section */}
-          <div className={styles.bookSection}>
-            <h2 className={styles.bookSectionTitle}>Pastorate Bank Book</h2>
+        {/* Church Bank Book Section */}
+        <div className={styles.bookSection}>
+          <h2 className={styles.bookSectionTitle}>Church Bank Book</h2>
 
             {/* Row 1: Ledger Categories */}
             <div className={styles.buttonRow}>
@@ -516,104 +501,41 @@ const PastorateAccountsPage = ({
             <div className={styles.buttonRow}>
               <button
                 className={styles.actionButton}
-                onClick={() => navigate('/receipts?bookType=bank')}
+                onClick={() => navigate('/church-receipts?bookType=bank')}
               >
                 <ReceiptMoneyRegular />
                 Receipts
               </button>
               <button
                 className={styles.actionButton}
-                onClick={() => navigate('/other-credits?bookType=bank')}
+                onClick={() => navigate('/church-other-credits?bookType=bank')}
               >
                 <MoneyRegular />
                 Other Credits
               </button>
               <button
                 className={styles.actionButtonOutlined}
-                onClick={() => navigate('/bill-vouchers?bookType=bank')}
+                onClick={() => navigate('/church-bill-vouchers?bookType=bank')}
               >
                 <DocumentRegular />
                 Bills / Vouchers
               </button>
               <button
                 className={styles.actionButtonOutlined}
-                onClick={() => navigate('/acquittance?bookType=bank')}
+                onClick={() => navigate('/church-acquittance?bookType=bank')}
               >
                 <DocumentRegular />
                 Acquittance
               </button>
               <button
                 className={styles.actionButton}
-                onClick={() => navigate('/contra-vouchers?bookType=bank')}
+                onClick={() => navigate('/church-contra-vouchers?bookType=bank')}
               >
                 <MoneyRegular />
                 Contra
               </button>
             </div>
           </div>
-
-          {/* Diocese Book Section */}
-          <div className={styles.bookSection}>
-            <h2 className={styles.bookSectionTitle}>Diocese Book</h2>
-
-            {/* Row 1: Ledger Categories */}
-            <div className={styles.buttonRow}>
-              <button
-                className={styles.actionButton}
-                onClick={() => handleOpenCategoryModal('diocese')}
-              >
-                <DocumentRegular />
-                Ledger Categories
-              </button>
-              <button
-                className={styles.actionButton}
-                onClick={() => handleOpenSubCategoryModal('diocese')}
-              >
-                <DocumentRegular />
-                Ledger Sub Categories
-              </button>
-            </div>
-
-            {/* Row 2: All Transaction Buttons */}
-            <div className={styles.buttonRow}>
-              <button
-                className={styles.actionButton}
-                onClick={() => navigate('/receipts?bookType=diocese')}
-              >
-                <ReceiptMoneyRegular />
-                Receipts
-              </button>
-              <button
-                className={styles.actionButton}
-                onClick={() => navigate('/other-credits?bookType=diocese')}
-              >
-                <MoneyRegular />
-                Other Credits
-              </button>
-              <button
-                className={styles.actionButtonOutlined}
-                onClick={() => navigate('/bill-vouchers?bookType=diocese')}
-              >
-                <DocumentRegular />
-                Bills / Vouchers
-              </button>
-              <button
-                className={styles.actionButtonOutlined}
-                onClick={() => navigate('/acquittance?bookType=diocese')}
-              >
-                <DocumentRegular />
-                Acquittance
-              </button>
-              <button
-                className={styles.actionButton}
-                onClick={() => navigate('/contra-vouchers?bookType=diocese')}
-              >
-                <MoneyRegular />
-                Contra
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* Custom Books Section */}
         <div className={styles.bookSection}>
@@ -648,7 +570,7 @@ const PastorateAccountsPage = ({
                   key={book.id}
                   className={styles.statCard}
                   style={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/custom-book-detail/${book.id}`)}
+                  onClick={() => navigate(`/church-custom-book-detail/${book.id}`)}
                 >
                   <div className={styles.statIcon}>
                     <BuildingRegular />
@@ -689,20 +611,20 @@ const PastorateAccountsPage = ({
         onLogout={onLogout}
         onProfileClick={onProfileClick}
         currentPastorate={currentPastorate}
+        currentChurch={currentChurch}
         userPastorates={userPastorates}
         onPastorateChange={onPastorateChange}
         onCreatePastorate={onCreatePastorate}
         onEditPastorate={onEditPastorate}
         onDeletePastorate={onDeletePastorate}
-        currentChurch={currentChurch}
         userChurches={userChurches}
         onChurchChange={onChurchChange}
         onCreateChurch={onCreateChurch}
         onEditChurch={onEditChurch}
         onDeleteChurch={onDeleteChurch}
-        currentView="pastorate"
-        disablePastorateChurchChange={false}
-        disableChurchSelector={true}
+        currentView="church"
+        disablePastorateChurchChange={true}
+        disableChurchSelector={false}
       />
 
       {/* Modals */}
@@ -711,7 +633,7 @@ const PastorateAccountsPage = ({
         onClose={() => setShowCategoryModal(false)}
         onSuccess={handleCategoryCreated}
         user={user}
-        currentPastorate={currentPastorate}
+        currentChurch={currentChurch}
         bookType={currentBookType}
       />
 
@@ -720,7 +642,7 @@ const PastorateAccountsPage = ({
         onClose={() => setShowSubCategoryModal(false)}
         onSuccess={handleSubCategoryCreated}
         user={user}
-        currentPastorate={currentPastorate}
+        currentChurch={currentChurch}
         bookType={currentBookType}
         categories={categories}
       />
@@ -729,12 +651,12 @@ const PastorateAccountsPage = ({
         open={showCustomBookModal}
         onClose={() => setShowCustomBookModal(false)}
         onSuccess={loadCustomBooks}
-        pastorateId={currentPastorate?.id}
-        isChurchLevel={false}
+        churchId={currentChurch?.id}
+        isChurchLevel={true}
       />
     </div>
   );
 };
 
-export default PastorateAccountsPage;
+export default ChurchAccountsPage;
 

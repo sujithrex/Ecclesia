@@ -411,8 +411,7 @@ const ChurchDashboard = ({
   };
 
   const handleAccounts = () => {
-    // TODO: Implement accounts functionality
-    console.log('Accounts clicked');
+    navigate('/church-accounts');
   };
 
   return (
