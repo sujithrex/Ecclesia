@@ -38,6 +38,7 @@ const ChurchContraService = require('./backend/churchContraService.js');
 const AccountBalanceService = require('./backend/accountBalanceService.js');
 const ChurchAccountBalanceService = require('./backend/churchAccountBalanceService.js');
 const AccountListService = require('./backend/accountListService.js');
+const IndentService = require('./backend/indentService.js');
 const RoughCashBookService = require('./backend/roughCashBookService.js');
 const RoughCashBookReportPuppeteerService = require('./backend/roughCashBookReportPuppeteerService.js');
 
@@ -79,6 +80,7 @@ let churchContraService;
 let accountBalanceService;
 let churchAccountBalanceService;
 let accountListService;
+let indentService;
 let roughCashBookService;
 let roughCashBookReportPuppeteerService;
 
@@ -1070,6 +1072,83 @@ ipcMain.handle('rough-cash-book-generate-pdf', async (event, { reportData, optio
   return await roughCashBookReportPuppeteerService.generateRoughCashBookPDF(reportData, options);
 });
 
+// Indent IPC handlers
+// Deduction Fields
+ipcMain.handle('indent-get-deduction-fields', async (event, { pastorateId }) => {
+  return await indentService.getDeductionFields(pastorateId);
+});
+
+ipcMain.handle('indent-create-deduction-field', async (event, { pastorateId, fieldData }) => {
+  return await indentService.createDeductionField(pastorateId, fieldData);
+});
+
+ipcMain.handle('indent-update-deduction-field', async (event, { fieldId, fieldData }) => {
+  return await indentService.updateDeductionField(fieldId, fieldData);
+});
+
+ipcMain.handle('indent-delete-deduction-field', async (event, { fieldId }) => {
+  return await indentService.deleteDeductionField(fieldId);
+});
+
+// Employees
+ipcMain.handle('indent-get-employees', async (event, { pastorateId, filters }) => {
+  return await indentService.getEmployees(pastorateId, filters);
+});
+
+ipcMain.handle('indent-get-employee', async (event, { employeeId }) => {
+  return await indentService.getEmployeeById(employeeId);
+});
+
+ipcMain.handle('indent-create-employee', async (event, { pastorateId, userId, employeeData }) => {
+  return await indentService.createEmployee(pastorateId, userId, employeeData);
+});
+
+ipcMain.handle('indent-update-employee', async (event, { employeeId, employeeData }) => {
+  return await indentService.updateEmployee(employeeId, employeeData);
+});
+
+ipcMain.handle('indent-delete-employee', async (event, { employeeId }) => {
+  return await indentService.deleteEmployee(employeeId);
+});
+
+// Allowance Fields
+ipcMain.handle('indent-get-allowance-fields', async (event, { pastorateId }) => {
+  return await indentService.getAllowanceFields(pastorateId);
+});
+
+ipcMain.handle('indent-create-allowance-field', async (event, { pastorateId, fieldData }) => {
+  return await indentService.createAllowanceField(pastorateId, fieldData);
+});
+
+ipcMain.handle('indent-update-allowance-field', async (event, { fieldId, fieldData }) => {
+  return await indentService.updateAllowanceField(fieldId, fieldData);
+});
+
+ipcMain.handle('indent-delete-allowance-field', async (event, { fieldId }) => {
+  return await indentService.deleteAllowanceField(fieldId);
+});
+
+// Allowances
+ipcMain.handle('indent-get-allowances', async (event, { pastorateId, filters }) => {
+  return await indentService.getAllowances(pastorateId, filters);
+});
+
+ipcMain.handle('indent-get-allowance', async (event, { allowanceId }) => {
+  return await indentService.getAllowanceById(allowanceId);
+});
+
+ipcMain.handle('indent-create-allowance', async (event, { pastorateId, userId, allowanceData }) => {
+  return await indentService.createAllowance(pastorateId, userId, allowanceData);
+});
+
+ipcMain.handle('indent-update-allowance', async (event, { allowanceId, allowanceData }) => {
+  return await indentService.updateAllowance(allowanceId, allowanceData);
+});
+
+ipcMain.handle('indent-delete-allowance', async (event, { allowanceId }) => {
+  return await indentService.deleteAllowance(allowanceId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -1221,6 +1300,7 @@ app.on('ready', async () => {
   accountBalanceService = new AccountBalanceService(db);
   churchAccountBalanceService = new ChurchAccountBalanceService(db);
   accountListService = new AccountListService(db);
+  indentService = new IndentService(db);
   roughCashBookService = new RoughCashBookService(db);
   roughCashBookReportPuppeteerService = new RoughCashBookReportPuppeteerService(db);
 

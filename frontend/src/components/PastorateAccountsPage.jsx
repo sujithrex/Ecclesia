@@ -9,6 +9,7 @@ import {
   ReceiptMoneyRegular,
   BuildingRegular,
   DocumentPdfRegular,
+  PersonRegular,
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
@@ -560,6 +561,13 @@ const PastorateAccountsPage = ({
             >
               <MoneyRegular />
               Contra
+            </button>
+            <button
+              className={styles.actionButton}
+              onClick={() => navigate('/indent')}
+            >
+              <PersonRegular />
+              Indent
             </button>
           </div>
         </div>

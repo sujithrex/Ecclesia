@@ -363,5 +363,31 @@ contextBridge.exposeInMainWorld('electron', {
     getAvailableMonths: (data) => ipcRenderer.invoke('rough-cash-book-get-available-months', data),
     getReportData: (data) => ipcRenderer.invoke('rough-cash-book-get-report-data', data),
     generatePDF: (data) => ipcRenderer.invoke('rough-cash-book-generate-pdf', data)
+  },
+
+  // Indent API (Pastorate Level Only)
+  indent: {
+    // Deduction Fields
+    getDeductionFields: (data) => ipcRenderer.invoke('indent-get-deduction-fields', data),
+    createDeductionField: (data) => ipcRenderer.invoke('indent-create-deduction-field', data),
+    updateDeductionField: (data) => ipcRenderer.invoke('indent-update-deduction-field', data),
+    deleteDeductionField: (data) => ipcRenderer.invoke('indent-delete-deduction-field', data),
+    // Employees
+    getEmployees: (data) => ipcRenderer.invoke('indent-get-employees', data),
+    getEmployee: (data) => ipcRenderer.invoke('indent-get-employee', data),
+    createEmployee: (data) => ipcRenderer.invoke('indent-create-employee', data),
+    updateEmployee: (data) => ipcRenderer.invoke('indent-update-employee', data),
+    deleteEmployee: (data) => ipcRenderer.invoke('indent-delete-employee', data),
+    // Allowance Fields
+    getAllowanceFields: (data) => ipcRenderer.invoke('indent-get-allowance-fields', data),
+    createAllowanceField: (data) => ipcRenderer.invoke('indent-create-allowance-field', data),
+    updateAllowanceField: (data) => ipcRenderer.invoke('indent-update-allowance-field', data),
+    deleteAllowanceField: (data) => ipcRenderer.invoke('indent-delete-allowance-field', data),
+    // Allowances
+    getAllowances: (data) => ipcRenderer.invoke('indent-get-allowances', data),
+    getAllowance: (data) => ipcRenderer.invoke('indent-get-allowance', data),
+    createAllowance: (data) => ipcRenderer.invoke('indent-create-allowance', data),
+    updateAllowance: (data) => ipcRenderer.invoke('indent-update-allowance', data),
+    deleteAllowance: (data) => ipcRenderer.invoke('indent-delete-allowance', data)
   }
 });

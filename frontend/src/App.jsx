@@ -54,6 +54,7 @@ import ContraVouchersPage from './components/ContraVouchersPage';
 import AddContraTransactionPage from './components/AddContraTransactionPage';
 import ChurchContraVouchersPage from './components/ChurchContraVouchersPage';
 import AddChurchContraTransactionPage from './components/AddChurchContraTransactionPage';
+import IndentPage from './components/IndentPage';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -1460,6 +1461,34 @@ function App() {
           element={
             user ? (
               <AddContraTransactionPage
+                user={user}
+                currentPastorate={currentPastorate}
+                userPastorates={userPastorates}
+                onLogout={handleLogout}
+                onProfileClick={handleProfileClick}
+                onPastorateChange={handlePastorateChange}
+                onCreatePastorate={handleCreatePastorateFromStatus}
+                onEditPastorate={handleEditPastorate}
+                onDeletePastorate={handleDeletePastorate}
+                currentChurch={currentChurch}
+                userChurches={userChurches}
+                onChurchChange={handleChurchChange}
+                onCreateChurch={handleCreateChurchFromStatus}
+                onEditChurch={handleEditChurch}
+                onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        {/* Indent Route (Pastorate Level Only) */}
+        <Route
+          path="/indent"
+          element={
+            user ? (
+              <IndentPage
                 user={user}
                 currentPastorate={currentPastorate}
                 userPastorates={userPastorates}

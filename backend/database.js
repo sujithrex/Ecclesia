@@ -671,6 +671,79 @@ class DatabaseManager {
                         FOREIGN KEY (created_by) REFERENCES users (id),
                         UNIQUE(church_id, book_type, voucher_number)
                     )
+                `);
+
+                // ========== INDENT BOOK TABLES (PASTORATE LEVEL ONLY) ==========
+
+                // Indent deduction fields table - for custom deduction fields
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_deduction_fields (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        field_name TEXT NOT NULL,
+                        field_order INTEGER NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(pastorate_id, field_name)
+                    )
+                `);
+
+                // Indent employees table - for employee salary and deductions
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_employees (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        position TEXT NOT NULL,
+                        date_of_birth DATE,
+                        salary REAL NOT NULL DEFAULT 0,
+                        da REAL NOT NULL DEFAULT 0,
+                        dpf REAL NOT NULL DEFAULT 0,
+                        cpf REAL NOT NULL DEFAULT 0,
+                        dfbf REAL NOT NULL DEFAULT 0,
+                        cswf REAL NOT NULL DEFAULT 0,
+                        dmaf REAL NOT NULL DEFAULT 0,
+                        sangam REAL NOT NULL DEFAULT 0,
+                        custom_deductions TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id)
+                    )
+                `);
+
+                // Indent allowance fields table - for custom allowance field names
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_allowance_fields (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        field_name TEXT NOT NULL,
+                        field_order INTEGER NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(pastorate_id, field_name)
+                    )
+                `);
+
+                // Indent allowances table - for employee allowances
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_allowances (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        position TEXT NOT NULL,
+                        date_of_birth DATE,
+                        allowance_name TEXT NOT NULL,
+                        allowance_amount REAL NOT NULL DEFAULT 0,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);
