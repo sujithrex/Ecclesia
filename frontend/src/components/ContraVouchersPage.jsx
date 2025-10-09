@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { makeStyles } from '@fluentui/react-components';
 import {
   HomeRegular,
@@ -350,6 +350,8 @@ const ContraVouchersPage = ({
   const styles = useStyles();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const bookType = searchParams.get('bookType') || 'all';
   const [allTransactions, setAllTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -402,7 +404,7 @@ const ContraVouchersPage = ({
   };
 
   const handleAddTransaction = () => {
-    navigate('/contra-vouchers/add');
+    navigate(`/contra-vouchers/add?bookType=${bookType}`);
   };
 
   const handleEditTransaction = (transaction) => {

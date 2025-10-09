@@ -214,6 +214,8 @@ const AddContraTransactionPage = ({
   const styles = useStyles();
   const navigate = useNavigate();
   const { transactionId } = useParams();
+  const [searchParams] = useSearchParams();
+  const bookType = searchParams.get('bookType') || 'all';
   const isEditMode = !!transactionId;
 
   const [formData, setFormData] = useState({
@@ -245,6 +247,29 @@ const AddContraTransactionPage = ({
       }
     }
   }, [currentPastorate?.id, user?.id, transactionId]);
+
+  // Pre-select FROM account based on bookType from URL
+  useEffect(() => {
+    if (!isEditMode && bookType && bookType !== 'all' && allAccounts.length > 0) {
+      const accountTypeMap = {
+        'cash': 'pastorate_cash',
+        'bank': 'pastorate_bank',
+        'diocese': 'pastorate_diocese'
+      };
+
+      const targetAccountType = accountTypeMap[bookType];
+      if (targetAccountType) {
+        const matchingAccount = allAccounts.find(acc => acc.type === targetAccountType);
+        if (matchingAccount && !formData.from_account_type) {
+          setFormData(prev => ({
+            ...prev,
+            from_account_type: matchingAccount.type,
+            from_account_id: matchingAccount.id
+          }));
+        }
+      }
+    }
+  }, [bookType, allAccounts, isEditMode]);
 
   useEffect(() => {
     if (notification) {
@@ -419,16 +444,36 @@ const AddContraTransactionPage = ({
 
         if (closeAfter) {
           setTimeout(() => {
-            navigate('/contra-vouchers?reload=' + Date.now());
+            navigate(`/contra-vouchers?bookType=${bookType}&reload=` + Date.now());
           }, 1500);
         } else {
-          // Reset form for new entry
+          // Reset form for new entry but keep FROM account if bookType is specified
+          const accountTypeMap = {
+            'cash': 'pastorate_cash',
+            'bank': 'pastorate_bank',
+            'diocese': 'pastorate_diocese'
+          };
+
+          let preselectedFromType = '';
+          let preselectedFromId = '';
+
+          if (bookType && bookType !== 'all') {
+            const targetAccountType = accountTypeMap[bookType];
+            if (targetAccountType) {
+              const matchingAccount = allAccounts.find(acc => acc.type === targetAccountType);
+              if (matchingAccount) {
+                preselectedFromType = matchingAccount.type;
+                preselectedFromId = matchingAccount.id;
+              }
+            }
+          }
+
           setFormData({
             id: null,
             transaction_id: '',
             voucher_number: '',
-            from_account_type: '',
-            from_account_id: '',
+            from_account_type: preselectedFromType,
+            from_account_id: preselectedFromId,
             to_account_type: '',
             to_account_id: '',
             date: new Date().toISOString().split('T')[0],
@@ -438,11 +483,11 @@ const AddContraTransactionPage = ({
           setErrors({});
           generateTransactionId();
           getNextVoucherNumber();
-          // Focus on from account type dropdown
+          // Focus on to account dropdown since from is pre-selected
           setTimeout(() => {
-            const fromAccountSelect = document.querySelector('select[name="from_account_type"]');
-            if (fromAccountSelect) {
-              fromAccountSelect.focus();
+            const toAccountSelect = document.querySelector('select[name="to_account_type"]');
+            if (toAccountSelect) {
+              toAccountSelect.focus();
             }
           }, 100);
         }
@@ -464,7 +509,7 @@ const AddContraTransactionPage = ({
   };
 
   const handleCancel = () => {
-    navigate('/contra-vouchers');
+    navigate(`/contra-vouchers?bookType=${bookType}`);
   };
 
   if (!currentPastorate) {
@@ -491,7 +536,7 @@ const AddContraTransactionPage = ({
           {
             label: 'Contra Vouchers',
             icon: <MoneyRegular />,
-            onClick: () => navigate('/contra-vouchers')
+            onClick: () => navigate(`/contra-vouchers?bookType=${bookType}`)
           },
           {
             label: isEditMode ? 'Edit Transaction' : 'Add Transaction',
