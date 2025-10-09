@@ -124,12 +124,20 @@
       padding-left: 3mm;
       background-color: #f8f8f8;
     }
-    
+
+    .section-title {
+      font-size: 13pt;
+      font-weight: bold;
+      text-align: center;
+      background-color: #e0e0e0;
+      padding: 2mm;
+    }
+
     .total-row {
       font-weight: bold;
       background-color: #e8e8e8;
     }
-    
+
     .balance-row {
       font-weight: bold;
       background-color: #d8d8d8;
@@ -469,19 +477,25 @@
   <!-- Main Table -->
   <table>
     <thead>
+      <!-- Receipts and Payments Row -->
+      <tr>
+        <th colspan="6" class="section-title">Receipts</th>
+        <th colspan="6" class="section-title">Payments</th>
+      </tr>
+      <!-- Column Headers Row -->
       <tr>
         <th class="date-col">Date</th>
         <th class="particulars-col">Particulars</th>
         <th class="rno-col">R.No</th>
         <th class="amount-col">Cash</th>
         <th class="amount-col">Bank</th>
-        <th class="amount-col">Dio. Off</th>
+        <th class="amount-col">Dio</th>
         <th class="particulars-col">Particulars</th>
         <th class="date-col">Date</th>
         <th class="rno-col">R.No</th>
         <th class="amount-col">Cash</th>
         <th class="amount-col">Bank</th>
-        <th class="amount-col">Dio. Off</th>
+        <th class="amount-col">Dio</th>
       </tr>
     </thead>
     <tbody>
