@@ -93,9 +93,13 @@ class ContraService {
           transaction_id,
           voucher_number,
           from_account_type,
+          from_account_id,
           from_category_id,
+          from_subcategory_id,
           to_account_type,
+          to_account_id,
           to_category_id,
+          to_subcategory_id,
           date,
           amount,
           notes,
@@ -107,9 +111,13 @@ class ContraService {
           transaction_id,
           voucher_number,
           from_account_type,
+          from_account_id,
           from_category_id,
+          from_subcategory_id,
           to_account_type,
+          to_account_id,
           to_category_id,
+          to_subcategory_id,
           date,
           amount,
           notes,
@@ -118,7 +126,7 @@ class ContraService {
         });
 
         // Validate required fields
-        if (!transaction_id || !voucher_number || !from_account_type || !to_account_type || !date || !amount || !pastorateId || !bookType) {
+        if (!transaction_id || !voucher_number || !from_account_type || !from_account_id || !to_account_type || !to_account_id || !date || !amount || !pastorateId || !bookType) {
           console.log('Validation failed - missing fields');
           resolve({
             success: false,
@@ -128,27 +136,10 @@ class ContraService {
         }
 
         // Validate book_type
-        if (!['cash', 'bank', 'diocese'].includes(bookType)) {
+        if (!['cash', 'bank', 'diocese', 'all'].includes(bookType)) {
           resolve({
             success: false,
-            error: 'Invalid book type. Must be cash, bank, or diocese'
-          });
-          return;
-        }
-
-        // Validate account types
-        if (!['cash', 'bank', 'diocese'].includes(from_account_type)) {
-          resolve({
-            success: false,
-            error: 'Invalid from account type. Must be cash, bank, or diocese'
-          });
-          return;
-        }
-
-        if (!['cash', 'bank', 'diocese'].includes(to_account_type)) {
-          resolve({
-            success: false,
-            error: 'Invalid to account type. Must be cash, bank, or diocese'
+            error: 'Invalid book type. Must be cash, bank, diocese, or all'
           });
           return;
         }
@@ -210,9 +201,9 @@ class ContraService {
                 const dbInstance = this.db.db;
                 dbInstance.run(
                   `INSERT INTO contra_transactions
-                  (transaction_id, voucher_number, pastorate_id, book_type, from_account_type, from_category_id, to_account_type, to_category_id, date, amount, notes, created_by, created_at, updated_at)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-                  [transaction_id, voucher_number, pastorateId, bookType, from_account_type, from_category_id || null, to_account_type, to_category_id || null, date, amount, notes || null, userId],
+                  (transaction_id, voucher_number, pastorate_id, book_type, from_account_type, from_account_id, from_category_id, from_subcategory_id, to_account_type, to_account_id, to_category_id, to_subcategory_id, date, amount, notes, created_by, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+                  [transaction_id, voucher_number, pastorateId, bookType, from_account_type || null, from_account_id || null, from_category_id || null, from_subcategory_id || null, to_account_type || null, to_account_id || null, to_category_id || null, to_subcategory_id || null, date, amount, notes || null, userId],
                   function(err) {
                     if (err) {
                       console.error('Error inserting transaction:', err);
@@ -231,9 +222,13 @@ class ContraService {
                         transaction_id,
                         voucher_number,
                         from_account_type,
+                        from_account_id,
                         from_category_id,
+                        from_subcategory_id,
                         to_account_type,
+                        to_account_id,
                         to_category_id,
+                        to_subcategory_id,
                         date,
                         amount,
                         notes
@@ -388,9 +383,13 @@ class ContraService {
           transaction_id,
           voucher_number,
           from_account_type,
+          from_account_id,
           from_category_id,
+          from_subcategory_id,
           to_account_type,
+          to_account_id,
           to_category_id,
+          to_subcategory_id,
           date,
           amount,
           notes,
@@ -399,7 +398,7 @@ class ContraService {
         } = transactionData;
 
         // Validate required fields
-        if (!transaction_id || !voucher_number || !from_account_type || !to_account_type || !date || !amount || !pastorateId || !bookType) {
+        if (!transaction_id || !voucher_number || !from_account_type || !from_account_id || !to_account_type || !to_account_id || !date || !amount || !pastorateId || !bookType) {
           resolve({
             success: false,
             error: 'All required fields must be filled'
@@ -412,23 +411,6 @@ class ContraService {
           resolve({
             success: false,
             error: 'Invalid book type. Must be cash, bank, or diocese'
-          });
-          return;
-        }
-
-        // Validate account types
-        if (!['cash', 'bank', 'diocese'].includes(from_account_type)) {
-          resolve({
-            success: false,
-            error: 'Invalid from account type. Must be cash, bank, or diocese'
-          });
-          return;
-        }
-
-        if (!['cash', 'bank', 'diocese'].includes(to_account_type)) {
-          resolve({
-            success: false,
-            error: 'Invalid to account type. Must be cash, bank, or diocese'
           });
           return;
         }
@@ -489,9 +471,9 @@ class ContraService {
                 // Update the transaction
                 this.db.db.run(
                   `UPDATE contra_transactions
-                  SET transaction_id = ?, voucher_number = ?, from_account_type = ?, from_category_id = ?, to_account_type = ?, to_category_id = ?, date = ?, amount = ?, notes = ?, updated_at = datetime('now')
+                  SET transaction_id = ?, voucher_number = ?, from_account_type = ?, from_account_id = ?, from_category_id = ?, from_subcategory_id = ?, to_account_type = ?, to_account_id = ?, to_category_id = ?, to_subcategory_id = ?, date = ?, amount = ?, notes = ?, updated_at = datetime('now')
                   WHERE id = ?`,
-                  [transaction_id, voucher_number, from_account_type, from_category_id || null, to_account_type, to_category_id || null, date, amount, notes || null, transactionId],
+                  [transaction_id, voucher_number, from_account_type || null, from_account_id || null, from_category_id || null, from_subcategory_id || null, to_account_type || null, to_account_id || null, to_category_id || null, to_subcategory_id || null, date, amount, notes || null, transactionId],
                   function(err) {
                     if (err) {
                       console.error('Error updating transaction:', err);

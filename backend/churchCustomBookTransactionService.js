@@ -1,11 +1,11 @@
 /**
- * Church Custom Book Transaction Service
- * Handles Credit, Debit, and Contra transactions for church custom books
+ * Custom Book Transaction Service
+ * Handles Credit, Debit, and Contra transactions for custom books
  */
 
 const crypto = require('crypto');
 
-class ChurchCustomBookTransactionService {
+class CustomBookTransactionService {
   constructor(db) {
     this.db = db;
   }
@@ -22,18 +22,18 @@ class ChurchCustomBookTransactionService {
   }
 
   /**
-   * Get next voucher number for a custom book (separate series per transaction type)
+   * Get next voucher number for a custom book
    */
   async getNextVoucherNumber(customBookId, transactionType) {
     return new Promise((resolve) => {
       try {
         let tableName;
         if (transactionType === 'credit') {
-          tableName = 'church_custom_book_credit_transactions';
+          tableName = 'custom_book_credit_transactions';
         } else if (transactionType === 'debit') {
-          tableName = 'church_custom_book_debit_transactions';
+          tableName = 'custom_book_debit_transactions';
         } else if (transactionType === 'contra') {
-          tableName = 'church_custom_book_contra_transactions';
+          tableName = 'custom_book_contra_transactions';
         } else {
           resolve({ success: false, error: 'Invalid transaction type' });
           return;
@@ -73,15 +73,15 @@ class ChurchCustomBookTransactionService {
    * Create a credit transaction
    */
   async createCreditTransaction(transactionData, userId) {
-    const { transactionId, voucherNumber, customBookId, churchId, name, date, amount, notes } = transactionData;
+    const { transactionId, voucherNumber, customBookId, pastorateId, name, date, amount, notes } = transactionData;
 
     return new Promise((resolve) => {
       try {
         this.db.db.run(
-          `INSERT INTO church_custom_book_credit_transactions
-           (transaction_id, voucher_number, custom_book_id, church_id, name, date, amount, notes, created_by, created_at, updated_at)
+          `INSERT INTO custom_book_credit_transactions
+           (transaction_id, voucher_number, custom_book_id, pastorate_id, name, date, amount, notes, created_by, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-          [transactionId, voucherNumber, customBookId, churchId, name, date, amount, notes || null, userId],
+          [transactionId, voucherNumber, customBookId, pastorateId, name, date, amount, notes || null, userId],
           function(err) {
             if (err) {
               console.error('Error creating credit transaction:', err);
@@ -113,15 +113,15 @@ class ChurchCustomBookTransactionService {
    * Create a debit transaction
    */
   async createDebitTransaction(transactionData, userId) {
-    const { transactionId, voucherNumber, customBookId, churchId, name, date, amount, notes } = transactionData;
+    const { transactionId, voucherNumber, customBookId, pastorateId, name, date, amount, notes } = transactionData;
 
     return new Promise((resolve) => {
       try {
         this.db.db.run(
-          `INSERT INTO church_custom_book_debit_transactions
-           (transaction_id, voucher_number, custom_book_id, church_id, name, date, amount, notes, created_by, created_at, updated_at)
+          `INSERT INTO custom_book_debit_transactions
+           (transaction_id, voucher_number, custom_book_id, pastorate_id, name, date, amount, notes, created_by, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-          [transactionId, voucherNumber, customBookId, churchId, name, date, amount, notes || null, userId],
+          [transactionId, voucherNumber, customBookId, pastorateId, name, date, amount, notes || null, userId],
           function(err) {
             if (err) {
               console.error('Error creating debit transaction:', err);
@@ -153,15 +153,15 @@ class ChurchCustomBookTransactionService {
    * Create a contra transaction
    */
   async createContraTransaction(transactionData, userId) {
-    const { transactionId, voucherNumber, customBookId, churchId, fromAccountType, fromAccountId, toAccountType, toAccountId, fromName, toName, date, amount, notes, categoryId, subcategoryId } = transactionData;
+    const { transactionId, voucherNumber, customBookId, pastorateId, fromName, toName, date, amount, notes } = transactionData;
 
     return new Promise((resolve) => {
       try {
         this.db.db.run(
-          `INSERT INTO church_custom_book_contra_transactions
-           (transaction_id, voucher_number, custom_book_id, church_id, category_id, subcategory_id, from_account_type, from_account_id, to_account_type, to_account_id, from_name, to_name, date, amount, notes, created_by, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-          [transactionId, voucherNumber, customBookId, churchId, categoryId || null, subcategoryId || null, fromAccountType || null, fromAccountId || null, toAccountType || null, toAccountId || null, fromName || null, toName || null, date, amount, notes || null, userId],
+          `INSERT INTO custom_book_contra_transactions
+           (transaction_id, voucher_number, custom_book_id, pastorate_id, from_name, to_name, date, amount, notes, created_by, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+          [transactionId, voucherNumber, customBookId, pastorateId, fromName, toName, date, amount, notes || null, userId],
           function(err) {
             if (err) {
               console.error('Error creating contra transaction:', err);
@@ -190,73 +190,6 @@ class ChurchCustomBookTransactionService {
   }
 
   /**
-   * Search families by name for dropdown
-   */
-  async searchFamilies(churchId, searchTerm) {
-    return new Promise((resolve) => {
-      try {
-        // Get families from the specific church only
-        this.db.db.all(
-          `SELECT
-            f.id,
-            f.respect,
-            f.family_name,
-            f.family_number,
-            a.area_name,
-            c.church_name
-          FROM families f
-          JOIN areas a ON f.area_id = a.id
-          JOIN churches c ON a.church_id = c.id
-          WHERE c.id = ?
-            AND (
-              f.family_name LIKE ? OR
-              a.area_name LIKE ? OR
-              f.family_number LIKE ?
-            )
-          ORDER BY f.family_name
-          LIMIT 50`,
-          [churchId, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`],
-          (err, families) => {
-            if (err) {
-              console.error('Error searching families:', err);
-              resolve({
-                success: false,
-                error: err.message
-              });
-              return;
-            }
-
-            // Format families for dropdown
-            const formattedFamilies = (families || []).map(f => {
-              const respect = f.respect.charAt(0).toUpperCase() + f.respect.slice(1);
-              return {
-                id: f.id,
-                displayName: `${respect}. ${f.family_name} - ${f.area_name} - ${f.family_number}`,
-                family_name: f.family_name,
-                respect: f.respect,
-                area_name: f.area_name,
-                family_number: f.family_number,
-                church_name: f.church_name
-              };
-            });
-
-            resolve({
-              success: true,
-              families: formattedFamilies
-            });
-          }
-        );
-      } catch (error) {
-        console.error('Error searching families:', error);
-        resolve({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-  }
-
-  /**
    * Get transactions for a custom book
    */
   async getTransactions(customBookId, transactionType, page = 1, limit = 10, filters = {}) {
@@ -264,29 +197,29 @@ class ChurchCustomBookTransactionService {
       try {
         let tableName;
         if (transactionType === 'credit') {
-          tableName = 'church_custom_book_credit_transactions';
+          tableName = 'custom_book_credit_transactions';
         } else if (transactionType === 'debit') {
-          tableName = 'church_custom_book_debit_transactions';
+          tableName = 'custom_book_debit_transactions';
         } else if (transactionType === 'contra') {
-          tableName = 'church_custom_book_contra_transactions';
+          tableName = 'custom_book_contra_transactions';
         } else {
           resolve({ success: false, error: 'Invalid transaction type' });
           return;
         }
 
         const offset = (page - 1) * limit;
-        let whereClause = 'WHERE t.custom_book_id = ?';
+        let whereClause = 'WHERE custom_book_id = ?';
         const params = [customBookId];
 
         // Add month filter if provided
         if (filters.month) {
-          whereClause += ` AND strftime('%Y-%m', t.date) = ?`;
+          whereClause += ` AND strftime('%Y-%m', date) = ?`;
           params.push(filters.month);
         }
 
         // Get total count
         this.db.db.get(
-          `SELECT COUNT(*) as total FROM ${tableName} t ${whereClause}`,
+          `SELECT COUNT(*) as total FROM ${tableName} ${whereClause}`,
           params,
           (err, countResult) => {
             if (err) {
@@ -298,17 +231,10 @@ class ChurchCustomBookTransactionService {
               return;
             }
 
-            // Get transactions with category names
+            // Get transactions
             this.db.db.all(
-              `SELECT t.*,
-                      c.category_name,
-                      c.category_type,
-                      s.subcategory_name
-               FROM ${tableName} t
-               LEFT JOIN church_custom_book_categories c ON t.category_id = c.id
-               LEFT JOIN church_custom_book_subcategories s ON t.subcategory_id = s.id
-               ${whereClause}
-               ORDER BY t.date DESC, t.created_at DESC
+              `SELECT * FROM ${tableName} ${whereClause}
+               ORDER BY date DESC, created_at DESC
                LIMIT ? OFFSET ?`,
               [...params, limit, offset],
               (err, rows) => {
@@ -346,433 +272,7 @@ class ChurchCustomBookTransactionService {
       }
     });
   }
-
-  /**
-   * Get a single contra transaction by ID
-   */
-  async getContraTransaction(transactionId) {
-    return new Promise((resolve) => {
-      try {
-        this.db.db.get(
-          `SELECT * FROM church_custom_book_contra_transactions WHERE id = ?`,
-          [transactionId],
-          (err, transaction) => {
-            if (err) {
-              console.error('Error getting contra transaction:', err);
-              resolve({
-                success: false,
-                error: err.message
-              });
-              return;
-            }
-
-            if (!transaction) {
-              resolve({
-                success: false,
-                error: 'Transaction not found'
-              });
-              return;
-            }
-
-            resolve({
-              success: true,
-              transaction
-            });
-          }
-        );
-      } catch (error) {
-        console.error('Error getting contra transaction:', error);
-        resolve({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-  }
-
-  /**
-   * Update a contra transaction
-   */
-  async updateContraTransaction(transactionId, transactionData, userId) {
-    return new Promise((resolve) => {
-      try {
-        const { transactionId: txId, voucherNumber, fromAccountType, fromAccountId, toAccountType, toAccountId, fromName, toName, date, amount, notes, categoryId, subcategoryId } = transactionData;
-
-        // Validate required fields
-        if (!txId || !voucherNumber || !date || !amount) {
-          resolve({
-            success: false,
-            error: 'All required fields must be filled'
-          });
-          return;
-        }
-
-        this.db.db.run(
-          `UPDATE church_custom_book_contra_transactions
-           SET transaction_id = ?, voucher_number = ?, category_id = ?, subcategory_id = ?, from_account_type = ?, from_account_id = ?, to_account_type = ?, to_account_id = ?, from_name = ?, to_name = ?, date = ?, amount = ?, notes = ?, updated_at = datetime('now')
-           WHERE id = ?`,
-          [txId, voucherNumber, categoryId || null, subcategoryId || null, fromAccountType || null, fromAccountId || null, toAccountType || null, toAccountId || null, fromName || null, toName || null, date, amount, notes || null, transactionId],
-          function(err) {
-            if (err) {
-              console.error('Error updating contra transaction:', err);
-              resolve({
-                success: false,
-                error: err.message
-              });
-              return;
-            }
-
-            if (this.changes === 0) {
-              resolve({
-                success: false,
-                error: 'Transaction not found'
-              });
-              return;
-            }
-
-            resolve({
-              success: true,
-              message: 'Transaction updated successfully'
-            });
-          }
-        );
-      } catch (error) {
-        console.error('Error updating contra transaction:', error);
-        resolve({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-  }
-
-  /**
-   * Delete a contra transaction
-   */
-  async deleteContraTransaction(transactionId, userId) {
-    return new Promise((resolve) => {
-      try {
-        this.db.db.run(
-          'DELETE FROM church_custom_book_contra_transactions WHERE id = ?',
-          [transactionId],
-          function(err) {
-            if (err) {
-              console.error('Error deleting contra transaction:', err);
-              resolve({
-                success: false,
-                error: err.message
-              });
-              return;
-            }
-
-            if (this.changes === 0) {
-              resolve({
-                success: false,
-                error: 'Transaction not found'
-              });
-              return;
-            }
-
-            resolve({
-              success: true,
-              message: 'Transaction deleted successfully'
-            });
-          }
-        );
-      } catch (error) {
-        console.error('Error deleting contra transaction:', error);
-        resolve({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-  }
-
-  /**
-   * Get a single credit transaction by ID
-   */
-  async getCreditTransaction(transactionId) {
-    return new Promise((resolve) => {
-      try {
-        this.db.db.get(
-          `SELECT * FROM church_custom_book_credit_transactions WHERE id = ?`,
-          [transactionId],
-          (err, transaction) => {
-            if (err) {
-              console.error('Error getting credit transaction:', err);
-              resolve({
-                success: false,
-                error: err.message
-              });
-              return;
-            }
-
-            if (!transaction) {
-              resolve({
-                success: false,
-                error: 'Transaction not found'
-              });
-              return;
-            }
-
-            resolve({
-              success: true,
-              transaction
-            });
-          }
-        );
-      } catch (error) {
-        console.error('Error getting credit transaction:', error);
-        resolve({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-  }
-
-  /**
-   * Update a credit transaction
-   */
-  async updateCreditTransaction(transactionId, transactionData, userId) {
-    return new Promise((resolve) => {
-      try {
-        const { transactionId: txId, voucherNumber, name, date, amount, notes } = transactionData;
-
-        // Validate required fields
-        if (!txId || !voucherNumber || !name || !date || !amount) {
-          resolve({
-            success: false,
-            error: 'All required fields must be filled'
-          });
-          return;
-        }
-
-        this.db.db.run(
-          `UPDATE church_custom_book_credit_transactions
-           SET transaction_id = ?, voucher_number = ?, name = ?, date = ?, amount = ?, notes = ?, updated_at = datetime('now')
-           WHERE id = ?`,
-          [txId, voucherNumber, name, date, amount, notes || null, transactionId],
-          function(err) {
-            if (err) {
-              console.error('Error updating credit transaction:', err);
-              resolve({
-                success: false,
-                error: err.message
-              });
-              return;
-            }
-
-            if (this.changes === 0) {
-              resolve({
-                success: false,
-                error: 'Transaction not found'
-              });
-              return;
-            }
-
-            resolve({
-              success: true,
-              message: 'Transaction updated successfully'
-            });
-          }
-        );
-      } catch (error) {
-        console.error('Error updating credit transaction:', error);
-        resolve({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-  }
-
-  /**
-   * Delete a credit transaction
-   */
-  async deleteCreditTransaction(transactionId, userId) {
-    return new Promise((resolve) => {
-      try {
-        this.db.db.run(
-          'DELETE FROM church_custom_book_credit_transactions WHERE id = ?',
-          [transactionId],
-          function(err) {
-            if (err) {
-              console.error('Error deleting credit transaction:', err);
-              resolve({
-                success: false,
-                error: err.message
-              });
-              return;
-            }
-
-            if (this.changes === 0) {
-              resolve({
-                success: false,
-                error: 'Transaction not found'
-              });
-              return;
-            }
-
-            resolve({
-              success: true,
-              message: 'Transaction deleted successfully'
-            });
-          }
-        );
-      } catch (error) {
-        console.error('Error deleting credit transaction:', error);
-        resolve({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-  }
-
-  /**
-   * Get a single debit transaction by ID
-   */
-  async getDebitTransaction(transactionId) {
-    return new Promise((resolve) => {
-      try {
-        this.db.db.get(
-          `SELECT * FROM church_custom_book_debit_transactions WHERE id = ?`,
-          [transactionId],
-          (err, transaction) => {
-            if (err) {
-              console.error('Error getting debit transaction:', err);
-              resolve({
-                success: false,
-                error: err.message
-              });
-              return;
-            }
-
-            if (!transaction) {
-              resolve({
-                success: false,
-                error: 'Transaction not found'
-              });
-              return;
-            }
-
-            resolve({
-              success: true,
-              transaction
-            });
-          }
-        );
-      } catch (error) {
-        console.error('Error getting debit transaction:', error);
-        resolve({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-  }
-
-  /**
-   * Update a debit transaction
-   */
-  async updateDebitTransaction(transactionId, transactionData, userId) {
-    return new Promise((resolve) => {
-      try {
-        const { transactionId: txId, voucherNumber, name, date, amount, notes } = transactionData;
-
-        // Validate required fields
-        if (!txId || !voucherNumber || !name || !date || !amount) {
-          resolve({
-            success: false,
-            error: 'All required fields must be filled'
-          });
-          return;
-        }
-
-        this.db.db.run(
-          `UPDATE church_custom_book_debit_transactions
-           SET transaction_id = ?, voucher_number = ?, name = ?, date = ?, amount = ?, notes = ?, updated_at = datetime('now')
-           WHERE id = ?`,
-          [txId, voucherNumber, name, date, amount, notes || null, transactionId],
-          function(err) {
-            if (err) {
-              console.error('Error updating debit transaction:', err);
-              resolve({
-                success: false,
-                error: err.message
-              });
-              return;
-            }
-
-            if (this.changes === 0) {
-              resolve({
-                success: false,
-                error: 'Transaction not found'
-              });
-              return;
-            }
-
-            resolve({
-              success: true,
-              message: 'Transaction updated successfully'
-            });
-          }
-        );
-      } catch (error) {
-        console.error('Error updating debit transaction:', error);
-        resolve({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-  }
-
-  /**
-   * Delete a debit transaction
-   */
-  async deleteDebitTransaction(transactionId, userId) {
-    return new Promise((resolve) => {
-      try {
-        this.db.db.run(
-          'DELETE FROM church_custom_book_debit_transactions WHERE id = ?',
-          [transactionId],
-          function(err) {
-            if (err) {
-              console.error('Error deleting debit transaction:', err);
-              resolve({
-                success: false,
-                error: err.message
-              });
-              return;
-            }
-
-            if (this.changes === 0) {
-              resolve({
-                success: false,
-                error: 'Transaction not found'
-              });
-              return;
-            }
-
-            resolve({
-              success: true,
-              message: 'Transaction deleted successfully'
-            });
-          }
-        );
-      } catch (error) {
-        console.error('Error deleting debit transaction:', error);
-        resolve({
-          success: false,
-          error: error.message
-        });
-      }
-    });
-  }
 }
 
-module.exports = ChurchCustomBookTransactionService;
+module.exports = CustomBookTransactionService;
 

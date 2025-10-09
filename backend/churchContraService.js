@@ -92,12 +92,14 @@ class ChurchContraService {
         const {
           transaction_id,
           voucher_number,
-          from_account_level,
           from_account_type,
+          from_account_id,
           from_category_id,
-          to_account_level,
+          from_subcategory_id,
           to_account_type,
+          to_account_id,
           to_category_id,
+          to_subcategory_id,
           date,
           amount,
           notes,
@@ -109,12 +111,14 @@ class ChurchContraService {
         console.log('Extracted fields:', {
           transaction_id,
           voucher_number,
-          from_account_level,
           from_account_type,
+          from_account_id,
           from_category_id,
-          to_account_level,
+          from_subcategory_id,
           to_account_type,
+          to_account_id,
           to_category_id,
+          to_subcategory_id,
           date,
           amount,
           notes,
@@ -124,7 +128,7 @@ class ChurchContraService {
         });
 
         // Validate required fields
-        if (!transaction_id || !voucher_number || !from_account_level || !from_account_type || !to_account_level || !to_account_type || !date || !amount || !churchId || !pastorateId || !bookType) {
+        if (!transaction_id || !voucher_number || !from_account_type || !from_account_id || !to_account_type || !to_account_id || !date || !amount || !churchId || !pastorateId || !bookType) {
           console.log('Validation failed - missing fields');
           resolve({
             success: false,
@@ -233,9 +237,9 @@ class ChurchContraService {
                 const dbInstance = this.db.db;
                 dbInstance.run(
                   `INSERT INTO church_contra_transactions
-                  (transaction_id, voucher_number, church_id, pastorate_id, book_type, from_account_level, from_account_type, from_category_id, to_account_level, to_account_type, to_category_id, date, amount, notes, created_by, created_at, updated_at)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-                  [transaction_id, voucher_number, churchId, pastorateId, bookType, from_account_level, from_account_type, from_category_id || null, to_account_level, to_account_type, to_category_id || null, date, amount, notes || null, userId],
+                  (transaction_id, voucher_number, church_id, pastorate_id, book_type, from_account_type, from_account_id, from_category_id, from_subcategory_id, to_account_type, to_account_id, to_category_id, to_subcategory_id, date, amount, notes, created_by, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+                  [transaction_id, voucher_number, churchId, pastorateId, bookType, from_account_type || null, from_account_id || null, from_category_id || null, from_subcategory_id || null, to_account_type || null, to_account_id || null, to_category_id || null, to_subcategory_id || null, date, amount, notes || null, userId],
                   function(err) {
                     if (err) {
                       console.error('Error inserting transaction:', err);
@@ -411,9 +415,13 @@ class ChurchContraService {
           transaction_id,
           voucher_number,
           from_account_type,
+          from_account_id,
           from_category_id,
+          from_subcategory_id,
           to_account_type,
+          to_account_id,
           to_category_id,
+          to_subcategory_id,
           date,
           amount,
           notes,
@@ -422,7 +430,7 @@ class ChurchContraService {
         } = transactionData;
 
         // Validate required fields
-        if (!transaction_id || !voucher_number || !from_account_type || !to_account_type || !date || !amount || !churchId || !bookType) {
+        if (!transaction_id || !voucher_number || !from_account_type || !from_account_id || !to_account_type || !to_account_id || !date || !amount || !churchId || !bookType) {
           resolve({
             success: false,
             error: 'All required fields must be filled'
@@ -435,23 +443,6 @@ class ChurchContraService {
           resolve({
             success: false,
             error: 'Invalid book type. Must be cash, bank, or diocese'
-          });
-          return;
-        }
-
-        // Validate account types
-        if (!['cash', 'bank'].includes(from_account_type)) {
-          resolve({
-            success: false,
-            error: 'Invalid from account type. Must be cash, bank, or diocese'
-          });
-          return;
-        }
-
-        if (!['cash', 'bank'].includes(to_account_type)) {
-          resolve({
-            success: false,
-            error: 'Invalid to account type. Must be cash, bank, or diocese'
           });
           return;
         }
@@ -512,9 +503,9 @@ class ChurchContraService {
                 // Update the transaction
                 this.db.db.run(
                   `UPDATE church_contra_transactions
-                  SET transaction_id = ?, voucher_number = ?, from_account_type = ?, from_category_id = ?, to_account_type = ?, to_category_id = ?, date = ?, amount = ?, notes = ?, updated_at = datetime('now')
+                  SET transaction_id = ?, voucher_number = ?, from_account_type = ?, from_account_id = ?, from_category_id = ?, from_subcategory_id = ?, to_account_type = ?, to_account_id = ?, to_category_id = ?, to_subcategory_id = ?, date = ?, amount = ?, notes = ?, updated_at = datetime('now')
                   WHERE id = ?`,
-                  [transaction_id, voucher_number, from_account_type, from_category_id || null, to_account_type, to_category_id || null, date, amount, notes || null, transactionId],
+                  [transaction_id, voucher_number, from_account_type || null, from_account_id || null, from_category_id || null, from_subcategory_id || null, to_account_type || null, to_account_id || null, to_category_id || null, to_subcategory_id || null, date, amount, notes || null, transactionId],
                   function(err) {
                     if (err) {
                       console.error('Error updating transaction:', err);
@@ -532,9 +523,13 @@ class ChurchContraService {
                         transaction_id,
                         voucher_number,
                         from_account_type,
+                        from_account_id,
                         from_category_id,
+                        from_subcategory_id,
                         to_account_type,
+                        to_account_id,
                         to_category_id,
+                        to_subcategory_id,
                         date,
                         amount
                       }

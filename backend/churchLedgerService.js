@@ -323,6 +323,66 @@ class ChurchLedgerService {
   }
 
   /**
+   * Get all categories with subcategories for a church (for contra vouchers)
+   */
+  async getAllCategoriesWithSubcategories(churchId) {
+    return new Promise((resolve) => {
+      try {
+        this.db.db.all(
+          `SELECT * FROM church_ledger_categories
+           WHERE church_id = ?
+           ORDER BY category_type, category_name`,
+          [churchId],
+          (err, categories) => {
+            if (err) {
+              console.error('Error getting categories:', err);
+              resolve({
+                success: false,
+                error: err.message
+              });
+              return;
+            }
+
+            // Get subcategories for each category
+            const promises = categories.map(category => {
+              return new Promise((resolveSubcat) => {
+                this.db.db.all(
+                  `SELECT * FROM church_ledger_sub_categories
+                   WHERE parent_category_id = ?
+                   ORDER BY sub_category_name`,
+                  [category.id],
+                  (err, subcategories) => {
+                    if (err) {
+                      console.error('Error getting subcategories:', err);
+                      category.sub_categories = [];
+                    } else {
+                      category.sub_categories = subcategories || [];
+                    }
+                    resolveSubcat();
+                  }
+                );
+              });
+            });
+
+            Promise.all(promises).then(() => {
+              resolve({
+                success: true,
+                categories: categories || []
+              });
+            });
+          }
+        );
+      } catch (error) {
+        console.error('Error getting categories:', error);
+        resolve({
+          success: false,
+          error: error.message
+        });
+      }
+    });
+  }
+
+  /**
    * Get all sub-categories for a parent category
    */
   async getSubCategories(parentCategoryId) {

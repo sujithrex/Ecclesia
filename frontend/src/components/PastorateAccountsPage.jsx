@@ -13,7 +13,6 @@ import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
 import CreateLedgerCategoryModal from './CreateLedgerCategoryModal';
 import CreateLedgerSubCategoryModal from './CreateLedgerSubCategoryModal';
-import CreateCustomBookModal from './CreateCustomBookModal';
 
 const useStyles = makeStyles({
   container: {
@@ -219,14 +218,11 @@ const PastorateAccountsPage = ({
   const [showSubCategoryModal, setShowSubCategoryModal] = useState(false);
   const [currentBookType, setCurrentBookType] = useState('cash'); // 'cash', 'bank', 'diocese'
   const [categories, setCategories] = useState([]);
-  const [showCustomBookModal, setShowCustomBookModal] = useState(false);
-  const [customBooks, setCustomBooks] = useState([]);
 
   // Load account balances when pastorate changes
   useEffect(() => {
     if (currentPastorate && user) {
       loadAccountBalances();
-      loadCustomBooks();
       // Categories will be loaded when opening the sub-category modal
     }
   }, [currentPastorate?.id, user?.id]);
@@ -247,36 +243,6 @@ const PastorateAccountsPage = ({
       console.error('Failed to load account balances:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadCustomBooks = async () => {
-    try {
-      const userId = localStorage.getItem('userId');
-      const result = await window.electron.customBook.getByPastorate({
-        pastorateId: currentPastorate.id,
-        userId: parseInt(userId)
-      });
-
-      if (result.success) {
-        // Load balances for each custom book
-        const booksWithBalances = await Promise.all(
-          result.books.map(async (book) => {
-            const balanceResult = await window.electron.customBook.getBalance({
-              bookId: book.id
-            });
-            return {
-              ...book,
-              balance: balanceResult.success ? balanceResult.data : { totalCredit: 0, totalDebit: 0, balance: 0 }
-            };
-          })
-        );
-        setCustomBooks(booksWithBalances);
-      } else {
-        console.error('Failed to load custom books:', result.error);
-      }
-    } catch (error) {
-      console.error('Failed to load custom books:', error);
     }
   };
 
@@ -614,73 +580,6 @@ const PastorateAccountsPage = ({
             </div>
           </div>
         </div>
-
-        {/* Custom Books Section */}
-        <div className={styles.bookSection}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 className={styles.bookSectionTitle}>Custom Books</h2>
-            <button
-              className={styles.actionButton}
-              onClick={() => setShowCustomBookModal(true)}
-              style={{ margin: 0 }}
-            >
-              <BuildingRegular />
-              Create New Book
-            </button>
-          </div>
-
-          {customBooks.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px',
-              color: '#605E5C',
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              border: '1px solid #e1dfdd'
-            }}>
-              <BuildingRegular style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }} />
-              <p>No custom books created yet. Click "Create New Book" to get started.</p>
-            </div>
-          ) : (
-            <div className={styles.statsContainer}>
-              {customBooks.map((book) => (
-                <div
-                  key={book.id}
-                  className={styles.statCard}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/custom-book-detail/${book.id}`)}
-                >
-                  <div className={styles.statIcon}>
-                    <BuildingRegular />
-                  </div>
-                  <div className={styles.statLabel}>
-                    {book.book_name}
-                  </div>
-                  <div className={styles.statDetails}>
-                    <div className={styles.statRow}>
-                      <span className={styles.statRowLabel}>Total Credit:</span>
-                      <span className={styles.statRowValueIncome}>
-                        {formatCurrency(book.balance?.totalCredit || 0)}
-                      </span>
-                    </div>
-                    <div className={styles.statRow}>
-                      <span className={styles.statRowLabel}>Total Debit:</span>
-                      <span className={styles.statRowValueExpense}>
-                        {formatCurrency(book.balance?.totalDebit || 0)}
-                      </span>
-                    </div>
-                    <div className={styles.statRow}>
-                      <span className={styles.statRowLabel}>Balance:</span>
-                      <span className={book.balance?.balance >= 0 ? styles.statRowValueBalancePositive : styles.statRowValueBalanceNegative}>
-                        {formatCurrency(book.balance?.balance || 0)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Status Bar */}
@@ -723,14 +622,6 @@ const PastorateAccountsPage = ({
         currentPastorate={currentPastorate}
         bookType={currentBookType}
         categories={categories}
-      />
-
-      <CreateCustomBookModal
-        open={showCustomBookModal}
-        onClose={() => setShowCustomBookModal(false)}
-        onSuccess={loadCustomBooks}
-        pastorateId={currentPastorate?.id}
-        isChurchLevel={false}
       />
     </div>
   );

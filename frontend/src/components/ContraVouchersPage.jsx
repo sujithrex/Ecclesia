@@ -349,8 +349,6 @@ const ContraVouchersPage = ({
 }) => {
   const styles = useStyles();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const bookType = searchParams.get('bookType') || 'cash';
   const [allTransactions, setAllTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -361,20 +359,11 @@ const ContraVouchersPage = ({
   const [summaryMonth, setSummaryMonth] = useState(null);
   const itemsPerPage = 10;
 
-  const getBookTypeName = () => {
-    switch (bookType) {
-      case 'cash': return 'Pastorate Cash Book';
-      case 'bank': return 'Pastorate Bank Book';
-      case 'diocese': return 'Diocese Book';
-      default: return 'Cash Book';
-    }
-  };
-
   useEffect(() => {
     if (currentPastorate && user) {
       loadAllTransactions();
     }
-  }, [currentPastorate?.id, user?.id, bookType]);
+  }, [currentPastorate?.id, user?.id]);
 
   useEffect(() => {
     if (notification) {
@@ -391,7 +380,7 @@ const ContraVouchersPage = ({
       const result = await window.electron.contra.getTransactions({
         pastorateId: currentPastorate.id,
         userId: user.id,
-        bookType: bookType,
+        bookType: 'all', // Load all contra transactions regardless of book type
         page: 1,
         limit: 10000,
         filters: {}
@@ -412,11 +401,11 @@ const ContraVouchersPage = ({
   };
 
   const handleAddTransaction = () => {
-    navigate(`/contra-vouchers/add?bookType=${bookType}`);
+    navigate('/contra-vouchers/add');
   };
 
   const handleEditTransaction = (transaction) => {
-    navigate(`/contra-vouchers/edit/${transaction.id}?bookType=${bookType}`);
+    navigate(`/contra-vouchers/edit/${transaction.id}`);
   };
 
   const handleDeleteClick = (transaction) => {
@@ -540,7 +529,7 @@ const ContraVouchersPage = ({
     <div className={styles.container}>
       {/* Breadcrumb Navigation */}
       <Breadcrumb
-        pageTitle={`Contra Vouchers - ${getBookTypeName()}`}
+        pageTitle="Contra Vouchers (All Accounts)"
         titleAlign="left"
         breadcrumbs={[
           {

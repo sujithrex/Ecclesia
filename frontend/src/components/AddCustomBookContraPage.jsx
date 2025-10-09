@@ -195,19 +195,26 @@ const AddCustomBookContraPage = ({
     remarks: '',
     categoryId: '',
     subcategoryId: '',
+    fromCategoryId: '',
+    fromSubcategoryId: '',
+    toCategoryId: '',
+    toSubcategoryId: '',
   });
   const [txId, setTxId] = useState('');
   const [voucherNumber, setVoucherNumber] = useState('');
   const [alert, setAlert] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
+  const [fromCategories, setFromCategories] = useState([]);
+  const [toCategories, setToCategories] = useState([]);
+  const [fromSubcategories, setFromSubcategories] = useState([]);
+  const [toSubcategories, setToSubcategories] = useState([]);
   const [allAccounts, setAllAccounts] = useState([]);
+  const [loadingFromCategories, setLoadingFromCategories] = useState(false);
+  const [loadingToCategories, setLoadingToCategories] = useState(false);
 
   useEffect(() => {
     if (bookId) {
       loadBookDetails();
-      loadCategories();
       loadAllAccounts();
       if (isEditMode) {
         loadTransactionData();
@@ -247,18 +254,46 @@ const AddCustomBookContraPage = ({
     }
   };
 
-  const loadCategories = async () => {
+  const loadCategoriesForAccount = async (accountType, accountId, isFromAccount = true) => {
     try {
-      const categoryAPI = isChurchLevel ? window.electron.churchCustomBookCategory : window.electron.customBookCategory;
-      const params = isChurchLevel
-        ? { customBookId: parseInt(bookId), churchId: currentChurch?.id }
-        : { customBookId: parseInt(bookId), pastorateId: currentPastorate?.id };
+      if (isFromAccount) {
+        setLoadingFromCategories(true);
+      } else {
+        setLoadingToCategories(true);
+      }
 
-      // For contra, load ALL categories (both income and expense)
-      const result = await categoryAPI.getWithSubcategories(params);
-      setCategories(result);
+      const result = await window.electron.accountList.getCategoriesForAccount({
+        accountType,
+        accountId: parseInt(accountId)
+      });
+
+      if (result.success) {
+        if (isFromAccount) {
+          setFromCategories(result.categories || []);
+        } else {
+          setToCategories(result.categories || []);
+        }
+      } else {
+        console.error('Failed to load categories:', result.error);
+        if (isFromAccount) {
+          setFromCategories([]);
+        } else {
+          setToCategories([]);
+        }
+      }
     } catch (error) {
       console.error('Failed to load categories:', error);
+      if (isFromAccount) {
+        setFromCategories([]);
+      } else {
+        setToCategories([]);
+      }
+    } finally {
+      if (isFromAccount) {
+        setLoadingFromCategories(false);
+      } else {
+        setLoadingToCategories(false);
+      }
     }
   };
 
@@ -318,13 +353,38 @@ const AddCustomBookContraPage = ({
           remarks: tx.notes || '',
           categoryId: tx.category_id?.toString() || '',
           subcategoryId: tx.subcategory_id?.toString() || '',
+          fromCategoryId: tx.from_category_id?.toString() || '',
+          fromSubcategoryId: tx.from_subcategory_id?.toString() || '',
+          toCategoryId: tx.to_category_id?.toString() || '',
+          toSubcategoryId: tx.to_subcategory_id?.toString() || '',
         });
 
-        // Load subcategories if category is selected
-        if (tx.category_id) {
-          const category = categories.find(c => c.id === tx.category_id);
-          if (category) {
-            setSubcategories(category.subcategories || []);
+        // Load categories and subcategories for the selected accounts
+        if (tx.from_account_type && tx.from_account_id) {
+          await loadCategoriesForAccount(tx.from_account_type, tx.from_account_id, true);
+
+          // After categories are loaded, set subcategories if a category is selected
+          if (tx.from_category_id) {
+            setTimeout(() => {
+              const category = fromCategories.find(c => c.id === tx.from_category_id);
+              if (category) {
+                setFromSubcategories(category.sub_categories || category.subcategories || []);
+              }
+            }, 100);
+          }
+        }
+
+        if (tx.to_account_type && tx.to_account_id) {
+          await loadCategoriesForAccount(tx.to_account_type, tx.to_account_id, false);
+
+          // After categories are loaded, set subcategories if a category is selected
+          if (tx.to_category_id) {
+            setTimeout(() => {
+              const category = toCategories.find(c => c.id === tx.to_category_id);
+              if (category) {
+                setToSubcategories(category.sub_categories || category.subcategories || []);
+              }
+            }, 100);
           }
         }
       } else{
@@ -343,12 +403,58 @@ const AddCustomBookContraPage = ({
       [name]: value,
     }));
 
-    // Handle category change - load subcategories
-    if (name === 'categoryId') {
-      const category = categories.find(c => c.id === parseInt(value));
-      setSubcategories(category?.subcategories || []);
+    // Handle from account change - load categories for the selected account
+    if (name === 'fromAccount') {
+      const [accountType, accountId] = value.split('|');
+
+      // Reset from category and subcategory
+      setFormData(prev => ({
+        ...prev,
+        fromCategoryId: '',
+        fromSubcategoryId: ''
+      }));
+      setFromCategories([]);
+      setFromSubcategories([]);
+
+      // If both account type and id are set, load categories
+      if (accountType && accountId) {
+        loadCategoriesForAccount(accountType, accountId, true);
+      }
+    }
+
+    // Handle to account change - load categories for the selected account
+    if (name === 'toAccount') {
+      const [accountType, accountId] = value.split('|');
+
+      // Reset to category and subcategory
+      setFormData(prev => ({
+        ...prev,
+        toCategoryId: '',
+        toSubcategoryId: ''
+      }));
+      setToCategories([]);
+      setToSubcategories([]);
+
+      // If both account type and id are set, load categories
+      if (accountType && accountId) {
+        loadCategoriesForAccount(accountType, accountId, false);
+      }
+    }
+
+    // Handle from category change
+    if (name === 'fromCategoryId') {
+      const category = fromCategories.find(c => c.id === parseInt(value));
+      setFromSubcategories(category?.sub_categories || category?.subcategories || []);
       // Reset subcategory when category changes
-      setFormData(prev => ({ ...prev, subcategoryId: '' }));
+      setFormData(prev => ({ ...prev, fromSubcategoryId: '' }));
+    }
+
+    // Handle to category change
+    if (name === 'toCategoryId') {
+      const category = toCategories.find(c => c.id === parseInt(value));
+      setToSubcategories(category?.sub_categories || category?.subcategories || []);
+      // Reset subcategory when category changes
+      setFormData(prev => ({ ...prev, toSubcategoryId: '' }));
     }
   };
 
@@ -363,18 +469,23 @@ const AddCustomBookContraPage = ({
       return;
     }
 
+    if (!formData.fromCategoryId) {
+      showAlert('From Category is required', 'error');
+      return;
+    }
+
     if (!formData.toAccountType || !formData.toAccountId) {
       showAlert('To Account is required', 'error');
       return;
     }
 
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      showAlert('Please enter a valid amount', 'error');
+    if (!formData.toCategoryId) {
+      showAlert('To Category is required', 'error');
       return;
     }
 
-    if (!formData.categoryId) {
-      showAlert('Category is required', 'error');
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      showAlert('Please enter a valid amount', 'error');
       return;
     }
 
@@ -396,6 +507,10 @@ const AddCustomBookContraPage = ({
         notes: formData.remarks.trim(),
         categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
         subcategoryId: formData.subcategoryId ? parseInt(formData.subcategoryId) : null,
+        fromCategoryId: formData.fromCategoryId ? parseInt(formData.fromCategoryId) : null,
+        fromSubcategoryId: formData.fromSubcategoryId ? parseInt(formData.fromSubcategoryId) : null,
+        toCategoryId: formData.toCategoryId ? parseInt(formData.toCategoryId) : null,
+        toSubcategoryId: formData.toSubcategoryId ? parseInt(formData.toSubcategoryId) : null,
       };
 
       let result;
@@ -455,8 +570,15 @@ const AddCustomBookContraPage = ({
             remarks: '',
             categoryId: '',
             subcategoryId: '',
+            fromCategoryId: '',
+            fromSubcategoryId: '',
+            toCategoryId: '',
+            toSubcategoryId: '',
           });
-          setSubcategories([]);
+          setFromCategories([]);
+          setToCategories([]);
+          setFromSubcategories([]);
+          setToSubcategories([]);
           generateTransactionId();
           loadNextVoucherNumber();
         }
@@ -577,43 +699,6 @@ const AddCustomBookContraPage = ({
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                Category <span className={styles.required}>*</span>
-              </label>
-              <select
-                name="categoryId"
-                value={formData.categoryId}
-                onChange={handleInputChange}
-                className={styles.input}
-              >
-                <option value="">Select Category</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.category_name} ({category.category_type === 'income' ? 'Income' : 'Expense'})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Subcategory</label>
-              <select
-                name="subcategoryId"
-                value={formData.subcategoryId}
-                onChange={handleInputChange}
-                className={styles.input}
-                disabled={!formData.categoryId || subcategories.length === 0}
-              >
-                <option value="">Select Subcategory (Optional)</option>
-                {subcategories.map((subcategory) => (
-                  <option key={subcategory.id} value={subcategory.id}>
-                    {subcategory.subcategory_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
                 From Account <span className={styles.required}>*</span>
               </label>
               <select
@@ -640,6 +725,48 @@ const AddCustomBookContraPage = ({
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
+                From Category <span className={styles.required}>*</span>
+              </label>
+              <select
+                name="fromCategoryId"
+                value={formData.fromCategoryId}
+                onChange={handleInputChange}
+                className={styles.input}
+                disabled={loadingFromCategories || !formData.fromAccountType || !formData.fromAccountId}
+              >
+                <option value="">
+                  {loadingFromCategories ? 'Loading categories...' :
+                   !formData.fromAccountType || !formData.fromAccountId ? 'Select From Account first' :
+                   'Select From Category'}
+                </option>
+                {fromCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.category_name} ({category.category_type === 'income' ? 'Income' : 'Expense'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>From Subcategory</label>
+              <select
+                name="fromSubcategoryId"
+                value={formData.fromSubcategoryId}
+                onChange={handleInputChange}
+                className={styles.input}
+                disabled={!formData.fromCategoryId || fromSubcategories.length === 0}
+              >
+                <option value="">Select From Subcategory (Optional)</option>
+                {fromSubcategories.map((subcategory) => (
+                  <option key={subcategory.id} value={subcategory.id}>
+                    {subcategory.subcategory_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
                 To Account <span className={styles.required}>*</span>
               </label>
               <select
@@ -659,6 +786,48 @@ const AddCustomBookContraPage = ({
                 {allAccounts.map((account, index) => (
                   <option key={index} value={`${account.type}|${account.id}`}>
                     {account.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                To Category <span className={styles.required}>*</span>
+              </label>
+              <select
+                name="toCategoryId"
+                value={formData.toCategoryId}
+                onChange={handleInputChange}
+                className={styles.input}
+                disabled={loadingToCategories || !formData.toAccountType || !formData.toAccountId}
+              >
+                <option value="">
+                  {loadingToCategories ? 'Loading categories...' :
+                   !formData.toAccountType || !formData.toAccountId ? 'Select To Account first' :
+                   'Select To Category'}
+                </option>
+                {toCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.category_name} ({category.category_type === 'income' ? 'Income' : 'Expense'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>To Subcategory</label>
+              <select
+                name="toSubcategoryId"
+                value={formData.toSubcategoryId}
+                onChange={handleInputChange}
+                className={styles.input}
+                disabled={!formData.toCategoryId || toSubcategories.length === 0}
+              >
+                <option value="">Select To Subcategory (Optional)</option>
+                {toSubcategories.map((subcategory) => (
+                  <option key={subcategory.id} value={subcategory.id}>
+                    {subcategory.subcategory_name}
                   </option>
                 ))}
               </select>

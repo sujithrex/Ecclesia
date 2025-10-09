@@ -37,20 +37,20 @@ const useStyles = makeStyles({
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
     border: '1px solid #e1dfdd',
     padding: '32px',
-    maxWidth: '80%',
+    maxWidth: '800px',
     margin: '0 auto',
     width: '100%',
   },
   formTitle: {
-    fontSize: '20px',
+    fontSize: '24px',
     fontWeight: '600',
     color: '#323130',
     marginBottom: '24px',
   },
   formGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '20px',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '24px',
     marginBottom: '24px',
   },
   formGroup: {
@@ -74,11 +74,15 @@ const useStyles = makeStyles({
     fontSize: '14px',
     border: '1px solid #e1dfdd',
     borderRadius: '4px',
-    fontFamily: 'Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
-    transition: 'border-color 0.2s ease',
+    backgroundColor: 'white',
+    transition: 'border-color 0.2s',
     '&:focus': {
       outline: 'none',
       borderColor: '#B5316A',
+    },
+    '&:disabled': {
+      backgroundColor: '#f3f2f1',
+      cursor: 'not-allowed',
     },
   },
   select: {
@@ -86,13 +90,16 @@ const useStyles = makeStyles({
     fontSize: '14px',
     border: '1px solid #e1dfdd',
     borderRadius: '4px',
-    fontFamily: 'Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, sans-serif',
     backgroundColor: 'white',
     cursor: 'pointer',
-    transition: 'border-color 0.2s ease',
+    transition: 'border-color 0.2s',
     '&:focus': {
       outline: 'none',
       borderColor: '#B5316A',
+    },
+    '&:disabled': {
+      backgroundColor: '#f3f2f1',
+      cursor: 'not-allowed',
     },
   },
   textarea: {
@@ -207,8 +214,6 @@ const AddContraTransactionPage = ({
   const styles = useStyles();
   const navigate = useNavigate();
   const { transactionId } = useParams();
-  const [searchParams] = useSearchParams();
-  const bookType = searchParams.get('bookType') || 'cash';
   const isEditMode = !!transactionId;
 
   const [formData, setFormData] = useState({
@@ -216,33 +221,30 @@ const AddContraTransactionPage = ({
     transaction_id: '',
     voucher_number: '',
     from_account_type: '',
+    from_account_id: '',
     from_category_id: null,
+    from_subcategory_id: null,
     to_account_type: '',
+    to_account_id: '',
     to_category_id: null,
+    to_subcategory_id: null,
     date: new Date().toISOString().split('T')[0],
     amount: '',
     notes: '',
-    bookType: bookType,
   });
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [fromCategories, setFromCategories] = useState([]);
-  const [toCategories, setToCategories] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [allAccounts, setAllAccounts] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
-
-  const getBookTypeName = () => {
-    switch (bookType) {
-      case 'cash': return 'Pastorate Cash Book';
-      case 'bank': return 'Pastorate Bank Book';
-      case 'diocese': return 'Diocese Book';
-      default: return 'Cash Book';
-    }
-  };
 
   useEffect(() => {
     if (currentPastorate && user) {
+      loadAllAccounts();
+      loadCategories();
       if (isEditMode) {
         loadTransaction();
       } else {
@@ -261,24 +263,41 @@ const AddContraTransactionPage = ({
     }
   }, [notification]);
 
-  // Load categories when account type changes
-  useEffect(() => {
-    if (formData.from_account_type) {
-      loadFromCategories();
-    } else {
-      setFromCategories([]);
-      setFormData(prev => ({ ...prev, from_category_id: null }));
-    }
-  }, [formData.from_account_type]);
+  const loadCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const result = await window.electron.ledger.getAllCategoriesWithSubcategories({
+        pastorateId: currentPastorate.id
+      });
 
-  useEffect(() => {
-    if (formData.to_account_type) {
-      loadToCategories();
-    } else {
-      setToCategories([]);
-      setFormData(prev => ({ ...prev, to_category_id: null }));
+      if (result.success) {
+        setCategories(result.categories || []);
+      } else {
+        console.error('Failed to load categories:', result.error);
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
     }
-  }, [formData.to_account_type]);
+  };
+
+
+
+  const loadAllAccounts = async () => {
+    try {
+      const result = await window.electron.accountList.getAllForPastorate({ pastorateId: currentPastorate.id });
+      if (result.success) {
+        setAllAccounts(result.accounts || []);
+      }
+    } catch (error) {
+      console.error('Failed to load accounts:', error);
+    }
+  };
+
+
 
   const generateTransactionId = async () => {
     try {
@@ -291,7 +310,7 @@ const AddContraTransactionPage = ({
     }
   };
 
-  const getNextVoucherNumber = async () => {
+  const getNextVoucherNumber = async (bookType = 'cash') => {
     try {
       const result = await window.electron.contra.getNextVoucherNumber({
         pastorateId: currentPastorate.id,
@@ -316,14 +335,36 @@ const AddContraTransactionPage = ({
           transaction_id: transaction.transaction_id,
           voucher_number: transaction.voucher_number.toString(),
           from_account_type: transaction.from_account_type,
+          from_account_id: transaction.from_account_id?.toString() || '',
           from_category_id: transaction.from_category_id,
+          from_subcategory_id: transaction.from_subcategory_id,
           to_account_type: transaction.to_account_type,
+          to_account_id: transaction.to_account_id?.toString() || '',
           to_category_id: transaction.to_category_id,
+          to_subcategory_id: transaction.to_subcategory_id,
           date: transaction.date,
           amount: transaction.amount.toString(),
           notes: transaction.notes || '',
-          bookType: transaction.book_type,
         });
+
+        // Set subcategories if categories are selected
+        if (transaction.from_category_id) {
+          setTimeout(() => {
+            const category = categories.find(c => c.id === transaction.from_category_id);
+            if (category) {
+              setFromSubcategories(category.sub_categories || []);
+            }
+          }, 100);
+        }
+
+        if (transaction.to_category_id) {
+          setTimeout(() => {
+            const category = categories.find(c => c.id === transaction.to_category_id);
+            if (category) {
+              setToSubcategories(category.sub_categories || []);
+            }
+          }, 100);
+        }
       } else {
         setNotification({
           type: 'error',
@@ -341,58 +382,50 @@ const AddContraTransactionPage = ({
     }
   };
 
-  const loadFromCategories = async () => {
-    setLoadingCategories(true);
-    try {
-      const result = await window.electron.ledger.getCategories({
-        pastorateId: currentPastorate.id,
-        bookType: formData.from_account_type
-      });
-      if (result.success) {
-        // Filter only expense categories and their subcategories
-        const expenseCategories = (result.categories || []).filter(
-          cat => cat.category_type === 'expense'
-        );
-        setFromCategories(expenseCategories);
-      } else {
-        setFromCategories([]);
-      }
-    } catch (error) {
-      console.error('Error loading from categories:', error);
-      setFromCategories([]);
-    } finally {
-      setLoadingCategories(false);
-    }
-  };
-
-  const loadToCategories = async () => {
-    setLoadingCategories(true);
-    try {
-      const result = await window.electron.ledger.getCategories({
-        pastorateId: currentPastorate.id,
-        bookType: formData.to_account_type
-      });
-      if (result.success) {
-        // Filter only income categories and their subcategories
-        const incomeCategories = (result.categories || []).filter(
-          cat => cat.category_type === 'income'
-        );
-        setToCategories(incomeCategories);
-      } else {
-        setToCategories([]);
-      }
-    } catch (error) {
-      console.error('Error loading to categories:', error);
-      setToCategories([]);
-    } finally {
-      setLoadingCategories(false);
-    }
-  };
-
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
+    }
+
+    // Update voucher number when accounts change
+    if (field === 'from_account_type' || field === 'to_account_type') {
+      // Determine bookType and update voucher number
+      const fromType = field === 'from_account_type' ? value : formData.from_account_type;
+      const toType = field === 'to_account_type' ? value : formData.to_account_type;
+
+      let bookType = 'all';
+      if (fromType === 'pastorate_cash' || toType === 'pastorate_cash') {
+        bookType = 'cash';
+      } else if (fromType === 'pastorate_bank' || toType === 'pastorate_bank') {
+        bookType = 'bank';
+      } else if (fromType === 'pastorate_diocese' || toType === 'pastorate_diocese') {
+        bookType = 'diocese';
+      }
+
+      if (!isEditMode) {
+        getNextVoucherNumber(bookType);
+      }
+    }
+
+    // Handle category change - load subcategories
+    if (field === 'from_category_id') {
+      const category = categories.find(c => c.id === parseInt(value));
+      setSubcategories(category?.sub_categories || []);
+      setFormData(prev => ({
+        ...prev,
+        from_subcategory_id: null,
+        to_category_id: parseInt(value), // Set same category for TO
+        to_subcategory_id: null
+      }));
+    }
+
+    // Handle subcategory change - set same for both FROM and TO
+    if (field === 'from_subcategory_id') {
+      setFormData(prev => ({
+        ...prev,
+        to_subcategory_id: value // Set same subcategory for TO
+      }));
     }
   };
 
@@ -409,12 +442,20 @@ const AddContraTransactionPage = ({
       newErrors.voucher_number = 'Please enter a valid voucher number';
     }
 
-    if (!formData.from_account_type) {
-      newErrors.from_account_type = 'Please select from account type';
+    if (!formData.from_account_type || !formData.from_account_id) {
+      newErrors.from_account_type = 'Please select from account';
     }
 
-    if (!formData.to_account_type) {
-      newErrors.to_account_type = 'Please select to account type';
+    if (!formData.from_category_id) {
+      newErrors.from_category_id = 'Please select from category';
+    }
+
+    if (!formData.to_account_type || !formData.to_account_id) {
+      newErrors.to_account_type = 'Please select to account';
+    }
+
+    if (!formData.to_category_id) {
+      newErrors.to_category_id = 'Please select to category';
     }
 
     if (!formData.date) {
@@ -438,12 +479,24 @@ const AddContraTransactionPage = ({
     setNotification(null);
 
     try {
+      // Determine bookType based on the accounts involved
+      // Priority: cash > bank > diocese > all (if custom books involved)
+      let bookType = 'all';
+      if (formData.from_account_type === 'pastorate_cash' || formData.to_account_type === 'pastorate_cash') {
+        bookType = 'cash';
+      } else if (formData.from_account_type === 'pastorate_bank' || formData.to_account_type === 'pastorate_bank') {
+        bookType = 'bank';
+      } else if (formData.from_account_type === 'pastorate_diocese' || formData.to_account_type === 'pastorate_diocese') {
+        bookType = 'diocese';
+      }
+
       const result = isEditMode
         ? await window.electron.contra.updateTransaction({
             id: transactionId,
             ...formData,
             voucher_number: parseInt(formData.voucher_number),
             amount: parseFloat(formData.amount),
+            bookType,
             pastorateId: currentPastorate.id,
             userId: user.id
           })
@@ -451,6 +504,7 @@ const AddContraTransactionPage = ({
             ...formData,
             voucher_number: parseInt(formData.voucher_number),
             amount: parseFloat(formData.amount),
+            bookType,
             pastorateId: currentPastorate.id,
             userId: user.id
           });
@@ -463,7 +517,7 @@ const AddContraTransactionPage = ({
 
         if (closeAfter) {
           setTimeout(() => {
-            navigate(`/contra-vouchers?bookType=${bookType}`);
+            navigate('/contra-vouchers');
           }, 1500);
         } else {
           // Reset form for new entry
@@ -472,14 +526,18 @@ const AddContraTransactionPage = ({
             transaction_id: '',
             voucher_number: '',
             from_account_type: '',
+            from_account_id: '',
             from_category_id: null,
+            from_subcategory_id: null,
             to_account_type: '',
+            to_account_id: '',
             to_category_id: null,
+            to_subcategory_id: null,
             date: new Date().toISOString().split('T')[0],
             amount: '',
             notes: '',
-            bookType: bookType,
           });
+          setSubcategories([]);
           setErrors({});
           generateTransactionId();
           getNextVoucherNumber();
@@ -509,7 +567,7 @@ const AddContraTransactionPage = ({
   };
 
   const handleCancel = () => {
-    navigate(`/contra-vouchers?bookType=${bookType}`);
+    navigate('/contra-vouchers');
   };
 
   if (!currentPastorate) {
@@ -525,7 +583,7 @@ const AddContraTransactionPage = ({
     <div className={styles.container}>
       {/* Breadcrumb Navigation */}
       <Breadcrumb
-        pageTitle={`${isEditMode ? 'Edit' : 'Add'} Contra Transaction - ${getBookTypeName()}`}
+        pageTitle={`${isEditMode ? 'Edit' : 'Add'} Contra Transaction`}
         titleAlign="left"
         breadcrumbs={[
           {
@@ -541,7 +599,7 @@ const AddContraTransactionPage = ({
           {
             label: 'Contra Vouchers',
             icon: <MoneyRegular />,
-            onClick: () => navigate(`/contra-vouchers?bookType=${bookType}`)
+            onClick: () => navigate('/contra-vouchers')
           },
           {
             label: isEditMode ? 'Edit Transaction' : 'Add Transaction',
@@ -614,19 +672,24 @@ const AddContraTransactionPage = ({
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                From Account Type <span className={styles.required}>*</span>
+                From Account <span className={styles.required}>*</span>
               </label>
               <select
-                name="from_account_type"
                 className={`${styles.select} ${errors.from_account_type ? styles.errorInput : ''}`}
-                value={formData.from_account_type}
-                onChange={(e) => handleInputChange('from_account_type', e.target.value)}
+                value={formData.from_account_type && formData.from_account_id ? `${formData.from_account_type}|${formData.from_account_id}` : ''}
+                onChange={(e) => {
+                  const [type, id] = e.target.value.split('|');
+                  handleInputChange('from_account_type', type || '');
+                  handleInputChange('from_account_id', id || '');
+                }}
                 disabled={loading}
               >
-                <option value="">Select Account Type</option>
-                <option value="cash">Cash - Pastorate</option>
-                <option value="bank">Bank - Pastorate</option>
-                <option value="diocese">Diocese - Pastorate</option>
+                <option value="">Select From Account</option>
+                {allAccounts.map((account, index) => (
+                  <option key={index} value={`${account.type}|${account.id}`}>
+                    {account.displayName}
+                  </option>
+                ))}
               </select>
               {errors.from_account_type && (
                 <span className={styles.errorMessage}>{errors.from_account_type}</span>
@@ -635,67 +698,82 @@ const AddContraTransactionPage = ({
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                From Category (Expense)
+                Transfer Category <span className={styles.required}>*</span>
               </label>
               <select
-                className={styles.select}
+                className={`${styles.select} ${errors.from_category_id ? styles.errorInput : ''}`}
                 value={formData.from_category_id || ''}
                 onChange={(e) => handleInputChange('from_category_id', e.target.value ? parseInt(e.target.value) : null)}
-                disabled={loading || !formData.from_account_type || loadingCategories}
+                disabled={loading || loadingCategories}
               >
-                <option value="">Select Category (Optional)</option>
-                {fromCategories.map(category => (
+                <option value="">
+                  {loadingCategories ? 'Loading categories...' : 'Select Transfer Category'}
+                </option>
+                {categories.map(category => (
                   <option key={category.id} value={category.id}>
-                    {category.category_name}
+                    {category.category_name} ({category.category_type})
                   </option>
                 ))}
               </select>
-              <span className={styles.helperText}>
-                {!formData.from_account_type ? 'Select account type first' : 'Optional expense category'}
-              </span>
+              {errors.from_category_id && (
+                <span className={styles.errorMessage}>{errors.from_category_id}</span>
+              )}
+              {!errors.from_category_id && (
+                <span className={styles.helperText}>Choose the purpose of this transfer</span>
+              )}
             </div>
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                To Account Type <span className={styles.required}>*</span>
+                Transfer Subcategory
+              </label>
+              <select
+                className={styles.select}
+                value={formData.from_subcategory_id || ''}
+                onChange={(e) => handleInputChange('from_subcategory_id', e.target.value ? parseInt(e.target.value) : null)}
+                disabled={loading || !formData.from_category_id || subcategories.length === 0}
+              >
+                <option value="">Select Transfer Subcategory (Optional)</option>
+                {subcategories.map(subcategory => (
+                  <option key={subcategory.id} value={subcategory.id}>
+                    {subcategory.sub_category_name}
+                  </option>
+                ))}
+              </select>
+              <span className={styles.helperText}>Optional - Select if applicable</span>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                To Account <span className={styles.required}>*</span>
               </label>
               <select
                 className={`${styles.select} ${errors.to_account_type ? styles.errorInput : ''}`}
-                value={formData.to_account_type}
-                onChange={(e) => handleInputChange('to_account_type', e.target.value)}
+                value={formData.to_account_type && formData.to_account_id ? `${formData.to_account_type}|${formData.to_account_id}` : ''}
+                onChange={(e) => {
+                  const [type, id] = e.target.value.split('|');
+                  handleInputChange('to_account_type', type || '');
+                  handleInputChange('to_account_id', id || '');
+                }}
                 disabled={loading}
               >
-                <option value="">Select Account Type</option>
-                <option value="cash">Cash - Pastorate</option>
-                <option value="bank">Bank - Pastorate</option>
-                <option value="diocese">Diocese - Pastorate</option>
+                <option value="">Select To Account</option>
+                {allAccounts.map((account, index) => (
+                  <option key={index} value={`${account.type}|${account.id}`}>
+                    {account.displayName}
+                  </option>
+                ))}
               </select>
               {errors.to_account_type && (
                 <span className={styles.errorMessage}>{errors.to_account_type}</span>
               )}
             </div>
 
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
-                To Category (Income)
-              </label>
-              <select
-                className={styles.select}
-                value={formData.to_category_id || ''}
-                onChange={(e) => handleInputChange('to_category_id', e.target.value ? parseInt(e.target.value) : null)}
-                disabled={loading || !formData.to_account_type || loadingCategories}
-              >
-                <option value="">Select Category (Optional)</option>
-                {toCategories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.category_name}
-                  </option>
-                ))}
-              </select>
-              <span className={styles.helperText}>
-                {!formData.to_account_type ? 'Select account type first' : 'Optional income category'}
-              </span>
-            </div>
+            {/* Hidden TO category fields - automatically set to same as FROM */}
+            <input type="hidden" value={formData.to_category_id || ''} />
+            <input type="hidden" value={formData.to_subcategory_id || ''} />
+
+
 
             <div className={styles.formGroup}>
               <label className={styles.label}>

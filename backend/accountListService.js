@@ -282,6 +282,212 @@ class AccountListService {
       }
     });
   }
+
+  /**
+   * Get categories with subcategories for a specific account
+   * This is used in contra vouchers to show only relevant categories based on selected account
+   */
+  async getCategoriesForAccount(accountType, accountId) {
+    return new Promise((resolve) => {
+      try {
+        console.log('getCategoriesForAccount called with:', { accountType, accountId });
+
+        // Determine which table and book type to query based on account type
+        if (accountType === 'pastorate_cash' || accountType === 'pastorate_bank' || accountType === 'pastorate_diocese') {
+          // Pastorate ledger categories - load all categories for the pastorate regardless of book_type
+          // This allows contra vouchers to use any category when transferring between different book types
+          console.log(`Querying pastorate ledger_categories with pastorate_id=${accountId}`);
+
+          this.db.db.all(
+            `SELECT * FROM ledger_categories
+             WHERE pastorate_id = ?
+             ORDER BY category_type, category_name`,
+            [accountId],
+            (err, categories) => {
+              if (err) {
+                console.error('Error getting pastorate categories:', err);
+                resolve({ success: false, error: err.message });
+                return;
+              }
+
+              console.log(`Query returned ${(categories || []).length} categories for pastorate_id=${accountId}`);
+
+              // Get subcategories for each category
+              const promises = (categories || []).map(category => {
+                return new Promise((resolveSubcat) => {
+                  this.db.db.all(
+                    `SELECT * FROM ledger_sub_categories
+                     WHERE parent_category_id = ?
+                     ORDER BY sub_category_name`,
+                    [category.id],
+                    (err, subcategories) => {
+                      if (err) {
+                        console.error('Error getting subcategories:', err);
+                        resolveSubcat({ ...category, sub_categories: [] });
+                      } else {
+                        resolveSubcat({ ...category, sub_categories: subcategories || [] });
+                      }
+                    }
+                  );
+                });
+              });
+
+              Promise.all(promises).then(categoriesWithSubcategories => {
+                console.log(`Pastorate categories loaded: ${categoriesWithSubcategories.length} categories for ${accountType}`);
+                resolve({
+                  success: true,
+                  categories: categoriesWithSubcategories
+                });
+              });
+            }
+          );
+        } else if (accountType === 'church_cash' || accountType === 'church_bank') {
+          // Church ledger categories - load all categories for the church regardless of book_type
+          // This allows contra vouchers to use any category when transferring between different book types
+          console.log(`Querying church_ledger_categories with church_id=${accountId}`);
+
+          this.db.db.all(
+            `SELECT * FROM church_ledger_categories
+             WHERE church_id = ?
+             ORDER BY category_type, category_name`,
+            [accountId],
+            (err, categories) => {
+              if (err) {
+                console.error('Error getting church categories:', err);
+                resolve({ success: false, error: err.message });
+                return;
+              }
+
+              console.log(`Query returned ${(categories || []).length} categories for church_id=${accountId}`);
+
+              // Get subcategories for each category
+              const promises = (categories || []).map(category => {
+                return new Promise((resolveSubcat) => {
+                  this.db.db.all(
+                    `SELECT * FROM church_ledger_sub_categories
+                     WHERE parent_category_id = ?
+                     ORDER BY sub_category_name`,
+                    [category.id],
+                    (err, subcategories) => {
+                      if (err) {
+                        console.error('Error getting subcategories:', err);
+                        resolveSubcat({ ...category, sub_categories: [] });
+                      } else {
+                        resolveSubcat({ ...category, sub_categories: subcategories || [] });
+                      }
+                    }
+                  );
+                });
+              });
+
+              Promise.all(promises).then(categoriesWithSubcategories => {
+                console.log(`Church categories loaded: ${categoriesWithSubcategories.length} categories for ${accountType}`);
+                resolve({
+                  success: true,
+                  categories: categoriesWithSubcategories
+                });
+              });
+            }
+          );
+        } else if (accountType === 'custom_book') {
+          // Pastorate custom book categories
+          this.db.db.all(
+            `SELECT * FROM custom_book_categories
+             WHERE custom_book_id = ?
+             ORDER BY category_type, category_name`,
+            [accountId],
+            (err, categories) => {
+              if (err) {
+                console.error('Error getting custom book categories:', err);
+                resolve({ success: false, error: err.message });
+                return;
+              }
+
+              // Get subcategories for each category
+              const promises = (categories || []).map(category => {
+                return new Promise((resolveSubcat) => {
+                  this.db.db.all(
+                    `SELECT * FROM custom_book_subcategories
+                     WHERE category_id = ?
+                     ORDER BY subcategory_name`,
+                    [category.id],
+                    (err, subcategories) => {
+                      if (err) {
+                        console.error('Error getting subcategories:', err);
+                        resolveSubcat({ ...category, subcategories: [] });
+                      } else {
+                        resolveSubcat({ ...category, subcategories: subcategories || [] });
+                      }
+                    }
+                  );
+                });
+              });
+
+              Promise.all(promises).then(categoriesWithSubcategories => {
+                resolve({
+                  success: true,
+                  categories: categoriesWithSubcategories
+                });
+              });
+            }
+          );
+        } else if (accountType === 'church_custom_book') {
+          // Church custom book categories
+          this.db.db.all(
+            `SELECT * FROM church_custom_book_categories
+             WHERE custom_book_id = ?
+             ORDER BY category_type, category_name`,
+            [accountId],
+            (err, categories) => {
+              if (err) {
+                console.error('Error getting church custom book categories:', err);
+                resolve({ success: false, error: err.message });
+                return;
+              }
+
+              // Get subcategories for each category
+              const promises = (categories || []).map(category => {
+                return new Promise((resolveSubcat) => {
+                  this.db.db.all(
+                    `SELECT * FROM church_custom_book_subcategories
+                     WHERE category_id = ?
+                     ORDER BY subcategory_name`,
+                    [category.id],
+                    (err, subcategories) => {
+                      if (err) {
+                        console.error('Error getting subcategories:', err);
+                        resolveSubcat({ ...category, subcategories: [] });
+                      } else {
+                        resolveSubcat({ ...category, subcategories: subcategories || [] });
+                      }
+                    }
+                  );
+                });
+              });
+
+              Promise.all(promises).then(categoriesWithSubcategories => {
+                resolve({
+                  success: true,
+                  categories: categoriesWithSubcategories
+                });
+              });
+            }
+          );
+        } else {
+          resolve({
+            success: false,
+            error: 'Invalid account type'
+          });
+        }
+      } catch (error) {
+        console.error('Error getting categories for account:', error);
+        resolve({
+          success: false,
+          error: error.message
+        });
+      }
+    });
+  }
 }
 
 module.exports = AccountListService;
