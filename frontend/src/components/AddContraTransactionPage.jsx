@@ -236,15 +236,17 @@ const AddContraTransactionPage = ({
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
+  const [fromCategories, setFromCategories] = useState([]);
+  const [fromSubcategories, setFromSubcategories] = useState([]);
+  const [toCategories, setToCategories] = useState([]);
+  const [toSubcategories, setToSubcategories] = useState([]);
   const [allAccounts, setAllAccounts] = useState([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingFromCategories, setLoadingFromCategories] = useState(false);
+  const [loadingToCategories, setLoadingToCategories] = useState(false);
 
   useEffect(() => {
     if (currentPastorate && user) {
       loadAllAccounts();
-      loadCategories();
       if (isEditMode) {
         loadTransaction();
       } else {
@@ -263,24 +265,46 @@ const AddContraTransactionPage = ({
     }
   }, [notification]);
 
-  const loadCategories = async () => {
+  const loadCategoriesForAccount = async (accountType, accountId, isFromAccount = true) => {
     try {
-      setLoadingCategories(true);
-      const result = await window.electron.ledger.getAllCategoriesWithSubcategories({
-        pastorateId: currentPastorate.id
+      if (isFromAccount) {
+        setLoadingFromCategories(true);
+      } else {
+        setLoadingToCategories(true);
+      }
+
+      const result = await window.electron.accountList.getCategoriesForAccount({
+        accountType,
+        accountId: parseInt(accountId)
       });
 
       if (result.success) {
-        setCategories(result.categories || []);
+        if (isFromAccount) {
+          setFromCategories(result.categories || []);
+        } else {
+          setToCategories(result.categories || []);
+        }
       } else {
         console.error('Failed to load categories:', result.error);
-        setCategories([]);
+        if (isFromAccount) {
+          setFromCategories([]);
+        } else {
+          setToCategories([]);
+        }
       }
     } catch (error) {
       console.error('Failed to load categories:', error);
-      setCategories([]);
+      if (isFromAccount) {
+        setFromCategories([]);
+      } else {
+        setToCategories([]);
+      }
     } finally {
-      setLoadingCategories(false);
+      if (isFromAccount) {
+        setLoadingFromCategories(false);
+      } else {
+        setLoadingToCategories(false);
+      }
     }
   };
 
@@ -347,23 +371,40 @@ const AddContraTransactionPage = ({
           notes: transaction.notes || '',
         });
 
-        // Set subcategories if categories are selected
-        if (transaction.from_category_id) {
-          setTimeout(() => {
-            const category = categories.find(c => c.id === transaction.from_category_id);
-            if (category) {
-              setFromSubcategories(category.sub_categories || []);
+        // Load categories for FROM account
+        if (transaction.from_account_type && transaction.from_account_id) {
+          const fromResult = await window.electron.accountList.getCategoriesForAccount({
+            accountType: transaction.from_account_type,
+            accountId: parseInt(transaction.from_account_id)
+          });
+          if (fromResult.success) {
+            setFromCategories(fromResult.categories || []);
+            // Set subcategories if category is selected
+            if (transaction.from_category_id) {
+              const category = fromResult.categories.find(c => c.id === transaction.from_category_id);
+              if (category) {
+                setFromSubcategories(category.sub_categories || []);
+              }
             }
-          }, 100);
+          }
         }
 
-        if (transaction.to_category_id) {
-          setTimeout(() => {
-            const category = categories.find(c => c.id === transaction.to_category_id);
-            if (category) {
-              setToSubcategories(category.sub_categories || []);
+        // Load categories for TO account
+        if (transaction.to_account_type && transaction.to_account_id) {
+          const toResult = await window.electron.accountList.getCategoriesForAccount({
+            accountType: transaction.to_account_type,
+            accountId: parseInt(transaction.to_account_id)
+          });
+          if (toResult.success) {
+            setToCategories(toResult.categories || []);
+            // Set subcategories if category is selected
+            if (transaction.to_category_id) {
+              const category = toResult.categories.find(c => c.id === transaction.to_category_id);
+              if (category) {
+                setToSubcategories(category.sub_categories || []);
+              }
             }
-          }, 100);
+          }
         }
       } else {
         setNotification({
@@ -388,43 +429,23 @@ const AddContraTransactionPage = ({
       setErrors(prev => ({ ...prev, [field]: null }));
     }
 
-    // Update voucher number when accounts change
-    if (field === 'from_account_type' || field === 'to_account_type') {
-      // Determine bookType and update voucher number
-      const fromType = field === 'from_account_type' ? value : formData.from_account_type;
-      const toType = field === 'to_account_type' ? value : formData.to_account_type;
-
-      let bookType = 'all';
-      if (fromType === 'pastorate_cash' || toType === 'pastorate_cash') {
-        bookType = 'cash';
-      } else if (fromType === 'pastorate_bank' || toType === 'pastorate_bank') {
-        bookType = 'bank';
-      } else if (fromType === 'pastorate_diocese' || toType === 'pastorate_diocese') {
-        bookType = 'diocese';
-      }
-
-      if (!isEditMode) {
-        getNextVoucherNumber(bookType);
-      }
-    }
-
-    // Handle category change - load subcategories
+    // Handle FROM category change - load subcategories
     if (field === 'from_category_id') {
-      const category = categories.find(c => c.id === parseInt(value));
-      setSubcategories(category?.sub_categories || []);
+      const category = fromCategories.find(c => c.id === parseInt(value));
+      setFromSubcategories(category?.sub_categories || []);
       setFormData(prev => ({
         ...prev,
-        from_subcategory_id: null,
-        to_category_id: parseInt(value), // Set same category for TO
-        to_subcategory_id: null
+        from_subcategory_id: null
       }));
     }
 
-    // Handle subcategory change - set same for both FROM and TO
-    if (field === 'from_subcategory_id') {
+    // Handle TO category change - load subcategories
+    if (field === 'to_category_id') {
+      const category = toCategories.find(c => c.id === parseInt(value));
+      setToSubcategories(category?.sub_categories || []);
       setFormData(prev => ({
         ...prev,
-        to_subcategory_id: value // Set same subcategory for TO
+        to_subcategory_id: null
       }));
     }
   };
@@ -517,7 +538,7 @@ const AddContraTransactionPage = ({
 
         if (closeAfter) {
           setTimeout(() => {
-            navigate('/contra-vouchers');
+            navigate('/contra-vouchers?reload=' + Date.now());
           }, 1500);
         } else {
           // Reset form for new entry
@@ -537,7 +558,10 @@ const AddContraTransactionPage = ({
             amount: '',
             notes: '',
           });
-          setSubcategories([]);
+          setFromCategories([]);
+          setFromSubcategories([]);
+          setToCategories([]);
+          setToSubcategories([]);
           setErrors({});
           generateTransactionId();
           getNextVoucherNumber();
@@ -573,11 +597,6 @@ const AddContraTransactionPage = ({
   if (!currentPastorate) {
     return null;
   }
-
-  const capitalizeAccountType = (type) => {
-    if (!type) return '';
-    return type.charAt(0).toUpperCase() + type.slice(1) + ' - Pastorate';
-  };
 
   return (
     <div className={styles.container}>
@@ -679,8 +698,43 @@ const AddContraTransactionPage = ({
                 value={formData.from_account_type && formData.from_account_id ? `${formData.from_account_type}|${formData.from_account_id}` : ''}
                 onChange={(e) => {
                   const [type, id] = e.target.value.split('|');
-                  handleInputChange('from_account_type', type || '');
-                  handleInputChange('from_account_id', id || '');
+
+                  // Update both fields at once
+                  setFormData(prev => ({
+                    ...prev,
+                    from_account_type: type || '',
+                    from_account_id: id || '',
+                    from_category_id: null,
+                    from_subcategory_id: null
+                  }));
+
+                  // Clear errors
+                  if (errors.from_account_type) {
+                    setErrors(prev => ({ ...prev, from_account_type: null }));
+                  }
+
+                  // Reset categories
+                  setFromCategories([]);
+                  setFromSubcategories([]);
+
+                  // Load categories if both type and id are set
+                  if (type && id) {
+                    loadCategoriesForAccount(type, id, true);
+                  }
+
+                  // Update voucher number based on book type
+                  let bookType = 'all';
+                  if (type === 'pastorate_cash' || formData.to_account_type === 'pastorate_cash') {
+                    bookType = 'cash';
+                  } else if (type === 'pastorate_bank' || formData.to_account_type === 'pastorate_bank') {
+                    bookType = 'bank';
+                  } else if (type === 'pastorate_diocese' || formData.to_account_type === 'pastorate_diocese') {
+                    bookType = 'diocese';
+                  }
+
+                  if (!isEditMode) {
+                    getNextVoucherNumber(bookType);
+                  }
                 }}
                 disabled={loading}
               >
@@ -698,18 +752,18 @@ const AddContraTransactionPage = ({
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                Transfer Category <span className={styles.required}>*</span>
+                From Category <span className={styles.required}>*</span>
               </label>
               <select
                 className={`${styles.select} ${errors.from_category_id ? styles.errorInput : ''}`}
                 value={formData.from_category_id || ''}
                 onChange={(e) => handleInputChange('from_category_id', e.target.value ? parseInt(e.target.value) : null)}
-                disabled={loading || loadingCategories}
+                disabled={loading || loadingFromCategories || !formData.from_account_type}
               >
                 <option value="">
-                  {loadingCategories ? 'Loading categories...' : 'Select Transfer Category'}
+                  {loadingFromCategories ? 'Loading categories...' : 'Select From Category'}
                 </option>
-                {categories.map(category => (
+                {fromCategories.map(category => (
                   <option key={category.id} value={category.id}>
                     {category.category_name} ({category.category_type})
                   </option>
@@ -719,22 +773,22 @@ const AddContraTransactionPage = ({
                 <span className={styles.errorMessage}>{errors.from_category_id}</span>
               )}
               {!errors.from_category_id && (
-                <span className={styles.helperText}>Choose the purpose of this transfer</span>
+                <span className={styles.helperText}>Select category for FROM account</span>
               )}
             </div>
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                Transfer Subcategory
+                From Subcategory
               </label>
               <select
                 className={styles.select}
                 value={formData.from_subcategory_id || ''}
                 onChange={(e) => handleInputChange('from_subcategory_id', e.target.value ? parseInt(e.target.value) : null)}
-                disabled={loading || !formData.from_category_id || subcategories.length === 0}
+                disabled={loading || !formData.from_category_id || fromSubcategories.length === 0}
               >
-                <option value="">Select Transfer Subcategory (Optional)</option>
-                {subcategories.map(subcategory => (
+                <option value="">Select From Subcategory (Optional)</option>
+                {fromSubcategories.map(subcategory => (
                   <option key={subcategory.id} value={subcategory.id}>
                     {subcategory.sub_category_name}
                   </option>
@@ -752,8 +806,43 @@ const AddContraTransactionPage = ({
                 value={formData.to_account_type && formData.to_account_id ? `${formData.to_account_type}|${formData.to_account_id}` : ''}
                 onChange={(e) => {
                   const [type, id] = e.target.value.split('|');
-                  handleInputChange('to_account_type', type || '');
-                  handleInputChange('to_account_id', id || '');
+
+                  // Update both fields at once
+                  setFormData(prev => ({
+                    ...prev,
+                    to_account_type: type || '',
+                    to_account_id: id || '',
+                    to_category_id: null,
+                    to_subcategory_id: null
+                  }));
+
+                  // Clear errors
+                  if (errors.to_account_type) {
+                    setErrors(prev => ({ ...prev, to_account_type: null }));
+                  }
+
+                  // Reset categories
+                  setToCategories([]);
+                  setToSubcategories([]);
+
+                  // Load categories if both type and id are set
+                  if (type && id) {
+                    loadCategoriesForAccount(type, id, false);
+                  }
+
+                  // Update voucher number based on book type
+                  let bookType = 'all';
+                  if (formData.from_account_type === 'pastorate_cash' || type === 'pastorate_cash') {
+                    bookType = 'cash';
+                  } else if (formData.from_account_type === 'pastorate_bank' || type === 'pastorate_bank') {
+                    bookType = 'bank';
+                  } else if (formData.from_account_type === 'pastorate_diocese' || type === 'pastorate_diocese') {
+                    bookType = 'diocese';
+                  }
+
+                  if (!isEditMode) {
+                    getNextVoucherNumber(bookType);
+                  }
                 }}
                 disabled={loading}
               >
@@ -769,9 +858,52 @@ const AddContraTransactionPage = ({
               )}
             </div>
 
-            {/* Hidden TO category fields - automatically set to same as FROM */}
-            <input type="hidden" value={formData.to_category_id || ''} />
-            <input type="hidden" value={formData.to_subcategory_id || ''} />
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                To Category <span className={styles.required}>*</span>
+              </label>
+              <select
+                className={`${styles.select} ${errors.to_category_id ? styles.errorInput : ''}`}
+                value={formData.to_category_id || ''}
+                onChange={(e) => handleInputChange('to_category_id', e.target.value ? parseInt(e.target.value) : null)}
+                disabled={loading || loadingToCategories || !formData.to_account_type}
+              >
+                <option value="">
+                  {loadingToCategories ? 'Loading categories...' : 'Select To Category'}
+                </option>
+                {toCategories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.category_name} ({category.category_type})
+                  </option>
+                ))}
+              </select>
+              {errors.to_category_id && (
+                <span className={styles.errorMessage}>{errors.to_category_id}</span>
+              )}
+              {!errors.to_category_id && (
+                <span className={styles.helperText}>Select category for TO account</span>
+              )}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                To Subcategory
+              </label>
+              <select
+                className={styles.select}
+                value={formData.to_subcategory_id || ''}
+                onChange={(e) => handleInputChange('to_subcategory_id', e.target.value ? parseInt(e.target.value) : null)}
+                disabled={loading || !formData.to_category_id || toSubcategories.length === 0}
+              >
+                <option value="">Select To Subcategory (Optional)</option>
+                {toSubcategories.map(subcategory => (
+                  <option key={subcategory.id} value={subcategory.id}>
+                    {subcategory.sub_category_name}
+                  </option>
+                ))}
+              </select>
+              <span className={styles.helperText}>Optional - Select if applicable</span>
+            </div>
 
 
 

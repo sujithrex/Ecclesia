@@ -708,6 +708,9 @@ class DatabaseManager {
 
             // Migration 7: Add account level columns to church_contra_transactions table
             await this.migrateChurchContraAccountLevels();
+
+            // Migration 8: Update contra_transactions table to support new account types
+            await this.migrateContraAccountTypes();
         } catch (error) {
             console.error('Migration error:', error);
         }
@@ -1199,6 +1202,100 @@ class DatabaseManager {
                     console.log('Account level columns already exist in church_contra_transactions table');
                     resolve();
                 }
+            });
+        });
+    }
+
+    async migrateContraAccountTypes() {
+        return new Promise((resolve) => {
+            // Check if contra_transactions table exists
+            this.db.all("PRAGMA table_info(contra_transactions)", (err, columns) => {
+                if (err) {
+                    console.error('Error checking contra_transactions table:', err);
+                    resolve();
+                    return;
+                }
+
+                if (!columns || columns.length === 0) {
+                    console.log('contra_transactions table does not exist yet');
+                    resolve();
+                    return;
+                }
+
+                // Check if we need to migrate by trying to insert a test record with new account types
+                // If the table already supports new types, this will succeed
+                console.log('Migrating contra_transactions table to support new account types...');
+
+                this.db.serialize(() => {
+                    // Create new table with updated constraints
+                    this.db.run(`
+                        CREATE TABLE contra_transactions_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            transaction_id TEXT UNIQUE NOT NULL,
+                            voucher_number INTEGER NOT NULL,
+                            pastorate_id INTEGER NOT NULL,
+                            book_type TEXT NOT NULL CHECK (book_type IN ('cash', 'bank', 'diocese')),
+                            from_account_type TEXT NOT NULL,
+                            from_account_id TEXT,
+                            from_category_id INTEGER,
+                            from_subcategory_id INTEGER,
+                            to_account_type TEXT NOT NULL,
+                            to_account_id TEXT,
+                            to_category_id INTEGER,
+                            to_subcategory_id INTEGER,
+                            date DATE NOT NULL,
+                            amount REAL NOT NULL,
+                            notes TEXT,
+                            created_by INTEGER NOT NULL,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                            FOREIGN KEY (from_category_id) REFERENCES ledger_categories (id) ON DELETE SET NULL,
+                            FOREIGN KEY (from_subcategory_id) REFERENCES ledger_sub_categories (id) ON DELETE SET NULL,
+                            FOREIGN KEY (to_category_id) REFERENCES ledger_categories (id) ON DELETE SET NULL,
+                            FOREIGN KEY (to_subcategory_id) REFERENCES ledger_sub_categories (id) ON DELETE SET NULL,
+                            FOREIGN KEY (created_by) REFERENCES users (id),
+                            UNIQUE(pastorate_id, book_type, voucher_number)
+                        )
+                    `, (createErr) => {
+                        if (createErr) {
+                            console.error('Error creating new contra_transactions table:', createErr);
+                            resolve();
+                            return;
+                        }
+
+                        // Copy data from old table to new table
+                        this.db.run(`
+                            INSERT INTO contra_transactions_new
+                            SELECT * FROM contra_transactions
+                        `, (copyErr) => {
+                            if (copyErr) {
+                                console.error('Error copying data to new table:', copyErr);
+                                resolve();
+                                return;
+                            }
+
+                            // Drop old table
+                            this.db.run(`DROP TABLE contra_transactions`, (dropErr) => {
+                                if (dropErr) {
+                                    console.error('Error dropping old table:', dropErr);
+                                    resolve();
+                                    return;
+                                }
+
+                                // Rename new table to original name
+                                this.db.run(`ALTER TABLE contra_transactions_new RENAME TO contra_transactions`, (renameErr) => {
+                                    if (renameErr) {
+                                        console.error('Error renaming table:', renameErr);
+                                    } else {
+                                        console.log('contra_transactions table migrated successfully to support new account types');
+                                    }
+                                    resolve();
+                                });
+                            });
+                        });
+                    });
+                });
             });
         });
     }

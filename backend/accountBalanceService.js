@@ -17,34 +17,54 @@ class AccountBalanceService {
   async getAccountBalance(pastorateId, bookType) {
     return new Promise((resolve) => {
       try {
+        console.log(`=== Calculating balance for pastorate ${pastorateId}, bookType: ${bookType} ===`);
+
+        // Debug: Check what's in contra_transactions
+        this.db.db.all(
+          'SELECT id, from_account_type, to_account_type, amount, book_type FROM contra_transactions WHERE pastorate_id = ?',
+          [pastorateId],
+          (err, rows) => {
+            if (!err) {
+              console.log('Contra transactions in DB:', rows);
+            }
+          }
+        );
+
         // Calculate total income from all income sources
         const incomeQuery = `
-          SELECT 
+          SELECT
             COALESCE(SUM(amount), 0) as total_income
           FROM (
             -- Receipts
-            SELECT amount FROM receipt_transactions 
+            SELECT amount FROM receipt_transactions
             WHERE pastorate_id = ? AND book_type = ?
-            
+
             UNION ALL
-            
+
             -- Other Credits
-            SELECT amount FROM other_credit_transactions 
+            SELECT amount FROM other_credit_transactions
             WHERE pastorate_id = ? AND book_type = ?
-            
+
             UNION ALL
-            
+
             -- Offerings (only for cash book)
-            SELECT amount FROM offering_transactions 
+            SELECT amount FROM offering_transactions
             WHERE pastorate_id = ? AND ? = 'cash'
-            
+
             UNION ALL
-            
+
             -- Contra IN (transfers TO this account)
-            SELECT amount FROM contra_transactions 
-            WHERE pastorate_id = ? AND book_type = ? AND to_account_type = ?
+            -- Match account types: 'cash'/'bank'/'diocese' OR 'pastorate_cash'/'pastorate_bank'/'pastorate_diocese'
+            SELECT amount FROM contra_transactions
+            WHERE pastorate_id = ?
+            AND (
+              to_account_type = ?
+              OR to_account_type = 'pastorate_' || ?
+            )
           ) as income_sources
         `;
+
+        console.log('Income query params:', [pastorateId, bookType, pastorateId, bookType, pastorateId, bookType, pastorateId, bookType, bookType]);
 
         this.db.db.get(
           incomeQuery,
@@ -59,28 +79,37 @@ class AccountBalanceService {
               return;
             }
 
+            console.log(`Income result for ${bookType}:`, incomeResult);
+
             // Calculate total expenses from all expense sources
             const expenseQuery = `
-              SELECT 
+              SELECT
                 COALESCE(SUM(amount), 0) as total_expense
               FROM (
                 -- Bill Vouchers
-                SELECT amount FROM bill_voucher_transactions 
+                SELECT amount FROM bill_voucher_transactions
                 WHERE pastorate_id = ? AND book_type = ?
-                
+
                 UNION ALL
-                
+
                 -- Acquittance
-                SELECT amount FROM acquittance_transactions 
+                SELECT amount FROM acquittance_transactions
                 WHERE pastorate_id = ? AND book_type = ?
-                
+
                 UNION ALL
-                
+
                 -- Contra OUT (transfers FROM this account)
-                SELECT amount FROM contra_transactions 
-                WHERE pastorate_id = ? AND book_type = ? AND from_account_type = ?
+                -- Match account types: 'cash'/'bank'/'diocese' OR 'pastorate_cash'/'pastorate_bank'/'pastorate_diocese'
+                SELECT amount FROM contra_transactions
+                WHERE pastorate_id = ?
+                AND (
+                  from_account_type = ?
+                  OR from_account_type = 'pastorate_' || ?
+                )
               ) as expense_sources
             `;
+
+            console.log('Expense query params:', [pastorateId, bookType, pastorateId, bookType, pastorateId, bookType, bookType]);
 
             this.db.db.get(
               expenseQuery,
@@ -95,9 +124,13 @@ class AccountBalanceService {
                   return;
                 }
 
+                console.log(`Expense result for ${bookType}:`, expenseResult);
+
                 const totalIncome = parseFloat(incomeResult?.total_income || 0);
                 const totalExpense = parseFloat(expenseResult?.total_expense || 0);
                 const balance = totalIncome - totalExpense;
+
+                console.log(`Balance for ${bookType}: Income=${totalIncome}, Expense=${totalExpense}, Balance=${balance}`);
 
                 resolve({
                   success: true,

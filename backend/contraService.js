@@ -257,8 +257,14 @@ class ContraService {
     return new Promise((resolve) => {
       try {
         const offset = (page - 1) * limit;
-        let whereClause = 'WHERE ct.pastorate_id = ? AND ct.book_type = ?';
-        let queryParams = [pastorateId, bookType];
+        let whereClause = 'WHERE ct.pastorate_id = ?';
+        let queryParams = [pastorateId];
+
+        // Add book type filter if not 'all'
+        if (bookType && bookType !== 'all') {
+          whereClause += ' AND ct.book_type = ?';
+          queryParams.push(bookType);
+        }
 
         // Add month filter if specified
         if (filters.month && filters.month !== 'all') {

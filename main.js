@@ -37,6 +37,7 @@ const ChurchAcquittanceService = require('./backend/churchAcquittanceService.js'
 const ChurchContraService = require('./backend/churchContraService.js');
 const AccountBalanceService = require('./backend/accountBalanceService.js');
 const ChurchAccountBalanceService = require('./backend/churchAccountBalanceService.js');
+const AccountListService = require('./backend/accountListService.js');
 
 let mainWindow;
 let db;
@@ -75,6 +76,7 @@ let churchAcquittanceService;
 let churchContraService;
 let accountBalanceService;
 let churchAccountBalanceService;
+let accountListService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -660,6 +662,10 @@ ipcMain.handle('ledger-delete-sub-category', async (event, { subCategoryId, user
   return await ledgerService.deleteSubCategory(subCategoryId, userId);
 });
 
+ipcMain.handle('ledger-get-all-categories-with-subcategories', async (event, { pastorateId }) => {
+  return await ledgerService.getAllCategoriesWithSubcategories(pastorateId);
+});
+
 // Other Credits IPC handlers
 ipcMain.handle('other-credits-create-transaction', async (event, transactionData) => {
   return await otherCreditsService.createTransaction(transactionData, transactionData.userId);
@@ -837,6 +843,10 @@ ipcMain.handle('church-ledger-update-sub-category', async (event, subCategoryDat
 
 ipcMain.handle('church-ledger-delete-sub-category', async (event, { subCategoryId, userId }) => {
   return await churchLedgerService.deleteSubCategory(subCategoryId, userId);
+});
+
+ipcMain.handle('church-ledger-get-all-categories-with-subcategories', async (event, { churchId }) => {
+  return await churchLedgerService.getAllCategoriesWithSubcategories(churchId);
 });
 
 // Church Receipts IPC handlers
@@ -1030,6 +1040,19 @@ ipcMain.handle('church-account-balance-get-by-book-type', async (event, { church
   return await churchAccountBalanceService.getAccountBalance(churchId, bookType);
 });
 
+// Account List IPC handlers
+ipcMain.handle('account-list-get-all-for-pastorate', async (event, { pastorateId }) => {
+  return await accountListService.getAllAccountsForPastorate(pastorateId);
+});
+
+ipcMain.handle('account-list-get-all-for-church', async (event, { churchId }) => {
+  return await accountListService.getAllAccountsForChurch(churchId);
+});
+
+ipcMain.handle('account-list-get-categories-for-account', async (event, { accountType, accountId }) => {
+  return await accountListService.getCategoriesForAccount(accountType, accountId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -1180,6 +1203,7 @@ app.on('ready', async () => {
   churchContraService = new ChurchContraService(db);
   accountBalanceService = new AccountBalanceService(db);
   churchAccountBalanceService = new ChurchAccountBalanceService(db);
+  accountListService = new AccountListService(db);
 
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

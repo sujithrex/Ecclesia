@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { makeStyles } from '@fluentui/react-components';
 import {
   HomeRegular,
@@ -349,6 +349,7 @@ const ContraVouchersPage = ({
 }) => {
   const styles = useStyles();
   const navigate = useNavigate();
+  const location = useLocation();
   const [allTransactions, setAllTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -363,7 +364,7 @@ const ContraVouchersPage = ({
     if (currentPastorate && user) {
       loadAllTransactions();
     }
-  }, [currentPastorate?.id, user?.id]);
+  }, [currentPastorate?.id, user?.id, location.key]);
 
   useEffect(() => {
     if (notification) {

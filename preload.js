@@ -195,7 +195,8 @@ contextBridge.exposeInMainWorld('electron', {
     createSubCategory: (data) => ipcRenderer.invoke('ledger-create-sub-category', data),
     getSubCategories: (data) => ipcRenderer.invoke('ledger-get-sub-categories', data),
     updateSubCategory: (data) => ipcRenderer.invoke('ledger-update-sub-category', data),
-    deleteSubCategory: (data) => ipcRenderer.invoke('ledger-delete-sub-category', data)
+    deleteSubCategory: (data) => ipcRenderer.invoke('ledger-delete-sub-category', data),
+    getAllCategoriesWithSubcategories: (data) => ipcRenderer.invoke('ledger-get-all-categories-with-subcategories', data)
   },
 
   // Pastorate Ledger API (alias for ledger)
@@ -272,7 +273,8 @@ contextBridge.exposeInMainWorld('electron', {
     createSubCategory: (data) => ipcRenderer.invoke('church-ledger-create-sub-category', data),
     getSubCategories: (data) => ipcRenderer.invoke('church-ledger-get-sub-categories', data),
     updateSubCategory: (data) => ipcRenderer.invoke('church-ledger-update-sub-category', data),
-    deleteSubCategory: (data) => ipcRenderer.invoke('church-ledger-delete-sub-category', data)
+    deleteSubCategory: (data) => ipcRenderer.invoke('church-ledger-delete-sub-category', data),
+    getAllCategoriesWithSubcategories: (data) => ipcRenderer.invoke('church-ledger-get-all-categories-with-subcategories', data)
   },
 
   // Church Receipts API
@@ -347,5 +349,12 @@ contextBridge.exposeInMainWorld('electron', {
   churchAccountBalance: {
     getAllBalances: (data) => ipcRenderer.invoke('church-account-balance-get-all', data),
     getBalanceByBookType: (data) => ipcRenderer.invoke('church-account-balance-get-by-book-type', data)
+  },
+
+  // Account List API
+  accountList: {
+    getAllForPastorate: (data) => ipcRenderer.invoke('account-list-get-all-for-pastorate', data),
+    getAllForChurch: (data) => ipcRenderer.invoke('account-list-get-all-for-church', data),
+    getCategoriesForAccount: (data) => ipcRenderer.invoke('account-list-get-categories-for-account', data)
   }
 });
