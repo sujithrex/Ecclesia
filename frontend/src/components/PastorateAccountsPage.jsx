@@ -549,13 +549,6 @@ const PastorateAccountsPage = ({
               Bills / Vouchers
             </button>
             <button
-              className={styles.actionButtonOutlined}
-              onClick={() => navigate('/acquittance?bookType=cash')}
-            >
-              <DocumentRegular />
-              Acquittance
-            </button>
-            <button
               className={styles.actionButton}
               onClick={() => navigate('/contra-vouchers?bookType=cash')}
             >
@@ -567,7 +560,7 @@ const PastorateAccountsPage = ({
               onClick={() => navigate('/indent')}
             >
               <PersonRegular />
-              Indent
+              Indent / Acquittance
             </button>
           </div>
         </div>
@@ -618,13 +611,6 @@ const PastorateAccountsPage = ({
               >
                 <DocumentRegular />
                 Bills / Vouchers
-              </button>
-              <button
-                className={styles.actionButtonOutlined}
-                onClick={() => navigate('/acquittance?bookType=bank')}
-              >
-                <DocumentRegular />
-                Acquittance
               </button>
               <button
                 className={styles.actionButton}
@@ -680,13 +666,6 @@ const PastorateAccountsPage = ({
               >
                 <DocumentRegular />
                 Bills / Vouchers
-              </button>
-              <button
-                className={styles.actionButtonOutlined}
-                onClick={() => navigate('/acquittance?bookType=diocese')}
-              >
-                <DocumentRegular />
-                Acquittance
               </button>
               <button
                 className={styles.actionButton}

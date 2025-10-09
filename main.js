@@ -1149,6 +1149,65 @@ ipcMain.handle('indent-delete-allowance', async (event, { allowanceId }) => {
   return await indentService.deleteAllowance(allowanceId);
 });
 
+// Payment Fields
+ipcMain.handle('indent-get-payment-fields', async (event, { pastorateId }) => {
+  return await indentService.getPaymentFields(pastorateId);
+});
+
+ipcMain.handle('indent-create-payment-field', async (event, { pastorateId, fieldData }) => {
+  return await indentService.createPaymentField(pastorateId, fieldData);
+});
+
+ipcMain.handle('indent-update-payment-field', async (event, { fieldId, fieldData }) => {
+  return await indentService.updatePaymentField(fieldId, fieldData);
+});
+
+ipcMain.handle('indent-delete-payment-field', async (event, { fieldId }) => {
+  return await indentService.deletePaymentField(fieldId);
+});
+
+// Payments
+ipcMain.handle('indent-get-payments', async (event, { pastorateId, filters }) => {
+  return await indentService.getPayments(pastorateId, filters);
+});
+
+ipcMain.handle('indent-get-payment', async (event, { paymentId }) => {
+  return await indentService.getPaymentById(paymentId);
+});
+
+ipcMain.handle('indent-create-payment', async (event, { pastorateId, userId, paymentData }) => {
+  return await indentService.createPayment(pastorateId, userId, paymentData);
+});
+
+ipcMain.handle('indent-update-payment', async (event, { paymentId, paymentData }) => {
+  return await indentService.updatePayment(paymentId, paymentData);
+});
+
+ipcMain.handle('indent-delete-payment', async (event, { paymentId }) => {
+  return await indentService.deletePayment(paymentId);
+});
+
+// Monthly Payouts
+ipcMain.handle('indent-get-monthly-payouts', async (event, { pastorateId, filters }) => {
+  return await indentService.getMonthlyPayouts(pastorateId, filters);
+});
+
+ipcMain.handle('indent-get-monthly-payout', async (event, { payoutId }) => {
+  return await indentService.getMonthlyPayoutById(payoutId);
+});
+
+ipcMain.handle('indent-create-monthly-payout', async (event, { pastorateId, userId, payoutData }) => {
+  return await indentService.createMonthlyPayout(pastorateId, userId, payoutData);
+});
+
+ipcMain.handle('indent-update-monthly-payout', async (event, { payoutId, payoutData }) => {
+  return await indentService.updateMonthlyPayout(payoutId, payoutData);
+});
+
+ipcMain.handle('indent-delete-monthly-payout', async (event, { payoutId }) => {
+  return await indentService.deleteMonthlyPayout(payoutId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {

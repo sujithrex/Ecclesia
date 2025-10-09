@@ -388,6 +388,23 @@ contextBridge.exposeInMainWorld('electron', {
     getAllowance: (data) => ipcRenderer.invoke('indent-get-allowance', data),
     createAllowance: (data) => ipcRenderer.invoke('indent-create-allowance', data),
     updateAllowance: (data) => ipcRenderer.invoke('indent-update-allowance', data),
-    deleteAllowance: (data) => ipcRenderer.invoke('indent-delete-allowance', data)
+    deleteAllowance: (data) => ipcRenderer.invoke('indent-delete-allowance', data),
+    // Payment Fields
+    getPaymentFields: (data) => ipcRenderer.invoke('indent-get-payment-fields', data),
+    createPaymentField: (data) => ipcRenderer.invoke('indent-create-payment-field', data),
+    updatePaymentField: (data) => ipcRenderer.invoke('indent-update-payment-field', data),
+    deletePaymentField: (data) => ipcRenderer.invoke('indent-delete-payment-field', data),
+    // Payments
+    getPayments: (data) => ipcRenderer.invoke('indent-get-payments', data),
+    getPayment: (data) => ipcRenderer.invoke('indent-get-payment', data),
+    createPayment: (data) => ipcRenderer.invoke('indent-create-payment', data),
+    updatePayment: (data) => ipcRenderer.invoke('indent-update-payment', data),
+    deletePayment: (data) => ipcRenderer.invoke('indent-delete-payment', data),
+    // Monthly Payouts
+    getMonthlyPayouts: (data) => ipcRenderer.invoke('indent-get-monthly-payouts', data),
+    getMonthlyPayout: (data) => ipcRenderer.invoke('indent-get-monthly-payout', data),
+    createMonthlyPayout: (data) => ipcRenderer.invoke('indent-create-monthly-payout', data),
+    updateMonthlyPayout: (data) => ipcRenderer.invoke('indent-update-monthly-payout', data),
+    deleteMonthlyPayout: (data) => ipcRenderer.invoke('indent-delete-monthly-payout', data)
   }
 });

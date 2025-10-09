@@ -744,6 +744,53 @@ class DatabaseManager {
                         FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
                         FOREIGN KEY (created_by) REFERENCES users (id)
                     )
+                `);
+
+                // Indent payment fields table - for custom payment types
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_payment_fields (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        field_name TEXT NOT NULL,
+                        field_order INTEGER NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(pastorate_id, field_name)
+                    )
+                `);
+
+                // Indent payments table - for payment entries
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_payments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        payment_name TEXT NOT NULL,
+                        payment_amount REAL NOT NULL DEFAULT 0,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id)
+                    )
+                `);
+
+                // Indent monthly payouts table - for monthly snapshots
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_monthly_payouts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        month INTEGER NOT NULL,
+                        year INTEGER NOT NULL,
+                        total_amount REAL NOT NULL DEFAULT 0,
+                        snapshot_data TEXT,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(pastorate_id, month, year)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);

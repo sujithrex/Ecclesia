@@ -503,6 +503,308 @@ class IndentService {
             });
         });
     }
+
+    // ========== PAYMENT FIELDS MANAGEMENT ==========
+
+    /**
+     * Get all payment fields for a pastorate
+     */
+    async getPaymentFields(pastorateId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.all(`
+                SELECT * FROM indent_payment_fields
+                WHERE pastorate_id = ?
+                ORDER BY field_order ASC, id ASC
+            `, [pastorateId], (err, rows) => {
+                if (err) {
+                    console.error('Error fetching payment fields:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, fields: rows || [] });
+                }
+            });
+        });
+    }
+
+    /**
+     * Create a new payment field
+     */
+    async createPaymentField(pastorateId, fieldData) {
+        return new Promise((resolve, reject) => {
+            const { field_name } = fieldData;
+
+            this.db.db.get(`
+                SELECT MAX(field_order) as max_order
+                FROM indent_payment_fields
+                WHERE pastorate_id = ?
+            `, [pastorateId], (err, row) => {
+                if (err) {
+                    console.error('Error getting max order:', err);
+                    reject(err);
+                    return;
+                }
+
+                const nextOrder = (row?.max_order || 0) + 1;
+
+                this.db.db.run(`
+                    INSERT INTO indent_payment_fields (
+                        pastorate_id, field_name, field_order
+                    ) VALUES (?, ?, ?)
+                `, [pastorateId, field_name, nextOrder], function(err) {
+                    if (err) {
+                        console.error('Error creating payment field:', err);
+                        reject(err);
+                    } else {
+                        resolve({ success: true, id: this.lastID });
+                    }
+                });
+            });
+        });
+    }
+
+    /**
+     * Update a payment field
+     */
+    async updatePaymentField(fieldId, fieldData) {
+        return new Promise((resolve, reject) => {
+            const { field_name } = fieldData;
+
+            this.db.db.run(`
+                UPDATE indent_payment_fields
+                SET field_name = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [field_name, fieldId], function(err) {
+                if (err) {
+                    console.error('Error updating payment field:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    /**
+     * Delete a payment field
+     */
+    async deletePaymentField(fieldId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.run(`
+                DELETE FROM indent_payment_fields WHERE id = ?
+            `, [fieldId], function(err) {
+                if (err) {
+                    console.error('Error deleting payment field:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // ========== PAYMENTS MANAGEMENT ==========
+
+    /**
+     * Get all payments for a pastorate
+     */
+    async getPayments(pastorateId, filters = {}) {
+        return new Promise((resolve, reject) => {
+            this.db.db.all(`
+                SELECT * FROM indent_payments
+                WHERE pastorate_id = ?
+                ORDER BY created_at DESC
+            `, [pastorateId], (err, rows) => {
+                if (err) {
+                    console.error('Error fetching payments:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, payments: rows || [] });
+                }
+            });
+        });
+    }
+
+    /**
+     * Get a single payment by ID
+     */
+    async getPaymentById(paymentId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.get(`
+                SELECT * FROM indent_payments WHERE id = ?
+            `, [paymentId], (err, row) => {
+                if (err) {
+                    console.error('Error fetching payment:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, payment: row });
+                }
+            });
+        });
+    }
+
+    /**
+     * Create a new payment
+     */
+    async createPayment(pastorateId, userId, paymentData) {
+        return new Promise((resolve, reject) => {
+            const { payment_name, payment_amount } = paymentData;
+
+            this.db.db.run(`
+                INSERT INTO indent_payments (
+                    pastorate_id, payment_name, payment_amount, created_by
+                ) VALUES (?, ?, ?, ?)
+            `, [pastorateId, payment_name, payment_amount, userId], function(err) {
+                if (err) {
+                    console.error('Error creating payment:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    /**
+     * Update a payment
+     */
+    async updatePayment(paymentId, paymentData) {
+        return new Promise((resolve, reject) => {
+            const { payment_name, payment_amount } = paymentData;
+
+            this.db.db.run(`
+                UPDATE indent_payments
+                SET payment_name = ?, payment_amount = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [payment_name, payment_amount, paymentId], function(err) {
+                if (err) {
+                    console.error('Error updating payment:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    /**
+     * Delete a payment
+     */
+    async deletePayment(paymentId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.run(`
+                DELETE FROM indent_payments WHERE id = ?
+            `, [paymentId], function(err) {
+                if (err) {
+                    console.error('Error deleting payment:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // ========== MONTHLY PAYOUTS MANAGEMENT ==========
+
+    /**
+     * Get all monthly payouts for a pastorate
+     */
+    async getMonthlyPayouts(pastorateId, filters = {}) {
+        return new Promise((resolve, reject) => {
+            this.db.db.all(`
+                SELECT * FROM indent_monthly_payouts
+                WHERE pastorate_id = ?
+                ORDER BY year DESC, month DESC
+            `, [pastorateId], (err, rows) => {
+                if (err) {
+                    console.error('Error fetching monthly payouts:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, payouts: rows || [] });
+                }
+            });
+        });
+    }
+
+    /**
+     * Get a single monthly payout by ID
+     */
+    async getMonthlyPayoutById(payoutId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.get(`
+                SELECT * FROM indent_monthly_payouts WHERE id = ?
+            `, [payoutId], (err, row) => {
+                if (err) {
+                    console.error('Error fetching monthly payout:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, payout: row });
+                }
+            });
+        });
+    }
+
+    /**
+     * Create a new monthly payout
+     */
+    async createMonthlyPayout(pastorateId, userId, payoutData) {
+        return new Promise((resolve, reject) => {
+            const { month, year, total_amount, snapshot_data } = payoutData;
+
+            this.db.db.run(`
+                INSERT INTO indent_monthly_payouts (
+                    pastorate_id, month, year, total_amount, snapshot_data, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            `, [pastorateId, month, year, total_amount, snapshot_data, userId], function(err) {
+                if (err) {
+                    console.error('Error creating monthly payout:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    /**
+     * Update a monthly payout
+     */
+    async updateMonthlyPayout(payoutId, payoutData) {
+        return new Promise((resolve, reject) => {
+            const { month, year, total_amount, snapshot_data } = payoutData;
+
+            this.db.db.run(`
+                UPDATE indent_monthly_payouts
+                SET month = ?, year = ?, total_amount = ?, snapshot_data = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [month, year, total_amount, snapshot_data, payoutId], function(err) {
+                if (err) {
+                    console.error('Error updating monthly payout:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    /**
+     * Delete a monthly payout
+     */
+    async deleteMonthlyPayout(payoutId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.run(`
+                DELETE FROM indent_monthly_payouts WHERE id = ?
+            `, [payoutId], function(err) {
+                if (err) {
+                    console.error('Error deleting monthly payout:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
 }
 
 module.exports = IndentService;

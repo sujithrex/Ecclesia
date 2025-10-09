@@ -362,6 +362,19 @@ const IndentPage = ({
   const [editingAllowance, setEditingAllowance] = useState(null);
   const [newAllowanceFieldName, setNewAllowanceFieldName] = useState('');
 
+  // Payments state
+  const [payments, setPayments] = useState([]);
+  const [paymentFields, setPaymentFields] = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPaymentFieldsModal, setShowPaymentFieldsModal] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [newPaymentFieldName, setNewPaymentFieldName] = useState('');
+
+  // Monthly Payouts state
+  const [monthlyPayouts, setMonthlyPayouts] = useState([]);
+  const [showMonthlyPayoutModal, setShowMonthlyPayoutModal] = useState(false);
+  const [editingMonthlyPayout, setEditingMonthlyPayout] = useState(null);
+
   // Common state
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState(null);
@@ -392,6 +405,18 @@ const IndentPage = ({
     allowance_amount: 0
   });
 
+  // Payment form state
+  const [paymentForm, setPaymentForm] = useState({
+    payment_name: '',
+    payment_amount: 0
+  });
+
+  // Monthly payout form state
+  const [monthlyPayoutForm, setMonthlyPayoutForm] = useState({
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear()
+  });
+
   // Load data on mount
   useEffect(() => {
     if (currentPastorate && user) {
@@ -405,7 +430,10 @@ const IndentPage = ({
       loadEmployees(),
       loadDeductionFields(),
       loadAllowances(),
-      loadAllowanceFields()
+      loadAllowanceFields(),
+      loadPayments(),
+      loadPaymentFields(),
+      loadMonthlyPayouts()
     ]);
     setLoading(false);
   };
@@ -465,6 +493,47 @@ const IndentPage = ({
     }
   };
 
+  const loadPayments = async () => {
+    try {
+      const result = await window.electron.indent.getPayments({
+        pastorateId: currentPastorate.id,
+        filters: {}
+      });
+      if (result.success) {
+        setPayments(result.payments || []);
+      }
+    } catch (error) {
+      console.error('Failed to load payments:', error);
+    }
+  };
+
+  const loadPaymentFields = async () => {
+    try {
+      const result = await window.electron.indent.getPaymentFields({
+        pastorateId: currentPastorate.id
+      });
+      if (result.success) {
+        setPaymentFields(result.fields || []);
+      }
+    } catch (error) {
+      console.error('Failed to load payment fields:', error);
+    }
+  };
+
+  const loadMonthlyPayouts = async () => {
+    try {
+      const result = await window.electron.indent.getMonthlyPayouts({
+        pastorateId: currentPastorate.id,
+        filters: {}
+      });
+      if (result.success) {
+        setMonthlyPayouts(result.payouts || []);
+      }
+    } catch (error) {
+      console.error('Failed to load monthly payouts:', error);
+    }
+  };
+
   // Utility functions
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
@@ -501,6 +570,22 @@ const IndentPage = ({
 
   const handleEditEmployee = (employee) => {
     setEditingEmployee(employee);
+
+    // Parse custom_deductions safely - it might be a string or already an object
+    let customDeductions = {};
+    if (employee.custom_deductions) {
+      if (typeof employee.custom_deductions === 'string') {
+        try {
+          customDeductions = JSON.parse(employee.custom_deductions);
+        } catch (e) {
+          console.error('Error parsing custom_deductions:', e);
+          customDeductions = {};
+        }
+      } else if (typeof employee.custom_deductions === 'object') {
+        customDeductions = employee.custom_deductions;
+      }
+    }
+
     setEmployeeForm({
       name: employee.name,
       position: employee.position,
@@ -513,7 +598,7 @@ const IndentPage = ({
       cswf: employee.cswf,
       dmaf: employee.dmaf,
       sangam: employee.sangam,
-      custom_deductions: employee.custom_deductions ? JSON.parse(employee.custom_deductions) : {}
+      custom_deductions: customDeductions
     });
     setShowEmployeeModal(true);
   };
@@ -753,6 +838,243 @@ const IndentPage = ({
     );
   };
 
+  // Payment handlers
+  const handleAddPayment = () => {
+    setEditingPayment(null);
+    setPaymentForm({
+      payment_name: '',
+      payment_amount: 0
+    });
+    setShowPaymentModal(true);
+  };
+
+  const handleEditPayment = (payment) => {
+    setEditingPayment(payment);
+    setPaymentForm({
+      payment_name: payment.payment_name,
+      payment_amount: payment.payment_amount
+    });
+    setShowPaymentModal(true);
+  };
+
+  const handleSavePayment = async () => {
+    if (!paymentForm.payment_name) {
+      showNotification('Please fill in required fields', 'error');
+      return;
+    }
+
+    try {
+      if (editingPayment) {
+        const result = await window.electron.indent.updatePayment({
+          paymentId: editingPayment.id,
+          paymentData: paymentForm
+        });
+        if (result.success) {
+          showNotification('Payment updated successfully');
+          loadPayments();
+          setShowPaymentModal(false);
+        } else {
+          showNotification('Failed to update payment', 'error');
+        }
+      } else {
+        const result = await window.electron.indent.createPayment({
+          pastorateId: currentPastorate.id,
+          userId: user.id,
+          paymentData: paymentForm
+        });
+        if (result.success) {
+          showNotification('Payment added successfully');
+          loadPayments();
+          setShowPaymentModal(false);
+        } else {
+          showNotification('Failed to add payment', 'error');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save payment:', error);
+      showNotification('Failed to save payment', 'error');
+    }
+  };
+
+  const handleDeletePayment = (paymentId) => {
+    showConfirm(
+      'Delete Payment',
+      'Are you sure you want to delete this payment? This action cannot be undone.',
+      async () => {
+        try {
+          const result = await window.electron.indent.deletePayment({ paymentId });
+          if (result.success) {
+            showNotification('Payment deleted successfully');
+            loadPayments();
+          } else {
+            showNotification('Failed to delete payment', 'error');
+          }
+        } catch (error) {
+          console.error('Failed to delete payment:', error);
+          showNotification('Failed to delete payment', 'error');
+        }
+        hideConfirm();
+      }
+    );
+  };
+
+  // Payment field handlers
+  const handleAddPaymentField = async () => {
+    if (!newPaymentFieldName.trim()) return;
+
+    try {
+      const result = await window.electron.indent.createPaymentField({
+        pastorateId: currentPastorate.id,
+        fieldData: { field_name: newPaymentFieldName.trim() }
+      });
+      if (result.success) {
+        showNotification('Payment field added successfully');
+        loadPaymentFields();
+        setNewPaymentFieldName('');
+      } else {
+        showNotification('Failed to add payment field', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to add payment field:', error);
+      showNotification('Failed to add payment field', 'error');
+    }
+  };
+
+  const handleDeletePaymentField = (fieldId) => {
+    showConfirm(
+      'Delete Payment Field',
+      'Are you sure you want to delete this field? This action cannot be undone.',
+      async () => {
+        try {
+          const result = await window.electron.indent.deletePaymentField({ fieldId });
+          if (result.success) {
+            showNotification('Payment field deleted successfully');
+            loadPaymentFields();
+          } else {
+            showNotification('Failed to delete payment field', 'error');
+          }
+        } catch (error) {
+          console.error('Failed to delete payment field:', error);
+          showNotification('Failed to delete payment field', 'error');
+        }
+        hideConfirm();
+      }
+    );
+  };
+
+  // Monthly payout handlers
+  const handleAddMonthlyPayout = () => {
+    setEditingMonthlyPayout(null);
+    setMonthlyPayoutForm({
+      month: new Date().getMonth() + 1,
+      year: new Date().getFullYear()
+    });
+    setShowMonthlyPayoutModal(true);
+  };
+
+  const handleSaveMonthlyPayout = async () => {
+    try {
+      // Calculate total amounts from all three tables
+      const employeeTotal = employees.reduce((sum, emp) => {
+        let total = emp.salary + emp.da + emp.dpf + emp.cpf + emp.dfbf + emp.cswf + emp.dmaf + emp.sangam;
+        if (emp.custom_deductions) {
+          try {
+            const customDed = typeof emp.custom_deductions === 'string'
+              ? JSON.parse(emp.custom_deductions)
+              : emp.custom_deductions;
+            total += Object.values(customDed).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+          } catch (e) {
+            console.error('Error parsing custom_deductions in monthly payout:', e);
+          }
+        }
+        return sum + total;
+      }, 0);
+
+      const allowanceTotal = allowances.reduce((sum, allow) => sum + (allow.allowance_amount || 0), 0);
+      const paymentTotal = payments.reduce((sum, pay) => sum + (pay.payment_amount || 0), 0);
+      const totalAmount = employeeTotal + allowanceTotal + paymentTotal;
+
+      // Create snapshot data
+      const snapshotData = {
+        employees: employees.map(emp => ({
+          id: emp.id,
+          name: emp.name,
+          position: emp.position,
+          salary: emp.salary,
+          da: emp.da,
+          dpf: emp.dpf,
+          cpf: emp.cpf,
+          dfbf: emp.dfbf,
+          cswf: emp.cswf,
+          dmaf: emp.dmaf,
+          sangam: emp.sangam,
+          custom_deductions: emp.custom_deductions
+        })),
+        allowances: allowances.map(allow => ({
+          id: allow.id,
+          name: allow.name,
+          position: allow.position,
+          allowance_name: allow.allowance_name,
+          allowance_amount: allow.allowance_amount
+        })),
+        payments: payments.map(pay => ({
+          id: pay.id,
+          payment_name: pay.payment_name,
+          payment_amount: pay.payment_amount
+        }))
+      };
+
+      const result = await window.electron.indent.createMonthlyPayout({
+        pastorateId: currentPastorate.id,
+        userId: user.id,
+        payoutData: {
+          month: monthlyPayoutForm.month,
+          year: monthlyPayoutForm.year,
+          total_amount: totalAmount,
+          snapshot_data: JSON.stringify(snapshotData)
+        }
+      });
+
+      if (result.success) {
+        showNotification('Monthly payout created successfully');
+        loadMonthlyPayouts();
+        setShowMonthlyPayoutModal(false);
+      } else {
+        showNotification('Failed to create monthly payout', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to save monthly payout:', error);
+      showNotification('Failed to save monthly payout', 'error');
+    }
+  };
+
+  const handleDeleteMonthlyPayout = (payoutId) => {
+    showConfirm(
+      'Delete Monthly Payout',
+      'Are you sure you want to delete this monthly payout? This action cannot be undone.',
+      async () => {
+        try {
+          const result = await window.electron.indent.deleteMonthlyPayout({ payoutId });
+          if (result.success) {
+            showNotification('Monthly payout deleted successfully');
+            loadMonthlyPayouts();
+          } else {
+            showNotification('Failed to delete monthly payout', 'error');
+          }
+        } catch (error) {
+          console.error('Failed to delete monthly payout:', error);
+          showNotification('Failed to delete monthly payout', 'error');
+        }
+        hideConfirm();
+      }
+    );
+  };
+
+  const handleEditMonthlyPayout = (payout) => {
+    // Navigate to edit page
+    navigate(`/indent/monthly-payout/edit/${payout.id}`);
+  };
+
   // Format functions
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -772,39 +1094,43 @@ const IndentPage = ({
     });
   };
 
-  // Breadcrumb
-  const breadcrumbItems = [
-    { label: 'Home', icon: <HomeRegular />, onClick: () => navigate('/') },
-    { label: 'Pastorate Accounts', onClick: () => navigate('/pastorate-accounts') },
-    { label: 'Indent Book' }
-  ];
+  const getMonthName = (monthNumber) => {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[monthNumber - 1] || '';
+  };
 
   return (
     <div className={styles.container}>
-      <StatusBar
-        user={user}
-        onLogout={onLogout}
-        onProfileClick={onProfileClick}
-        currentPastorate={currentPastorate}
-        userPastorates={userPastorates}
-        onPastorateChange={onPastorateChange}
-        onCreatePastorate={onCreatePastorate}
-        onEditPastorate={onEditPastorate}
-        onDeletePastorate={onDeletePastorate}
-        currentChurch={currentChurch}
-        userChurches={userChurches}
-        onChurchChange={onChurchChange}
-        onCreateChurch={onCreateChurch}
-        onEditChurch={onEditChurch}
-        onDeleteChurch={onDeleteChurch}
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb
+        pageTitle="Indent Book - Employee Salary & Deductions"
+        titleAlign="left"
+        breadcrumbs={[
+          {
+            label: 'Home',
+            icon: <HomeRegular />,
+            onClick: () => navigate('/')
+          },
+          {
+            label: 'Pastorate Accounts',
+            onClick: () => navigate('/pastorate-accounts')
+          },
+          {
+            label: 'Indent Book',
+            current: true
+          }
+        ]}
+        onNavigate={(breadcrumb) => {
+          if (breadcrumb.onClick) {
+            breadcrumb.onClick();
+          }
+        }}
       />
 
       <div className={styles.content}>
-        <Breadcrumb items={breadcrumbItems} />
-
-        <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#323130', margin: 0 }}>
-          Indent Book - Employee Salary & Deductions
-        </h1>
 
         {/* Two-column layout */}
         <div className={styles.twoColumnLayout}>
@@ -943,6 +1269,149 @@ const IndentPage = ({
                               <button
                                 className={styles.iconButton}
                                 onClick={() => handleDeleteAllowance(allowance.id)}
+                                title="Delete"
+                              >
+                                <DeleteRegular fontSize={18} style={{ color: '#D13438' }} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Second row: Indent Payments and Monthly Payouts */}
+        <div className={styles.twoColumnLayout}>
+          {/* Left: Indent Payments Table */}
+          <div className={styles.tableSection}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Indent Payments</h2>
+              <div className={styles.buttonGroup}>
+                <button className={styles.addButton} onClick={() => setShowPaymentFieldsModal(true)}>
+                  <SettingsRegular fontSize={18} />
+                  Add Fields
+                </button>
+                <button className={styles.addButton} onClick={handleAddPayment}>
+                  <AddRegular fontSize={18} />
+                  Add Entry
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.tableContainer}>
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                  <thead className={styles.tableHeader}>
+                    <tr>
+                      <th className={styles.th}>Name of the Payment</th>
+                      <th className={styles.th}>Amount</th>
+                      <th className={styles.th}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan="3" className={styles.emptyState}>
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : payments.length === 0 ? (
+                      <tr>
+                        <td colSpan="3" className={styles.emptyState}>
+                          <MoneyRegular fontSize={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                          <p>No payments found. Click "Add Entry" to add your first payment.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      payments.map((payment) => (
+                        <tr key={payment.id}>
+                          <td className={styles.td}>{payment.payment_name}</td>
+                          <td className={styles.td}>{formatCurrency(payment.payment_amount)}</td>
+                          <td className={styles.td}>
+                            <div className={styles.actionButtons}>
+                              <button
+                                className={styles.iconButton}
+                                onClick={() => handleEditPayment(payment)}
+                                title="Edit"
+                              >
+                                <EditRegular fontSize={18} style={{ color: '#B5316A' }} />
+                              </button>
+                              <button
+                                className={styles.iconButton}
+                                onClick={() => handleDeletePayment(payment.id)}
+                                title="Delete"
+                              >
+                                <DeleteRegular fontSize={18} style={{ color: '#D13438' }} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Monthly Payouts Table */}
+          <div className={styles.tableSection}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Monthly Payouts</h2>
+              <div className={styles.buttonGroup}>
+                <button className={styles.addButton} onClick={handleAddMonthlyPayout}>
+                  <AddRegular fontSize={18} />
+                  Add Entry
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.tableContainer}>
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                  <thead className={styles.tableHeader}>
+                    <tr>
+                      <th className={styles.th}>Month & Year</th>
+                      <th className={styles.th}>Total Amount</th>
+                      <th className={styles.th}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan="3" className={styles.emptyState}>
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : monthlyPayouts.length === 0 ? (
+                      <tr>
+                        <td colSpan="3" className={styles.emptyState}>
+                          <MoneyRegular fontSize={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                          <p>No monthly payouts found. Click "Add Entry" to create your first snapshot.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      monthlyPayouts.map((payout) => (
+                        <tr key={payout.id}>
+                          <td className={styles.td}>{getMonthName(payout.month)} {payout.year}</td>
+                          <td className={styles.td}>{formatCurrency(payout.total_amount)}</td>
+                          <td className={styles.td}>
+                            <div className={styles.actionButtons}>
+                              <button
+                                className={styles.iconButton}
+                                onClick={() => handleEditMonthlyPayout(payout)}
+                                title="Edit"
+                              >
+                                <EditRegular fontSize={18} style={{ color: '#B5316A' }} />
+                              </button>
+                              <button
+                                className={styles.iconButton}
+                                onClick={() => handleDeleteMonthlyPayout(payout.id)}
                                 title="Delete"
                               >
                                 <DeleteRegular fontSize={18} style={{ color: '#D13438' }} />
@@ -1420,6 +1889,242 @@ const IndentPage = ({
           </div>
         </div>
       )}
+
+      {/* Payment Fields Modal */}
+      {showPaymentFieldsModal && (
+        <div className={styles.modal} onClick={() => setShowPaymentFieldsModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Manage Payment Fields</h2>
+              <button className={styles.closeButton} onClick={() => setShowPaymentFieldsModal(false)}>
+                <DismissRegular fontSize={20} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ fontSize: '14px', color: '#605e5c', marginBottom: '16px' }}>
+                Add custom payment types that will appear in the payment form.
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={newPaymentFieldName}
+                  onChange={(e) => setNewPaymentFieldName(e.target.value)}
+                  placeholder="Enter payment type (e.g., Bonus, Incentive)"
+                  style={{ flex: 1 }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddPaymentField();
+                    }
+                  }}
+                />
+                <button className={styles.addButton} onClick={handleAddPaymentField}>
+                  <AddRegular fontSize={18} />
+                  Add
+                </button>
+              </div>
+
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#323130' }}>
+                  Current Payment Types
+                </h3>
+                {paymentFields.length === 0 ? (
+                  <p style={{ fontSize: '14px', color: '#605e5c', fontStyle: 'italic' }}>
+                    No custom payment types added yet.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {paymentFields.map((field) => (
+                      <div
+                        key={field.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '12px',
+                          backgroundColor: '#f8f8f8',
+                          borderRadius: '6px',
+                          border: '1px solid #e1dfdd'
+                        }}
+                      >
+                        <span style={{ fontSize: '14px', fontWeight: '500', color: '#323130' }}>
+                          {field.field_name}
+                        </span>
+                        <button
+                          className={styles.iconButton}
+                          onClick={() => handleDeletePaymentField(field.id)}
+                          title="Delete field"
+                        >
+                          <DeleteRegular fontSize={18} style={{ color: '#D13438' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button className={styles.cancelButton} onClick={() => setShowPaymentFieldsModal(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className={styles.modal} onClick={() => setShowPaymentModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>
+                {editingPayment ? 'Edit Payment' : 'Add New Payment'}
+              </h2>
+              <button className={styles.closeButton} onClick={() => setShowPaymentModal(false)}>
+                <DismissRegular fontSize={20} />
+              </button>
+            </div>
+
+            <div className={styles.formGrid}>
+              <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                <label className={styles.label}>Name of the Payment *</label>
+                {paymentFields.length > 0 ? (
+                  <select
+                    className={styles.select}
+                    value={paymentForm.payment_name}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, payment_name: e.target.value })}
+                  >
+                    <option value="">Select payment type</option>
+                    {paymentFields.map((field) => (
+                      <option key={field.id} value={field.field_name}>
+                        {field.field_name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={paymentForm.payment_name}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, payment_name: e.target.value })}
+                    placeholder="Enter payment name"
+                  />
+                )}
+              </div>
+
+              <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                <label className={styles.label}>Amount *</label>
+                <input
+                  type="number"
+                  className={styles.input}
+                  value={paymentForm.payment_amount}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, payment_amount: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button className={styles.cancelButton} onClick={() => setShowPaymentModal(false)}>
+                Cancel
+              </button>
+              <button className={styles.saveButton} onClick={handleSavePayment}>
+                {editingPayment ? 'Update' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Monthly Payout Modal */}
+      {showMonthlyPayoutModal && (
+        <div className={styles.modal} onClick={() => setShowMonthlyPayoutModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Create Monthly Payout Snapshot</h2>
+              <button className={styles.closeButton} onClick={() => setShowMonthlyPayoutModal(false)}>
+                <DismissRegular fontSize={20} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ fontSize: '14px', color: '#605e5c', marginBottom: '16px' }}>
+                This will create a snapshot of all current amounts from Employee Deductions, Allowances, and Indent Payments tables.
+              </p>
+
+              <div className={styles.formGrid}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Month *</label>
+                  <select
+                    className={styles.select}
+                    value={monthlyPayoutForm.month}
+                    onChange={(e) => setMonthlyPayoutForm({ ...monthlyPayoutForm, month: parseInt(e.target.value) })}
+                  >
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Year *</label>
+                  <input
+                    type="number"
+                    className={styles.input}
+                    value={monthlyPayoutForm.year}
+                    onChange={(e) => setMonthlyPayoutForm({ ...monthlyPayoutForm, year: parseInt(e.target.value) || new Date().getFullYear() })}
+                    placeholder="2025"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button className={styles.cancelButton} onClick={() => setShowMonthlyPayoutModal(false)}>
+                Cancel
+              </button>
+              <button className={styles.saveButton} onClick={handleSaveMonthlyPayout}>
+                Create Snapshot
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Status Bar */}
+      <StatusBar
+        user={user}
+        onLogout={onLogout}
+        onProfileClick={onProfileClick}
+        currentPastorate={currentPastorate}
+        userPastorates={userPastorates}
+        onPastorateChange={onPastorateChange}
+        onCreatePastorate={onCreatePastorate}
+        onEditPastorate={onEditPastorate}
+        onDeletePastorate={onDeletePastorate}
+        currentChurch={currentChurch}
+        userChurches={userChurches}
+        onChurchChange={onChurchChange}
+        onCreateChurch={onCreateChurch}
+        onEditChurch={onEditChurch}
+        onDeleteChurch={onDeleteChurch}
+        currentView="pastorate"
+        disablePastorateChurchChange={false}
+        disableChurchSelector={true}
+      />
 
       {/* Notification */}
       {notification && (
