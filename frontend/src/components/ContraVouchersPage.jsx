@@ -635,11 +635,9 @@ const ContraVouchersPage = ({
                         <td className={styles.td}>{transaction.voucher_number}</td>
                         <td className={styles.td}>
                           {capitalizeAccountType(transaction.from_account_type)}
-                          {transaction.from_category_name && ` - ${transaction.from_category_name}`}
                         </td>
                         <td className={styles.td}>
                           {capitalizeAccountType(transaction.to_account_type)}
-                          {transaction.to_category_name && ` - ${transaction.to_category_name}`}
                         </td>
                         <td className={styles.td}>{formatDate(transaction.date)}</td>
                         <td className={styles.td}>{formatAmount(transaction.amount)}</td>

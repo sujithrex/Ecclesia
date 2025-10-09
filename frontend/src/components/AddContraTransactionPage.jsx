@@ -222,12 +222,8 @@ const AddContraTransactionPage = ({
     voucher_number: '',
     from_account_type: '',
     from_account_id: '',
-    from_category_id: null,
-    from_subcategory_id: null,
     to_account_type: '',
     to_account_id: '',
-    to_category_id: null,
-    to_subcategory_id: null,
     date: new Date().toISOString().split('T')[0],
     amount: '',
     notes: '',
@@ -236,13 +232,7 @@ const AddContraTransactionPage = ({
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [fromCategories, setFromCategories] = useState([]);
-  const [fromSubcategories, setFromSubcategories] = useState([]);
-  const [toCategories, setToCategories] = useState([]);
-  const [toSubcategories, setToSubcategories] = useState([]);
   const [allAccounts, setAllAccounts] = useState([]);
-  const [loadingFromCategories, setLoadingFromCategories] = useState(false);
-  const [loadingToCategories, setLoadingToCategories] = useState(false);
 
   useEffect(() => {
     if (currentPastorate && user) {
@@ -265,48 +255,7 @@ const AddContraTransactionPage = ({
     }
   }, [notification]);
 
-  const loadCategoriesForAccount = async (accountType, accountId, isFromAccount = true) => {
-    try {
-      if (isFromAccount) {
-        setLoadingFromCategories(true);
-      } else {
-        setLoadingToCategories(true);
-      }
 
-      const result = await window.electron.accountList.getCategoriesForAccount({
-        accountType,
-        accountId: parseInt(accountId)
-      });
-
-      if (result.success) {
-        if (isFromAccount) {
-          setFromCategories(result.categories || []);
-        } else {
-          setToCategories(result.categories || []);
-        }
-      } else {
-        console.error('Failed to load categories:', result.error);
-        if (isFromAccount) {
-          setFromCategories([]);
-        } else {
-          setToCategories([]);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-      if (isFromAccount) {
-        setFromCategories([]);
-      } else {
-        setToCategories([]);
-      }
-    } finally {
-      if (isFromAccount) {
-        setLoadingFromCategories(false);
-      } else {
-        setLoadingToCategories(false);
-      }
-    }
-  };
 
 
 
@@ -360,52 +309,12 @@ const AddContraTransactionPage = ({
           voucher_number: transaction.voucher_number.toString(),
           from_account_type: transaction.from_account_type,
           from_account_id: transaction.from_account_id?.toString() || '',
-          from_category_id: transaction.from_category_id,
-          from_subcategory_id: transaction.from_subcategory_id,
           to_account_type: transaction.to_account_type,
           to_account_id: transaction.to_account_id?.toString() || '',
-          to_category_id: transaction.to_category_id,
-          to_subcategory_id: transaction.to_subcategory_id,
           date: transaction.date,
           amount: transaction.amount.toString(),
           notes: transaction.notes || '',
         });
-
-        // Load categories for FROM account
-        if (transaction.from_account_type && transaction.from_account_id) {
-          const fromResult = await window.electron.accountList.getCategoriesForAccount({
-            accountType: transaction.from_account_type,
-            accountId: parseInt(transaction.from_account_id)
-          });
-          if (fromResult.success) {
-            setFromCategories(fromResult.categories || []);
-            // Set subcategories if category is selected
-            if (transaction.from_category_id) {
-              const category = fromResult.categories.find(c => c.id === transaction.from_category_id);
-              if (category) {
-                setFromSubcategories(category.sub_categories || []);
-              }
-            }
-          }
-        }
-
-        // Load categories for TO account
-        if (transaction.to_account_type && transaction.to_account_id) {
-          const toResult = await window.electron.accountList.getCategoriesForAccount({
-            accountType: transaction.to_account_type,
-            accountId: parseInt(transaction.to_account_id)
-          });
-          if (toResult.success) {
-            setToCategories(toResult.categories || []);
-            // Set subcategories if category is selected
-            if (transaction.to_category_id) {
-              const category = toResult.categories.find(c => c.id === transaction.to_category_id);
-              if (category) {
-                setToSubcategories(category.sub_categories || []);
-              }
-            }
-          }
-        }
       } else {
         setNotification({
           type: 'error',
@@ -428,26 +337,6 @@ const AddContraTransactionPage = ({
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
-
-    // Handle FROM category change - load subcategories
-    if (field === 'from_category_id') {
-      const category = fromCategories.find(c => c.id === parseInt(value));
-      setFromSubcategories(category?.sub_categories || []);
-      setFormData(prev => ({
-        ...prev,
-        from_subcategory_id: null
-      }));
-    }
-
-    // Handle TO category change - load subcategories
-    if (field === 'to_category_id') {
-      const category = toCategories.find(c => c.id === parseInt(value));
-      setToSubcategories(category?.sub_categories || []);
-      setFormData(prev => ({
-        ...prev,
-        to_subcategory_id: null
-      }));
-    }
   };
 
   const validateForm = () => {
@@ -467,16 +356,8 @@ const AddContraTransactionPage = ({
       newErrors.from_account_type = 'Please select from account';
     }
 
-    if (!formData.from_category_id) {
-      newErrors.from_category_id = 'Please select from category';
-    }
-
     if (!formData.to_account_type || !formData.to_account_id) {
       newErrors.to_account_type = 'Please select to account';
-    }
-
-    if (!formData.to_category_id) {
-      newErrors.to_category_id = 'Please select to category';
     }
 
     if (!formData.date) {
@@ -548,20 +429,12 @@ const AddContraTransactionPage = ({
             voucher_number: '',
             from_account_type: '',
             from_account_id: '',
-            from_category_id: null,
-            from_subcategory_id: null,
             to_account_type: '',
             to_account_id: '',
-            to_category_id: null,
-            to_subcategory_id: null,
             date: new Date().toISOString().split('T')[0],
             amount: '',
             notes: '',
           });
-          setFromCategories([]);
-          setFromSubcategories([]);
-          setToCategories([]);
-          setToSubcategories([]);
           setErrors({});
           generateTransactionId();
           getNextVoucherNumber();
@@ -703,23 +576,12 @@ const AddContraTransactionPage = ({
                   setFormData(prev => ({
                     ...prev,
                     from_account_type: type || '',
-                    from_account_id: id || '',
-                    from_category_id: null,
-                    from_subcategory_id: null
+                    from_account_id: id || ''
                   }));
 
                   // Clear errors
                   if (errors.from_account_type) {
                     setErrors(prev => ({ ...prev, from_account_type: null }));
-                  }
-
-                  // Reset categories
-                  setFromCategories([]);
-                  setFromSubcategories([]);
-
-                  // Load categories if both type and id are set
-                  if (type && id) {
-                    loadCategoriesForAccount(type, id, true);
                   }
 
                   // Update voucher number based on book type
@@ -752,53 +614,6 @@ const AddContraTransactionPage = ({
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                From Category <span className={styles.required}>*</span>
-              </label>
-              <select
-                className={`${styles.select} ${errors.from_category_id ? styles.errorInput : ''}`}
-                value={formData.from_category_id || ''}
-                onChange={(e) => handleInputChange('from_category_id', e.target.value ? parseInt(e.target.value) : null)}
-                disabled={loading || loadingFromCategories || !formData.from_account_type}
-              >
-                <option value="">
-                  {loadingFromCategories ? 'Loading categories...' : 'Select From Category'}
-                </option>
-                {fromCategories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.category_name} ({category.category_type})
-                  </option>
-                ))}
-              </select>
-              {errors.from_category_id && (
-                <span className={styles.errorMessage}>{errors.from_category_id}</span>
-              )}
-              {!errors.from_category_id && (
-                <span className={styles.helperText}>Select category for FROM account</span>
-              )}
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
-                From Subcategory
-              </label>
-              <select
-                className={styles.select}
-                value={formData.from_subcategory_id || ''}
-                onChange={(e) => handleInputChange('from_subcategory_id', e.target.value ? parseInt(e.target.value) : null)}
-                disabled={loading || !formData.from_category_id || fromSubcategories.length === 0}
-              >
-                <option value="">Select From Subcategory (Optional)</option>
-                {fromSubcategories.map(subcategory => (
-                  <option key={subcategory.id} value={subcategory.id}>
-                    {subcategory.sub_category_name}
-                  </option>
-                ))}
-              </select>
-              <span className={styles.helperText}>Optional - Select if applicable</span>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
                 To Account <span className={styles.required}>*</span>
               </label>
               <select
@@ -811,23 +626,12 @@ const AddContraTransactionPage = ({
                   setFormData(prev => ({
                     ...prev,
                     to_account_type: type || '',
-                    to_account_id: id || '',
-                    to_category_id: null,
-                    to_subcategory_id: null
+                    to_account_id: id || ''
                   }));
 
                   // Clear errors
                   if (errors.to_account_type) {
                     setErrors(prev => ({ ...prev, to_account_type: null }));
-                  }
-
-                  // Reset categories
-                  setToCategories([]);
-                  setToSubcategories([]);
-
-                  // Load categories if both type and id are set
-                  if (type && id) {
-                    loadCategoriesForAccount(type, id, false);
                   }
 
                   // Update voucher number based on book type
@@ -857,55 +661,6 @@ const AddContraTransactionPage = ({
                 <span className={styles.errorMessage}>{errors.to_account_type}</span>
               )}
             </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
-                To Category <span className={styles.required}>*</span>
-              </label>
-              <select
-                className={`${styles.select} ${errors.to_category_id ? styles.errorInput : ''}`}
-                value={formData.to_category_id || ''}
-                onChange={(e) => handleInputChange('to_category_id', e.target.value ? parseInt(e.target.value) : null)}
-                disabled={loading || loadingToCategories || !formData.to_account_type}
-              >
-                <option value="">
-                  {loadingToCategories ? 'Loading categories...' : 'Select To Category'}
-                </option>
-                {toCategories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.category_name} ({category.category_type})
-                  </option>
-                ))}
-              </select>
-              {errors.to_category_id && (
-                <span className={styles.errorMessage}>{errors.to_category_id}</span>
-              )}
-              {!errors.to_category_id && (
-                <span className={styles.helperText}>Select category for TO account</span>
-              )}
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>
-                To Subcategory
-              </label>
-              <select
-                className={styles.select}
-                value={formData.to_subcategory_id || ''}
-                onChange={(e) => handleInputChange('to_subcategory_id', e.target.value ? parseInt(e.target.value) : null)}
-                disabled={loading || !formData.to_category_id || toSubcategories.length === 0}
-              >
-                <option value="">Select To Subcategory (Optional)</option>
-                {toSubcategories.map(subcategory => (
-                  <option key={subcategory.id} value={subcategory.id}>
-                    {subcategory.sub_category_name}
-                  </option>
-                ))}
-              </select>
-              <span className={styles.helperText}>Optional - Select if applicable</span>
-            </div>
-
-
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
