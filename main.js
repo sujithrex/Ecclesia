@@ -38,6 +38,8 @@ const ChurchContraService = require('./backend/churchContraService.js');
 const AccountBalanceService = require('./backend/accountBalanceService.js');
 const ChurchAccountBalanceService = require('./backend/churchAccountBalanceService.js');
 const AccountListService = require('./backend/accountListService.js');
+const RoughCashBookService = require('./backend/roughCashBookService.js');
+const RoughCashBookReportPuppeteerService = require('./backend/roughCashBookReportPuppeteerService.js');
 
 let mainWindow;
 let db;
@@ -77,6 +79,8 @@ let churchContraService;
 let accountBalanceService;
 let churchAccountBalanceService;
 let accountListService;
+let roughCashBookService;
+let roughCashBookReportPuppeteerService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -1053,6 +1057,19 @@ ipcMain.handle('account-list-get-categories-for-account', async (event, { accoun
   return await accountListService.getCategoriesForAccount(accountType, accountId);
 });
 
+// Rough Cash Book IPC handlers
+ipcMain.handle('rough-cash-book-get-available-months', async (event, { pastorateId, userId }) => {
+  return await roughCashBookService.getAvailableMonths(pastorateId, userId);
+});
+
+ipcMain.handle('rough-cash-book-get-report-data', async (event, { pastorateId, userId, month }) => {
+  return await roughCashBookService.getReportData(pastorateId, userId, month);
+});
+
+ipcMain.handle('rough-cash-book-generate-pdf', async (event, { reportData, options }) => {
+  return await roughCashBookReportPuppeteerService.generateRoughCashBookPDF(reportData, options);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -1204,6 +1221,8 @@ app.on('ready', async () => {
   accountBalanceService = new AccountBalanceService(db);
   churchAccountBalanceService = new ChurchAccountBalanceService(db);
   accountListService = new AccountListService(db);
+  roughCashBookService = new RoughCashBookService(db);
+  roughCashBookReportPuppeteerService = new RoughCashBookReportPuppeteerService(db);
 
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {

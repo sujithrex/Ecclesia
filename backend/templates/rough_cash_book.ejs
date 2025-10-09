@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @font-face {
+      font-family: 'Vijaya';
+      src: url('file:///<%= fontPath %>') format('truetype');
+    }
+    @font-face {
+      font-family: 'Times New Roman';
+      src: local('Times New Roman');
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      width: 297.00mm;
+      min-height: 210.00mm;
+      position: relative;
+      font-family: 'Times New Roman', serif;
+      padding: 10mm;
+      padding-bottom: 15mm; /* Space for footer */
+    }
+
+    .footer {
+      position: fixed;
+      bottom: 5mm;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 10pt;
+      color: #666;
+    }
+    .english-text {
+      font-family: 'Times New Roman', serif;
+    }
+    .tamil-text {
+      font-family: 'Vijaya', serif;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 5mm;
+    }
+    .header-title {
+      font-size: 14pt;
+      font-weight: bold;
+      margin-bottom: 3mm;
+    }
+    .header-subtitle {
+      font-size: 14pt;
+      margin-bottom: 3mm;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 5mm;
+    }
+    .header-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 3mm;
+    }
+    .pastorate-info {
+      font-size: 14pt;
+    }
+    
+    /* Table styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11pt;
+      page-break-inside: auto;
+    }
+    
+    thead {
+      display: table-header-group;
+    }
+    
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+    
+    th, td {
+      border: 0.35mm solid #000000;
+      padding: 1mm 2mm;
+      text-align: center;
+      vertical-align: middle;
+    }
+    
+    th {
+      font-size: 12pt;
+      font-weight: bold;
+      background-color: #f0f0f0;
+    }
+    
+    .date-col {
+      width: 25mm;
+    }
+    
+    .particulars-col {
+      width: 61mm;
+      text-align: left;
+      padding-left: 3mm;
+    }
+    
+    .rno-col {
+      width: 15mm;
+      font-size: 10pt;
+    }
+    
+    .amount-col {
+      width: 20mm;
+      text-align: right;
+      padding-right: 3mm;
+    }
+    
+    .section-header {
+      font-weight: bold;
+      text-align: left;
+      padding-left: 3mm;
+      background-color: #f8f8f8;
+    }
+    
+    .total-row {
+      font-weight: bold;
+      background-color: #e8e8e8;
+    }
+    
+    .balance-row {
+      font-weight: bold;
+      background-color: #d8d8d8;
+    }
+    
+    /* Two-column layout for credits and debits */
+    .report-container {
+      display: flex;
+      gap: 5mm;
+    }
+    
+    .credits-section, .debits-section {
+      flex: 1;
+    }
+    
+    @media print {
+      body {
+        width: 297.00mm;
+        height: 210.00mm;
+        counter-reset: page;
+      }
+
+      thead {
+        display: table-header-group;
+      }
+
+      tfoot {
+        display: table-footer-group;
+      }
+
+      .footer::after {
+        counter-increment: page;
+        content: "Page " counter(page);
+      }
+    }
+  </style>
+</head>
+<body>
+  <%
+    // Helper functions for font detection
+    function isTamilText(text) {
+      if (!text) return false;
+      // Tamil Unicode range: \u0B80-\u0BFF
+      const tamilRegex = /[\u0B80-\u0BFF]/;
+      return tamilRegex.test(text);
+    }
+
+    function getFontClass(text) {
+      return isTamilText(text) ? 'tamil-text' : 'english-text';
+    }
+
+    function getFontSize(text, baseSize) {
+      return isTamilText(text) ? (baseSize + 1) : baseSize;
+    }
+
+    // Parse account type to get clean name and location
+    function parseAccountType(accountType) {
+      // Handle new format: 'pastorate_cash', 'church_cash', etc.
+      if (accountType.includes('_')) {
+        const parts = accountType.split('_');
+        const location = parts[0].charAt(0).toUpperCase() + parts[0].slice(1); // Pastorate or Church
+        const type = parts[1].charAt(0).toUpperCase() + parts[1].slice(1); // Cash, Bank, Diocese
+        return { type, location };
+      }
+      // Handle old format: 'cash', 'bank', 'diocese'
+      const type = accountType.charAt(0).toUpperCase() + accountType.slice(1);
+      return { type, location: 'Pastorate' };
+    }
+
+    // Get account type for filtering (normalize to base type)
+    function getBaseAccountType(accountType) {
+      if (accountType.includes('_')) {
+        return accountType.split('_')[1]; // Returns 'cash', 'bank', 'diocese'
+      }
+      return accountType;
+    }
+
+    // Format respect title
+    function formatRespect(respect) {
+      if (!respect) return '';
+      const respectMap = {
+        'mr': 'Mr.', 'mrs': 'Mrs.', 'ms': 'Ms.', 'master': 'Master',
+        'rev': 'Rev.', 'dr': 'Dr.', 'er': 'Er.', 'sis': 'Sis.', 'bishop': 'Bishop'
+      };
+      return respectMap[respect.toLowerCase()] || respect;
+    }
+
+    // Format giver name with area identity and family number
+    function formatGiverName(receipt) {
+      if (!receipt.family_name) {
+        return receipt.giver_name || '';
+      }
+      const respect = formatRespect(receipt.respect);
+      const name = receipt.family_name;
+      const areaCode = receipt.area_identity || '';
+      const familyNum = receipt.family_number || '';
+
+      if (areaCode && familyNum) {
+        return `${respect} ${name} - ${areaCode}${familyNum}`;
+      }
+      return `${respect} ${name}`;
+    }
+
+    // Get church name and diocese name from pastorate settings (English only)
+    const churchName = reportData.pastorateSettings?.church_name_english || 'Church of South India';
+    const dioceseName = reportData.pastorateSettings?.diocese_name_english || 'Tirunelveli Diocese';
+    const pastorateName = reportData.pastorateSettings?.pastorate_name_english || reportData.pastorate?.pastorate_name || 'Pastorate';
+    const chairmanName = reportData.pastorateSettings?.chairman_name_english || reportData.pastorateSettings?.chairman_name_tamil || '';
+
+    // Format month display
+    const monthDisplay = formatMonthDisplay(reportData.month);
+
+    // Prepare data arrays for credits and debits
+    const creditEntries = [];
+    const debitEntries = [];
+    
+    // Opening Balance
+    creditEntries.push({
+      type: 'opening',
+      date: '',
+      particulars: 'Pastorate Opening Balance',
+      rno: '',
+      cash: reportData.openingBalance.cash,
+      bank: reportData.openingBalance.bank,
+      diocese: reportData.openingBalance.diocese
+    });
+    
+    // Receipts section header
+    if (reportData.receipts && reportData.receipts.length > 0) {
+      creditEntries.push({
+        type: 'section-header',
+        particulars: 'Receipts'
+      });
+
+      reportData.receipts.forEach(r => {
+        creditEntries.push({
+          type: 'receipt',
+          date: formatDate(r.date),
+          particulars: formatGiverName(r),
+          rno: r.receipt_number,
+          cash: r.book_type === 'cash' ? r.amount : 0,
+          bank: r.book_type === 'bank' ? r.amount : 0,
+          diocese: r.book_type === 'diocese' ? r.amount : 0
+        });
+      });
+    }
+    
+    // Church Offerings section
+    if (reportData.offerings && reportData.offerings.length > 0) {
+      creditEntries.push({
+        type: 'section-header',
+        particulars: 'Church Offertory'
+      });
+      
+      reportData.offerings.forEach(o => {
+        creditEntries.push({
+          type: 'offering',
+          date: formatDate(o.date),
+          particulars: o.church_name || 'Church Offering',
+          rno: 'CO',
+          cash: o.amount,
+          bank: 0,
+          diocese: 0
+        });
+      });
+    }
+    
+    // Other Credits section
+    if (reportData.otherCredits && reportData.otherCredits.length > 0) {
+      creditEntries.push({
+        type: 'section-header',
+        particulars: 'Other Credits'
+      });
+      
+      reportData.otherCredits.forEach(oc => {
+        creditEntries.push({
+          type: 'other-credit',
+          date: formatDate(oc.date),
+          particulars: oc.giver_name,
+          rno: oc.credit_number,
+          cash: oc.book_type === 'cash' ? oc.amount : 0,
+          bank: oc.book_type === 'bank' ? oc.amount : 0,
+          diocese: oc.book_type === 'diocese' ? oc.amount : 0
+        });
+      });
+    }
+    
+    // Transfers section (Contra transfers TO pastorate accounts - credits)
+    const contraCredits = reportData.contraTransactions ? reportData.contraTransactions.filter(ct => {
+      const fromAccount = parseAccountType(ct.from_account_type);
+      const toAccount = parseAccountType(ct.to_account_type);
+      const fromBase = getBaseAccountType(ct.from_account_type);
+      const toBase = getBaseAccountType(ct.to_account_type);
+
+      // Only show transfers TO pastorate accounts
+      // This includes:
+      // 1. Transfers from church to pastorate (church -> pastorate)
+      // 2. Transfers between pastorate accounts (pastorate -> pastorate)
+      return (toBase === 'cash' || toBase === 'bank' || toBase === 'diocese') &&
+             toAccount.location === 'Pastorate' &&
+             (fromBase === 'cash' || fromBase === 'bank' || fromBase === 'diocese');
+    }) : [];
+
+    if (contraCredits.length > 0) {
+      creditEntries.push({
+        type: 'section-header',
+        particulars: 'Transfers'
+      });
+
+      contraCredits.forEach(ct => {
+        // Parse account types
+        const fromAccount = parseAccountType(ct.from_account_type);
+        const toBase = getBaseAccountType(ct.to_account_type);
+
+        creditEntries.push({
+          type: 'contra-credit',
+          date: formatDate(ct.date),
+          particulars: `Transfer from ${fromAccount.type} - ${fromAccount.location}`,
+          rno: ct.voucher_number,
+          cash: toBase === 'cash' ? ct.amount : 0,
+          bank: toBase === 'bank' ? ct.amount : 0,
+          diocese: toBase === 'diocese' ? ct.amount : 0
+        });
+      });
+    }
+    
+    // Bills and Vouchers section
+    if (reportData.billVouchers && reportData.billVouchers.length > 0) {
+      debitEntries.push({
+        type: 'section-header',
+        particulars: 'Bills and Vouchers'
+      });
+      
+      reportData.billVouchers.forEach(bv => {
+        debitEntries.push({
+          type: 'bill-voucher',
+          date: formatDate(bv.date),
+          particulars: bv.payee_name,
+          rno: bv.voucher_number,
+          cash: bv.book_type === 'cash' ? bv.amount : 0,
+          bank: bv.book_type === 'bank' ? bv.amount : 0,
+          diocese: bv.book_type === 'diocese' ? bv.amount : 0
+        });
+      });
+    }
+    
+    // Acquittance section
+    if (reportData.acquittance && reportData.acquittance.length > 0) {
+      debitEntries.push({
+        type: 'section-header',
+        particulars: 'Acquittance'
+      });
+      
+      reportData.acquittance.forEach(aq => {
+        debitEntries.push({
+          type: 'acquittance',
+          date: formatDate(aq.date),
+          particulars: aq.payee_name,
+          rno: aq.voucher_number,
+          cash: aq.book_type === 'cash' ? aq.amount : 0,
+          bank: aq.book_type === 'bank' ? aq.amount : 0,
+          diocese: aq.book_type === 'diocese' ? aq.amount : 0
+        });
+      });
+    }
+    
+    // Transfers section (Contra transfers FROM pastorate accounts - debits)
+    const contraDebits = reportData.contraTransactions ? reportData.contraTransactions.filter(ct => {
+      const fromAccount = parseAccountType(ct.from_account_type);
+      const toAccount = parseAccountType(ct.to_account_type);
+      const fromBase = getBaseAccountType(ct.from_account_type);
+      const toBase = getBaseAccountType(ct.to_account_type);
+
+      // Only show transfers FROM pastorate accounts
+      // This includes:
+      // 1. Transfers from pastorate to church (pastorate -> church)
+      // 2. Transfers between pastorate accounts (pastorate -> pastorate)
+      return (fromBase === 'cash' || fromBase === 'bank' || fromBase === 'diocese') &&
+             fromAccount.location === 'Pastorate' &&
+             (toBase === 'cash' || toBase === 'bank' || toBase === 'diocese');
+    }) : [];
+
+    if (contraDebits.length > 0) {
+      debitEntries.push({
+        type: 'section-header',
+        particulars: 'Transfers'
+      });
+
+      contraDebits.forEach(ct => {
+        // Parse account types
+        const toAccount = parseAccountType(ct.to_account_type);
+        const fromBase = getBaseAccountType(ct.from_account_type);
+
+        debitEntries.push({
+          type: 'contra-debit',
+          date: formatDate(ct.date),
+          particulars: `Transfer to ${toAccount.type} - ${toAccount.location}`,
+          rno: ct.voucher_number,
+          cash: fromBase === 'cash' ? ct.amount : 0,
+          bank: fromBase === 'bank' ? ct.amount : 0,
+          diocese: fromBase === 'diocese' ? ct.amount : 0
+        });
+      });
+    }
+    
+    // Calculate totals
+    const totalCash = reportData.openingBalance.cash + reportData.totalCredits.cash;
+    const totalBank = reportData.openingBalance.bank + reportData.totalCredits.bank;
+    const totalDiocese = reportData.openingBalance.diocese + reportData.totalCredits.diocese;
+    
+    const totalDebitCash = reportData.totalDebits.cash;
+    const totalDebitBank = reportData.totalDebits.bank;
+    const totalDebitDiocese = reportData.totalDebits.diocese;
+    
+    // Add closing balance to appropriate side
+    const closingCash = reportData.closingBalance.cash;
+    const closingBank = reportData.closingBalance.bank;
+    const closingDiocese = reportData.closingBalance.diocese;
+    
+    const totalClosing = closingCash + closingBank + closingDiocese;
+  %>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title <%= getFontClass(churchName + dioceseName) %>" style="font-size: <%= getFontSize(churchName + dioceseName, 14) %>pt;"><%= churchName %> - <%= dioceseName %></div>
+    <div class="header-subtitle">
+      <span>Rough Cash Book of <%= monthDisplay %></span>
+    </div>
+    <div class="header-info">
+      <div class="pastorate-info <%= getFontClass(pastorateName) %>" style="font-size: <%= getFontSize(pastorateName, 14) %>pt;">Pastorate: <%= pastorateName %></div>
+      <% if (chairmanName) { %>
+      <div class="pastorate-info <%= getFontClass(chairmanName) %>" style="font-size: <%= getFontSize(chairmanName, 14) %>pt;">Chairman: <%= chairmanName %></div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Main Table -->
+  <table>
+    <thead>
+      <tr>
+        <th class="date-col">Date</th>
+        <th class="particulars-col">Particulars</th>
+        <th class="rno-col">R.No</th>
+        <th class="amount-col">Cash</th>
+        <th class="amount-col">Bank</th>
+        <th class="amount-col">Dio. Off</th>
+        <th class="particulars-col">Particulars</th>
+        <th class="date-col">Date</th>
+        <th class="rno-col">R.No</th>
+        <th class="amount-col">Cash</th>
+        <th class="amount-col">Bank</th>
+        <th class="amount-col">Dio. Off</th>
+      </tr>
+    </thead>
+    <tbody>
+      <%
+        const maxRows = Math.max(creditEntries.length, debitEntries.length);
+        for (let i = 0; i < maxRows; i++) {
+          const credit = creditEntries[i] || {};
+          const debit = debitEntries[i] || {};
+      %>
+      <tr>
+        <!-- Credits Side -->
+        <% if (credit.type === 'section-header') { %>
+          <td colspan="6" class="section-header"><%= credit.particulars %></td>
+        <% } else { %>
+          <td class="date-col"><%= credit.date || '' %></td>
+          <td class="particulars-col <%= getFontClass(credit.particulars) %>" style="font-size: <%= getFontSize(credit.particulars, 10) %>pt;"><%= credit.particulars || '' %></td>
+          <td class="rno-col"><%= credit.rno || '' %></td>
+          <td class="amount-col"><%= (credit.cash !== undefined && credit.cash !== null && credit.cash > 0) ? formatCurrency(credit.cash) : '' %></td>
+          <td class="amount-col"><%= (credit.bank !== undefined && credit.bank !== null && credit.bank > 0) ? formatCurrency(credit.bank) : '' %></td>
+          <td class="amount-col"><%= (credit.diocese !== undefined && credit.diocese !== null && credit.diocese > 0) ? formatCurrency(credit.diocese) : '' %></td>
+        <% } %>
+
+        <!-- Debits Side -->
+        <% if (debit.type === 'section-header') { %>
+          <td colspan="6" class="section-header"><%= debit.particulars %></td>
+        <% } else { %>
+          <td class="particulars-col <%= getFontClass(debit.particulars) %>" style="font-size: <%= getFontSize(debit.particulars, 10) %>pt;"><%= debit.particulars || '' %></td>
+          <td class="date-col"><%= debit.date || '' %></td>
+          <td class="rno-col"><%= debit.rno || '' %></td>
+          <td class="amount-col"><%= (debit.cash !== undefined && debit.cash !== null && debit.cash > 0) ? formatCurrency(debit.cash) : '' %></td>
+          <td class="amount-col"><%= (debit.bank !== undefined && debit.bank !== null && debit.bank > 0) ? formatCurrency(debit.bank) : '' %></td>
+          <td class="amount-col"><%= (debit.diocese !== undefined && debit.diocese !== null && debit.diocese > 0) ? formatCurrency(debit.diocese) : '' %></td>
+        <% } %>
+      </tr>
+      <% } %>
+      
+      <!-- Closing Balance Row (on debit side) -->
+      <tr class="total-row">
+        <td colspan="3"></td>
+        <td class="amount-col"></td>
+        <td class="amount-col"></td>
+        <td class="amount-col"></td>
+        <td colspan="3">
+          <% if (totalClosing >= 0) { %>
+            Pastorate Closing Balance
+          <% } else { %>
+            Pastorate Deficit Due
+          <% } %>
+        </td>
+        <td class="amount-col"><%= formatCurrency(totalClosing >= 0 ? closingCash : Math.abs(closingCash)) %></td>
+        <td class="amount-col"><%= formatCurrency(totalClosing >= 0 ? closingBank : Math.abs(closingBank)) %></td>
+        <td class="amount-col"><%= formatCurrency(totalClosing >= 0 ? closingDiocese : Math.abs(closingDiocese)) %></td>
+      </tr>
+
+      <!-- Final Total Row -->
+      <tr class="balance-row">
+        <td colspan="3">Total</td>
+        <td class="amount-col"><%= formatCurrency(totalCash) %></td>
+        <td class="amount-col"><%= formatCurrency(totalBank) %></td>
+        <td class="amount-col"><%= formatCurrency(totalDiocese) %></td>
+        <td colspan="3">Total</td>
+        <td class="amount-col"><%= formatCurrency(totalCash) %></td>
+        <td class="amount-col"><%= formatCurrency(totalBank) %></td>
+        <td class="amount-col"><%= formatCurrency(totalDiocese) %></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Footer with page number -->
+  <div class="footer"></div>
+</body>
+</html>
+

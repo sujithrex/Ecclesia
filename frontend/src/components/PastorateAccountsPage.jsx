@@ -8,11 +8,13 @@ import {
   DocumentRegular,
   ReceiptMoneyRegular,
   BuildingRegular,
+  DocumentPdfRegular,
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
 import CreateLedgerCategoryModal from './CreateLedgerCategoryModal';
 import CreateLedgerSubCategoryModal from './CreateLedgerSubCategoryModal';
+import { generateRoughCashBookReport, getAvailableMonths } from '../utils/roughCashBookReportPuppeteer';
 
 const useStyles = makeStyles({
   container: {
@@ -219,10 +221,16 @@ const PastorateAccountsPage = ({
   const [currentBookType, setCurrentBookType] = useState('cash'); // 'cash', 'bank', 'diocese'
   const [categories, setCategories] = useState([]);
 
+  // Rough Cash Book states
+  const [availableMonths, setAvailableMonths] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
+
   // Load account balances when pastorate changes
   useEffect(() => {
     if (currentPastorate && user) {
       loadAccountBalances();
+      loadAvailableMonths();
       // Categories will be loaded when opening the sub-category modal
     }
   }, [currentPastorate?.id, user?.id]);
@@ -284,6 +292,60 @@ const PastorateAccountsPage = ({
 
   const handleSubCategoryCreated = (subCategory) => {
     loadCategories(currentBookType); // Reload to get fresh data
+  };
+
+  // Load available months for rough cash book
+  const loadAvailableMonths = async () => {
+    try {
+      const result = await getAvailableMonths(currentPastorate.id, user.id);
+      if (result.success && result.months && result.months.length > 0) {
+        setAvailableMonths(result.months);
+        setSelectedMonth(result.months[0]); // Set first month as default
+      } else {
+        setAvailableMonths([]);
+        setSelectedMonth('');
+      }
+    } catch (error) {
+      console.error('Error loading available months:', error);
+      setAvailableMonths([]);
+      setSelectedMonth('');
+    }
+  };
+
+  // Format month display (YYYY-MM to "Month Year")
+  const formatMonthDisplay = (monthStr) => {
+    if (!monthStr) return '';
+    const [year, month] = monthStr.split('-');
+    const date = new Date(year, parseInt(month) - 1);
+    const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+    return `${monthName}-${year}`;
+  };
+
+  // Handle rough cash book report generation
+  const handleGenerateRoughCashBook = async (action = 'view') => {
+    if (!selectedMonth) {
+      alert('Please select a month');
+      return;
+    }
+
+    setReportLoading(true);
+    try {
+      const result = await generateRoughCashBookReport(
+        currentPastorate.id,
+        user.id,
+        selectedMonth,
+        action
+      );
+
+      if (!result.success) {
+        alert(`Error ${action === 'download' ? 'saving' : action === 'print' ? 'printing' : 'viewing'} report: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error generating rough cash book report:', error);
+      alert(`Error generating report: ${error.message}`);
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   // Build balance cards array
@@ -383,6 +445,54 @@ const PastorateAccountsPage = ({
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Rough Cash Book Section */}
+        <div className={styles.bookSection}>
+          <h2 className={styles.bookSectionTitle}>Rough Cash Book</h2>
+          <div className={styles.buttonRow} style={{ alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '600', color: '#323130' }}>
+                Month:
+              </label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                disabled={availableMonths.length === 0}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '14px',
+                  borderRadius: '6px',
+                  border: '1px solid #e1dfdd',
+                  backgroundColor: 'white',
+                  cursor: availableMonths.length === 0 ? 'not-allowed' : 'pointer',
+                  minWidth: '150px'
+                }}
+              >
+                {availableMonths.length === 0 ? (
+                  <option value="">No data available</option>
+                ) : (
+                  availableMonths.map(month => (
+                    <option key={month} value={month}>
+                      {formatMonthDisplay(month)}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+            <button
+              className={styles.actionButton}
+              onClick={() => handleGenerateRoughCashBook('view')}
+              disabled={!selectedMonth || reportLoading}
+              style={{
+                opacity: !selectedMonth || reportLoading ? 0.6 : 1,
+                cursor: !selectedMonth || reportLoading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <DocumentPdfRegular />
+              {reportLoading ? 'Generating...' : 'Generate Report'}
+            </button>
+          </div>
         </div>
 
         {/* Pastorate Cash Book Section */}

@@ -356,5 +356,12 @@ contextBridge.exposeInMainWorld('electron', {
     getAllForPastorate: (data) => ipcRenderer.invoke('account-list-get-all-for-pastorate', data),
     getAllForChurch: (data) => ipcRenderer.invoke('account-list-get-all-for-church', data),
     getCategoriesForAccount: (data) => ipcRenderer.invoke('account-list-get-categories-for-account', data)
+  },
+
+  // Rough Cash Book API
+  roughCashBook: {
+    getAvailableMonths: (data) => ipcRenderer.invoke('rough-cash-book-get-available-months', data),
+    getReportData: (data) => ipcRenderer.invoke('rough-cash-book-get-report-data', data),
+    generatePDF: (data) => ipcRenderer.invoke('rough-cash-book-generate-pdf', data)
   }
 });
