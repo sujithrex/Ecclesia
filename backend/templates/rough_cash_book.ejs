@@ -129,7 +129,7 @@
     }
 
     .section-title {
-      font-size: 11pt;
+      font-size: 9pt;
       font-weight: bold;
       text-align: center;
       background-color: #e0e0e0;
@@ -557,23 +557,59 @@
       </tr>
       <% } %>
       
-      <!-- Closing Balance Row (on debit side) -->
+      <%
+        // For each account, determine if closing balance or deficit
+        // If credits > debits: closing balance goes to RIGHT (debit side)
+        // If debits > credits: deficit goes to LEFT (credit side)
+
+        // Calculate for each account
+        const cashSurplus = closingCash >= 0;
+        const bankSurplus = closingBank >= 0;
+        const dioceseSurplus = closingDiocese >= 0;
+
+        // Left side (credits) - show deficit if any
+        const leftCashAmount = cashSurplus ? '' : Math.abs(closingCash);
+        const leftBankAmount = bankSurplus ? '' : Math.abs(closingBank);
+        const leftDioceseAmount = dioceseSurplus ? '' : Math.abs(closingDiocese);
+
+        // Right side (debits) - show closing balance if any
+        const rightCashAmount = cashSurplus ? closingCash : '';
+        const rightBankAmount = bankSurplus ? closingBank : '';
+        const rightDioceseAmount = dioceseSurplus ? closingDiocese : '';
+
+        // Check if we have any deficit or closing balance to show
+        const hasLeftBalance = leftCashAmount !== '' || leftBankAmount !== '' || leftDioceseAmount !== '';
+        const hasRightBalance = rightCashAmount !== '' || rightBankAmount !== '' || rightDioceseAmount !== '';
+      %>
+
+      <!-- Closing Balance / Deficit Row -->
+      <% if (hasLeftBalance || hasRightBalance) { %>
       <tr class="total-row">
-        <td colspan="3"></td>
-        <td class="amount-col"></td>
-        <td class="amount-col"></td>
-        <td class="amount-col"></td>
-        <td colspan="3">
-          <% if (totalClosing >= 0) { %>
-            Pastorate Closing Balance
-          <% } else { %>
-            Pastorate Deficit Due
-          <% } %>
-        </td>
-        <td class="amount-col"><%= formatCurrency(totalClosing >= 0 ? closingCash : Math.abs(closingCash)) %></td>
-        <td class="amount-col"><%= formatCurrency(totalClosing >= 0 ? closingBank : Math.abs(closingBank)) %></td>
-        <td class="amount-col"><%= formatCurrency(totalClosing >= 0 ? closingDiocese : Math.abs(closingDiocese)) %></td>
+        <% if (hasLeftBalance) { %>
+          <td colspan="3">Pastorate Deficit Due</td>
+          <td class="amount-col"><%= leftCashAmount !== '' ? formatCurrency(leftCashAmount) : '' %></td>
+          <td class="amount-col"><%= leftBankAmount !== '' ? formatCurrency(leftBankAmount) : '' %></td>
+          <td class="amount-col"><%= leftDioceseAmount !== '' ? formatCurrency(leftDioceseAmount) : '' %></td>
+        <% } else { %>
+          <td colspan="3"></td>
+          <td class="amount-col"></td>
+          <td class="amount-col"></td>
+          <td class="amount-col"></td>
+        <% } %>
+
+        <% if (hasRightBalance) { %>
+          <td colspan="3">Pastorate Closing Balance</td>
+          <td class="amount-col"><%= rightCashAmount !== '' ? formatCurrency(rightCashAmount) : '' %></td>
+          <td class="amount-col"><%= rightBankAmount !== '' ? formatCurrency(rightBankAmount) : '' %></td>
+          <td class="amount-col"><%= rightDioceseAmount !== '' ? formatCurrency(rightDioceseAmount) : '' %></td>
+        <% } else { %>
+          <td colspan="3"></td>
+          <td class="amount-col"></td>
+          <td class="amount-col"></td>
+          <td class="amount-col"></td>
+        <% } %>
       </tr>
+      <% } %>
 
       <!-- Final Total Row -->
       <tr class="balance-row">
