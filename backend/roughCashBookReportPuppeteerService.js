@@ -161,7 +161,7 @@ class RoughCashBookReportPuppeteerService {
                         // Generate PDF
                         const pdfBuffer = await win.webContents.printToPDF({
                             pageSize: 'A4',
-                            landscape: true,
+                            landscape: false,
                             printBackground: true,
                             margins: {
                                 top: 0,
@@ -232,8 +232,8 @@ class RoughCashBookReportPuppeteerService {
 
             // Generate PDF
             const pdfBuffer = await page.pdf({
-                width: '297.00mm',
-                height: '210.00mm',
+                width: '210.00mm',
+                height: '297.00mm',
                 printBackground: true,
                 preferCSSPageSize: true,
                 margin: {

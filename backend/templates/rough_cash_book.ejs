@@ -17,21 +17,21 @@
       box-sizing: border-box;
     }
     body {
-      width: 297.00mm;
-      min-height: 210.00mm;
+      width: 210.00mm;
+      min-height: 297.00mm;
       position: relative;
       font-family: 'Times New Roman', serif;
-      padding: 10mm;
-      padding-bottom: 15mm; /* Space for footer */
+      padding: 5mm;
+      padding-bottom: 8mm; /* Space for footer */
     }
 
     .footer {
       position: fixed;
-      bottom: 5mm;
+      bottom: 3mm;
       left: 0;
       right: 0;
       text-align: center;
-      font-size: 10pt;
+      font-size: 8pt;
       color: #666;
     }
     .english-text {
@@ -42,29 +42,29 @@
     }
     .header {
       text-align: center;
-      margin-bottom: 5mm;
+      margin-bottom: 3mm;
     }
     .header-title {
-      font-size: 14pt;
+      font-size: 9pt;
       font-weight: bold;
-      margin-bottom: 3mm;
+      margin-bottom: 2mm;
     }
     .header-subtitle {
-      font-size: 14pt;
-      margin-bottom: 3mm;
+      font-size: 9pt;
+      margin-bottom: 2mm;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 5mm;
+      gap: 3mm;
     }
     .header-info {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 3mm;
+      margin-bottom: 2mm;
     }
     .pastorate-info {
-      font-size: 14pt;
+      font-size: 9pt;
     }
     
     /* Table styles */
@@ -86,36 +86,39 @@
     
     th, td {
       border: 0.35mm solid #000000;
-      padding: 1mm 2mm;
+      padding: 1mm;
       text-align: center;
       vertical-align: middle;
+      font-size: 8pt;
     }
-    
+
     th {
-      font-size: 12pt;
+      font-size: 9pt;
       font-weight: bold;
       background-color: #f0f0f0;
     }
     
     .date-col {
-      width: 25mm;
+      width: 18mm;
+      font-size: 7pt;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    
+
     .particulars-col {
-      width: 61mm;
+      width: 40mm;
       text-align: left;
-      padding-left: 3mm;
     }
-    
+
     .rno-col {
-      width: 15mm;
-      font-size: 10pt;
+      width: 12mm;
+      font-size: 7pt;
     }
-    
+
     .amount-col {
-      width: 20mm;
+      width: 15mm;
       text-align: right;
-      padding-right: 3mm;
     }
     
     .section-header {
@@ -126,11 +129,11 @@
     }
 
     .section-title {
-      font-size: 13pt;
+      font-size: 11pt;
       font-weight: bold;
       text-align: center;
       background-color: #e0e0e0;
-      padding: 2mm;
+      padding: 1mm;
     }
 
     .total-row {
@@ -155,8 +158,8 @@
     
     @media print {
       body {
-        width: 297.00mm;
-        height: 210.00mm;
+        width: 210.00mm;
+        height: 297.00mm;
         counter-reset: page;
       }
 
@@ -246,6 +249,26 @@
     const dioceseName = reportData.pastorateSettings?.diocese_name_english || 'Tirunelveli Diocese';
     const pastorateName = reportData.pastorateSettings?.pastorate_name_english || reportData.pastorate?.pastorate_name || 'Pastorate';
     const chairmanName = reportData.pastorateSettings?.chairman_name_english || reportData.pastorateSettings?.chairman_name_tamil || '';
+    const pastorateShortName = reportData.pastorate?.pastorate_short_name || 'PST';
+
+    // Helper function to get location name (short name)
+    function getLocationName(accountType, contraTransaction) {
+      const location = accountType.location;
+      if (location === 'Pastorate') {
+        return pastorateShortName;
+      } else if (location === 'Church') {
+        // Determine if this is from or to account
+        const fromAccount = parseAccountType(contraTransaction.from_account_type);
+        const toAccount = parseAccountType(contraTransaction.to_account_type);
+
+        if (fromAccount.location === 'Church') {
+          return contraTransaction.from_church_short_name || 'Church';
+        } else if (toAccount.location === 'Church') {
+          return contraTransaction.to_church_short_name || 'Church';
+        }
+      }
+      return location;
+    }
 
     // Format month display
     const monthDisplay = formatMonthDisplay(reportData.month);
@@ -351,11 +374,12 @@
         // Parse account types
         const fromAccount = parseAccountType(ct.from_account_type);
         const toBase = getBaseAccountType(ct.to_account_type);
+        const locationName = getLocationName(fromAccount, ct);
 
         creditEntries.push({
           type: 'contra-credit',
           date: formatDate(ct.date),
-          particulars: `Transfer from ${fromAccount.type} - ${fromAccount.location}`,
+          particulars: `Transfer from ${fromAccount.type} - ${locationName}`,
           rno: ct.voucher_number,
           cash: toBase === 'cash' ? ct.amount : 0,
           bank: toBase === 'bank' ? ct.amount : 0,
@@ -430,11 +454,12 @@
         // Parse account types
         const toAccount = parseAccountType(ct.to_account_type);
         const fromBase = getBaseAccountType(ct.from_account_type);
+        const locationName = getLocationName(toAccount, ct);
 
         debitEntries.push({
           type: 'contra-debit',
           date: formatDate(ct.date),
-          particulars: `Transfer to ${toAccount.type} - ${toAccount.location}`,
+          particulars: `Transfer to ${toAccount.type} - ${locationName}`,
           rno: ct.voucher_number,
           cash: fromBase === 'cash' ? ct.amount : 0,
           bank: fromBase === 'bank' ? ct.amount : 0,
@@ -462,14 +487,14 @@
 
   <!-- Header -->
   <div class="header">
-    <div class="header-title <%= getFontClass(churchName + dioceseName) %>" style="font-size: <%= getFontSize(churchName + dioceseName, 14) %>pt;"><%= churchName %> - <%= dioceseName %></div>
+    <div class="header-title <%= getFontClass(churchName + dioceseName) %>" style="font-size: <%= getFontSize(churchName + dioceseName, 9) %>pt;"><%= churchName %> - <%= dioceseName %></div>
     <div class="header-subtitle">
       <span>Rough Cash Book of <%= monthDisplay %></span>
     </div>
     <div class="header-info">
-      <div class="pastorate-info <%= getFontClass(pastorateName) %>" style="font-size: <%= getFontSize(pastorateName, 14) %>pt;">Pastorate: <%= pastorateName %></div>
+      <div class="pastorate-info <%= getFontClass(pastorateName) %>" style="font-size: <%= getFontSize(pastorateName, 9) %>pt;">Pastorate: <%= pastorateName %></div>
       <% if (chairmanName) { %>
-      <div class="pastorate-info <%= getFontClass(chairmanName) %>" style="font-size: <%= getFontSize(chairmanName, 14) %>pt;">Chairman: <%= chairmanName %></div>
+      <div class="pastorate-info <%= getFontClass(chairmanName) %>" style="font-size: <%= getFontSize(chairmanName, 9) %>pt;">Chairman: <%= chairmanName %></div>
       <% } %>
     </div>
   </div>
@@ -511,7 +536,7 @@
           <td colspan="6" class="section-header"><%= credit.particulars %></td>
         <% } else { %>
           <td class="date-col"><%= credit.date || '' %></td>
-          <td class="particulars-col <%= getFontClass(credit.particulars) %>" style="font-size: <%= getFontSize(credit.particulars, 10) %>pt;"><%= credit.particulars || '' %></td>
+          <td class="particulars-col <%= getFontClass(credit.particulars) %>" style="font-size: <%= getFontSize(credit.particulars, 8) %>pt;"><%= credit.particulars || '' %></td>
           <td class="rno-col"><%= credit.rno || '' %></td>
           <td class="amount-col"><%= (credit.cash !== undefined && credit.cash !== null && credit.cash > 0) ? formatCurrency(credit.cash) : '' %></td>
           <td class="amount-col"><%= (credit.bank !== undefined && credit.bank !== null && credit.bank > 0) ? formatCurrency(credit.bank) : '' %></td>
@@ -522,7 +547,7 @@
         <% if (debit.type === 'section-header') { %>
           <td colspan="6" class="section-header"><%= debit.particulars %></td>
         <% } else { %>
-          <td class="particulars-col <%= getFontClass(debit.particulars) %>" style="font-size: <%= getFontSize(debit.particulars, 10) %>pt;"><%= debit.particulars || '' %></td>
+          <td class="particulars-col <%= getFontClass(debit.particulars) %>" style="font-size: <%= getFontSize(debit.particulars, 8) %>pt;"><%= debit.particulars || '' %></td>
           <td class="date-col"><%= debit.date || '' %></td>
           <td class="rno-col"><%= debit.rno || '' %></td>
           <td class="amount-col"><%= (debit.cash !== undefined && debit.cash !== null && debit.cash > 0) ? formatCurrency(debit.cash) : '' %></td>

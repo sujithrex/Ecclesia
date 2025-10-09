@@ -287,10 +287,16 @@ class RoughCashBookService {
                 SELECT
                     ct.*,
                     fc.category_name as from_category_name,
-                    tc.category_name as to_category_name
+                    tc.category_name as to_category_name,
+                    p.pastorate_short_name,
+                    from_church.church_short_name as from_church_short_name,
+                    to_church.church_short_name as to_church_short_name
                 FROM contra_transactions ct
                 LEFT JOIN ledger_categories fc ON ct.from_category_id = fc.id
                 LEFT JOIN ledger_categories tc ON ct.to_category_id = tc.id
+                LEFT JOIN pastorates p ON ct.pastorate_id = p.id
+                LEFT JOIN churches from_church ON ct.from_account_id = CAST(from_church.id AS TEXT)
+                LEFT JOIN churches to_church ON ct.to_account_id = CAST(to_church.id AS TEXT)
                 WHERE ct.pastorate_id = ?
                 AND strftime('%Y-%m', ct.date) = ?
                 AND (ct.from_account_type IN ('cash', 'bank', 'diocese')
