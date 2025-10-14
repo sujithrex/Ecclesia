@@ -618,6 +618,30 @@
       <% } %>
       
       <%
+        // Calculate Indent Advance/Surplus
+        // Indent Payments total (from debit side)
+        let indentPaymentsTotal = 0;
+        if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.indentItems) {
+          indentPaymentsTotal = reportData.monthlyPayoutData.indentItems.reduce((sum, item) => {
+            return sum + (parseFloat(item.amount) || 0);
+          }, 0);
+        }
+
+        // Indent Receipts total (from credit side)
+        let indentReceiptsTotal = 0;
+        if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.indentReceiptItems) {
+          indentReceiptsTotal = reportData.monthlyPayoutData.indentReceiptItems.reduce((sum, item) => {
+            return sum + (parseFloat(item.amount) || 0);
+          }, 0);
+        }
+
+        // Calculate difference: Indent Payments - Indent Receipts
+        const indentDifference = indentPaymentsTotal - indentReceiptsTotal;
+
+        // Determine if it's Advance (positive) or Surplus (negative)
+        const isIndentAdvance = indentDifference > 0;
+        const hasIndentDifference = Math.abs(indentDifference) > 0.01; // Check if there's a meaningful difference
+
         // For each account, determine if closing balance or deficit
         // If credits > debits: closing balance goes to RIGHT (debit side)
         // If debits > credits: deficit goes to LEFT (credit side)
@@ -641,6 +665,47 @@
         const hasLeftBalance = leftCashAmount !== '' || leftBankAmount !== '' || leftDioceseAmount !== '';
         const hasRightBalance = rightCashAmount !== '' || rightBankAmount !== '' || rightDioceseAmount !== '';
       %>
+
+      <!-- Indent Advance/Surplus Row -->
+      <% if (hasIndentDifference) { %>
+      <tr>
+        <% if (isIndentAdvance) { %>
+          <!-- Indent Advance: Payments > Receipts -->
+          <!-- Receipts side: Cash column, R.No = "C" -->
+          <td class="date-col"></td>
+          <td class="particulars-col">Indent Advance</td>
+          <td class="rno-col">C</td>
+          <td class="amount-col"><%= formatCurrency(Math.abs(indentDifference)) %></td>
+          <td class="amount-col"></td>
+          <td class="amount-col"></td>
+
+          <!-- Payments side: Diocese column, V.No = "C" -->
+          <td class="particulars-col">Indent Advance</td>
+          <td class="date-col"></td>
+          <td class="rno-col">C</td>
+          <td class="amount-col"></td>
+          <td class="amount-col"></td>
+          <td class="amount-col"><%= formatCurrency(Math.abs(indentDifference)) %></td>
+        <% } else { %>
+          <!-- Indent Surplus: Receipts > Payments -->
+          <!-- Receipts side: Diocese column, R.No = "C" -->
+          <td class="date-col"></td>
+          <td class="particulars-col">Indent Surplus</td>
+          <td class="rno-col">C</td>
+          <td class="amount-col"></td>
+          <td class="amount-col"></td>
+          <td class="amount-col"><%= formatCurrency(Math.abs(indentDifference)) %></td>
+
+          <!-- Payments side: Cash column, V.No = "C" -->
+          <td class="particulars-col">Indent Surplus</td>
+          <td class="date-col"></td>
+          <td class="rno-col">C</td>
+          <td class="amount-col"><%= formatCurrency(Math.abs(indentDifference)) %></td>
+          <td class="amount-col"></td>
+          <td class="amount-col"></td>
+        <% } %>
+      </tr>
+      <% } %>
 
       <!-- Closing Balance / Deficit Row -->
       <% if (hasLeftBalance || hasRightBalance) { %>
