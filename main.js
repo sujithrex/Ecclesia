@@ -1208,6 +1208,77 @@ ipcMain.handle('indent-delete-monthly-payout', async (event, { payoutId }) => {
   return await indentService.deleteMonthlyPayout(payoutId);
 });
 
+// Employee Salary IPC handlers
+ipcMain.handle('indent-get-employee-salaries', async (event, { pastorateId, filters }) => {
+  return await indentService.getEmployeeSalaries(pastorateId, filters);
+});
+
+ipcMain.handle('indent-get-employee-salary', async (event, { employeeId }) => {
+  return await indentService.getEmployeeSalaryById(employeeId);
+});
+
+ipcMain.handle('indent-create-employee-salary', async (event, { pastorateId, userId, employeeData }) => {
+  return await indentService.createEmployeeSalary(pastorateId, userId, employeeData);
+});
+
+ipcMain.handle('indent-update-employee-salary', async (event, { employeeId, employeeData }) => {
+  return await indentService.updateEmployeeSalary(employeeId, employeeData);
+});
+
+ipcMain.handle('indent-delete-employee-salary', async (event, { employeeId }) => {
+  return await indentService.deleteEmployeeSalary(employeeId);
+});
+
+// Employee Allowance IPC handlers
+ipcMain.handle('indent-get-employee-allowances', async (event, { pastorateId }) => {
+  return await indentService.getEmployeeAllowances(pastorateId);
+});
+
+ipcMain.handle('indent-get-employee-allowance', async (event, { employeeId }) => {
+  return await indentService.getEmployeeAllowanceByEmployeeId(employeeId);
+});
+
+ipcMain.handle('indent-update-employee-allowance', async (event, { employeeId, allowanceData }) => {
+  return await indentService.updateEmployeeAllowance(employeeId, allowanceData);
+});
+
+ipcMain.handle('indent-get-employee-allowance-fields', async (event, { pastorateId }) => {
+  return await indentService.getEmployeeAllowanceFields(pastorateId);
+});
+
+ipcMain.handle('indent-create-employee-allowance-field', async (event, { pastorateId, fieldData }) => {
+  return await indentService.createEmployeeAllowanceField(pastorateId, fieldData);
+});
+
+ipcMain.handle('indent-delete-employee-allowance-field', async (event, { fieldId }) => {
+  return await indentService.deleteEmployeeAllowanceField(fieldId);
+});
+
+// Employee Deduction IPC handlers
+ipcMain.handle('indent-get-employee-deductions', async (event, { pastorateId }) => {
+  return await indentService.getEmployeeDeductions(pastorateId);
+});
+
+ipcMain.handle('indent-get-employee-deduction', async (event, { employeeId }) => {
+  return await indentService.getEmployeeDeductionByEmployeeId(employeeId);
+});
+
+ipcMain.handle('indent-update-employee-deduction', async (event, { employeeId, deductionData }) => {
+  return await indentService.updateEmployeeDeduction(employeeId, deductionData);
+});
+
+ipcMain.handle('indent-get-employee-deduction-fields', async (event, { pastorateId }) => {
+  return await indentService.getEmployeeDeductionFields(pastorateId);
+});
+
+ipcMain.handle('indent-create-employee-deduction-field', async (event, { pastorateId, fieldData }) => {
+  return await indentService.createEmployeeDeductionField(pastorateId, fieldData);
+});
+
+ipcMain.handle('indent-delete-employee-deduction-field', async (event, { fieldId }) => {
+  return await indentService.deleteEmployeeDeductionField(fieldId);
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {

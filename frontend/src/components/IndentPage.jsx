@@ -346,15 +346,28 @@ const IndentPage = ({
   const styles = useStyles();
   const navigate = useNavigate();
 
-  // Employee Deductions state
-  const [employees, setEmployees] = useState([]);
-  const [deductionFields, setDeductionFields] = useState([]);
-  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
-  const [showDeductionFieldsModal, setShowDeductionFieldsModal] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState(null);
-  const [newDeductionFieldName, setNewDeductionFieldName] = useState('');
+  // NEW: Employee Salary state (replaces old employees state)
+  const [employeeSalaries, setEmployeeSalaries] = useState([]);
+  const [showEmployeeSalaryModal, setShowEmployeeSalaryModal] = useState(false);
+  const [editingEmployeeSalary, setEditingEmployeeSalary] = useState(null);
 
-  // Allowances state
+  // NEW: Employee Allowances state
+  const [employeeAllowances, setEmployeeAllowances] = useState([]);
+  const [employeeAllowanceFields, setEmployeeAllowanceFields] = useState([]);
+  const [showEmployeeAllowanceModal, setShowEmployeeAllowanceModal] = useState(false);
+  const [showEmployeeAllowanceFieldsModal, setShowEmployeeAllowanceFieldsModal] = useState(false);
+  const [editingEmployeeAllowance, setEditingEmployeeAllowance] = useState(null);
+  const [newEmployeeAllowanceFieldName, setNewEmployeeAllowanceFieldName] = useState('');
+
+  // NEW: Employee Deductions state
+  const [employeeDeductions, setEmployeeDeductions] = useState([]);
+  const [employeeDeductionFields, setEmployeeDeductionFields] = useState([]);
+  const [showEmployeeDeductionModal, setShowEmployeeDeductionModal] = useState(false);
+  const [showEmployeeDeductionFieldsModal, setShowEmployeeDeductionFieldsModal] = useState(false);
+  const [editingEmployeeDeduction, setEditingEmployeeDeduction] = useState(null);
+  const [newEmployeeDeductionFieldName, setNewEmployeeDeductionFieldName] = useState('');
+
+  // OLD: Pastorate Workers Allowances state (keep as is - different from employee allowances)
   const [allowances, setAllowances] = useState([]);
   const [allowanceFields, setAllowanceFields] = useState([]);
   const [showAllowanceModal, setShowAllowanceModal] = useState(false);
@@ -380,23 +393,36 @@ const IndentPage = ({
   const [notification, setNotification] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
 
-  // Employee form state
-  const [employeeForm, setEmployeeForm] = useState({
+  // NEW: Employee Salary form state (only basic info + salary)
+  const [employeeSalaryForm, setEmployeeSalaryForm] = useState({
     name: '',
     position: '',
     date_of_birth: '',
-    salary: 0,
-    da: 0,
+    salary: 0
+  });
+
+  // NEW: Employee Allowance form state
+  const [employeeAllowanceForm, setEmployeeAllowanceForm] = useState({
+    employee_id: '',
+    dearness_allowance: 0,
+    custom_allowances: {},
+    total_allowance: 0
+  });
+
+  // NEW: Employee Deduction form state
+  const [employeeDeductionForm, setEmployeeDeductionForm] = useState({
+    employee_id: '',
+    sangam: 0,
     dpf: 0,
     cpf: 0,
     dfbf: 0,
     cswf: 0,
     dmaf: 0,
-    sangam: 0,
-    custom_deductions: {}
+    custom_deductions: {},
+    total_deduction: 0
   });
 
-  // Allowance form state
+  // OLD: Allowance form state (for pastorate workers)
   const [allowanceForm, setAllowanceForm] = useState({
     name: '',
     position: '',
@@ -427,8 +453,11 @@ const IndentPage = ({
   const loadAllData = async () => {
     setLoading(true);
     await Promise.all([
-      loadEmployees(),
-      loadDeductionFields(),
+      loadEmployeeSalaries(),
+      loadEmployeeAllowances(),
+      loadEmployeeAllowanceFields(),
+      loadEmployeeDeductions(),
+      loadEmployeeDeductionFields(),
       loadAllowances(),
       loadAllowanceFields(),
       loadPayments(),
@@ -438,31 +467,70 @@ const IndentPage = ({
     setLoading(false);
   };
 
-  // Load functions
-  const loadEmployees = async () => {
+  // NEW: Load functions for three-table employee structure
+  const loadEmployeeSalaries = async () => {
     try {
-      const result = await window.electron.indent.getEmployees({
+      const result = await window.electron.indent.getEmployeeSalaries({
         pastorateId: currentPastorate.id,
         filters: {}
       });
       if (result.success) {
-        setEmployees(result.employees || []);
+        setEmployeeSalaries(result.employees || []);
       }
     } catch (error) {
-      console.error('Failed to load employees:', error);
+      console.error('Failed to load employee salaries:', error);
     }
   };
 
-  const loadDeductionFields = async () => {
+  const loadEmployeeAllowances = async () => {
     try {
-      const result = await window.electron.indent.getDeductionFields({
+      const result = await window.electron.indent.getEmployeeAllowances({
         pastorateId: currentPastorate.id
       });
       if (result.success) {
-        setDeductionFields(result.fields || []);
+        setEmployeeAllowances(result.allowances || []);
       }
     } catch (error) {
-      console.error('Failed to load deduction fields:', error);
+      console.error('Failed to load employee allowances:', error);
+    }
+  };
+
+  const loadEmployeeAllowanceFields = async () => {
+    try {
+      const result = await window.electron.indent.getEmployeeAllowanceFields({
+        pastorateId: currentPastorate.id
+      });
+      if (result.success) {
+        setEmployeeAllowanceFields(result.fields || []);
+      }
+    } catch (error) {
+      console.error('Failed to load employee allowance fields:', error);
+    }
+  };
+
+  const loadEmployeeDeductions = async () => {
+    try {
+      const result = await window.electron.indent.getEmployeeDeductions({
+        pastorateId: currentPastorate.id
+      });
+      if (result.success) {
+        setEmployeeDeductions(result.deductions || []);
+      }
+    } catch (error) {
+      console.error('Failed to load employee deductions:', error);
+    }
+  };
+
+  const loadEmployeeDeductionFields = async () => {
+    try {
+      const result = await window.electron.indent.getEmployeeDeductionFields({
+        pastorateId: currentPastorate.id
+      });
+      if (result.success) {
+        setEmployeeDeductionFields(result.fields || []);
+      }
+    } catch (error) {
+      console.error('Failed to load employee deduction fields:', error);
     }
   };
 
@@ -548,110 +616,82 @@ const IndentPage = ({
     setConfirmDialog(null);
   };
 
-  // Employee handlers
-  const handleAddEmployee = () => {
-    setEditingEmployee(null);
-    setEmployeeForm({
+  // NEW: Employee Salary handlers
+  const handleAddEmployeeSalary = () => {
+    setEditingEmployeeSalary(null);
+    setEmployeeSalaryForm({
       name: '',
       position: '',
       date_of_birth: '',
-      salary: 0,
-      da: 0,
-      dpf: 0,
-      cpf: 0,
-      dfbf: 0,
-      cswf: 0,
-      dmaf: 0,
-      sangam: 0,
-      custom_deductions: {}
+      salary: 0
     });
-    setShowEmployeeModal(true);
+    setShowEmployeeSalaryModal(true);
   };
 
-  const handleEditEmployee = (employee) => {
-    setEditingEmployee(employee);
-
-    // Parse custom_deductions safely - it might be a string or already an object
-    let customDeductions = {};
-    if (employee.custom_deductions) {
-      if (typeof employee.custom_deductions === 'string') {
-        try {
-          customDeductions = JSON.parse(employee.custom_deductions);
-        } catch (e) {
-          console.error('Error parsing custom_deductions:', e);
-          customDeductions = {};
-        }
-      } else if (typeof employee.custom_deductions === 'object') {
-        customDeductions = employee.custom_deductions;
-      }
-    }
-
-    setEmployeeForm({
+  const handleEditEmployeeSalary = (employee) => {
+    setEditingEmployeeSalary(employee);
+    setEmployeeSalaryForm({
       name: employee.name,
       position: employee.position,
       date_of_birth: employee.date_of_birth || '',
-      salary: employee.salary,
-      da: employee.da,
-      dpf: employee.dpf,
-      cpf: employee.cpf,
-      dfbf: employee.dfbf,
-      cswf: employee.cswf,
-      dmaf: employee.dmaf,
-      sangam: employee.sangam,
-      custom_deductions: customDeductions
+      salary: employee.salary || 0
     });
-    setShowEmployeeModal(true);
+    setShowEmployeeSalaryModal(true);
   };
 
-  const handleSaveEmployee = async () => {
-    if (!employeeForm.name || !employeeForm.position) {
-      showNotification('Please fill in required fields', 'error');
+  const handleSaveEmployeeSalary = async () => {
+    if (!employeeSalaryForm.name || !employeeSalaryForm.position || !employeeSalaryForm.date_of_birth) {
+      showNotification('Please fill in all required fields', 'error');
       return;
     }
 
     try {
-      if (editingEmployee) {
-        const result = await window.electron.indent.updateEmployee({
-          employeeId: editingEmployee.id,
-          employeeData: employeeForm
+      if (editingEmployeeSalary) {
+        const result = await window.electron.indent.updateEmployeeSalary({
+          employeeId: editingEmployeeSalary.id,
+          employeeData: employeeSalaryForm
         });
         if (result.success) {
-          showNotification('Employee updated successfully');
-          loadEmployees();
-          setShowEmployeeModal(false);
+          showNotification('Employee salary updated successfully');
+          loadEmployeeSalaries();
+          setShowEmployeeSalaryModal(false);
         } else {
-          showNotification('Failed to update employee', 'error');
+          showNotification('Failed to update employee salary', 'error');
         }
       } else {
-        const result = await window.electron.indent.createEmployee({
+        const result = await window.electron.indent.createEmployeeSalary({
           pastorateId: currentPastorate.id,
           userId: user.id,
-          employeeData: employeeForm
+          employeeData: employeeSalaryForm
         });
         if (result.success) {
-          showNotification('Employee added successfully');
-          loadEmployees();
-          setShowEmployeeModal(false);
+          showNotification('Employee added successfully (allowance & deduction records auto-created)');
+          loadEmployeeSalaries();
+          loadEmployeeAllowances();
+          loadEmployeeDeductions();
+          setShowEmployeeSalaryModal(false);
         } else {
           showNotification('Failed to add employee', 'error');
         }
       }
     } catch (error) {
-      console.error('Failed to save employee:', error);
-      showNotification('Failed to save employee', 'error');
+      console.error('Failed to save employee salary:', error);
+      showNotification('Failed to save employee salary', 'error');
     }
   };
 
-  const handleDeleteEmployee = (employeeId) => {
+  const handleDeleteEmployeeSalary = (employeeId) => {
     showConfirm(
       'Delete Employee',
-      'Are you sure you want to delete this employee? This action cannot be undone.',
+      'Are you sure you want to delete this employee? This will also delete their allowance and deduction records. This action cannot be undone.',
       async () => {
         try {
-          const result = await window.electron.indent.deleteEmployee({ employeeId });
+          const result = await window.electron.indent.deleteEmployeeSalary({ employeeId });
           if (result.success) {
             showNotification('Employee deleted successfully');
-            loadEmployees();
+            loadEmployeeSalaries();
+            loadEmployeeAllowances();
+            loadEmployeeDeductions();
           } else {
             showNotification('Failed to delete employee', 'error');
           }
@@ -664,51 +704,233 @@ const IndentPage = ({
     );
   };
 
-  // Deduction field handlers
-  const handleAddDeductionField = async () => {
-    if (!newDeductionFieldName.trim()) return;
+  // NEW: Employee Allowance handlers
+  const handleEditEmployeeAllowance = (allowance) => {
+    setEditingEmployeeAllowance(allowance);
+
+    // Parse custom_allowances safely
+    let customAllowances = {};
+    if (allowance.custom_allowances) {
+      if (typeof allowance.custom_allowances === 'string') {
+        try {
+          customAllowances = JSON.parse(allowance.custom_allowances);
+        } catch (e) {
+          console.error('Error parsing custom_allowances:', e);
+          customAllowances = {};
+        }
+      } else if (typeof allowance.custom_allowances === 'object') {
+        customAllowances = allowance.custom_allowances;
+      }
+    }
+
+    setEmployeeAllowanceForm({
+      employee_id: allowance.employee_id,
+      dearness_allowance: allowance.dearness_allowance || 0,
+      custom_allowances: customAllowances,
+      total_allowance: allowance.total_allowance || 0
+    });
+    setShowEmployeeAllowanceModal(true);
+  };
+
+  const handleSaveEmployeeAllowance = async () => {
+    if (!employeeAllowanceForm.employee_id) {
+      showNotification('Invalid employee selection', 'error');
+      return;
+    }
+
+    // Calculate total allowance
+    const customTotal = Object.values(employeeAllowanceForm.custom_allowances || {})
+      .reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+    const totalAllowance = (parseFloat(employeeAllowanceForm.dearness_allowance) || 0) + customTotal;
 
     try {
-      const result = await window.electron.indent.createDeductionField({
-        pastorateId: currentPastorate.id,
-        fieldData: { field_name: newDeductionFieldName.trim() }
+      const result = await window.electron.indent.updateEmployeeAllowance({
+        employeeId: employeeAllowanceForm.employee_id,
+        allowanceData: {
+          dearness_allowance: employeeAllowanceForm.dearness_allowance,
+          custom_allowances: JSON.stringify(employeeAllowanceForm.custom_allowances || {}),
+          total_allowance: totalAllowance
+        }
       });
       if (result.success) {
-        showNotification('Deduction field added successfully');
-        loadDeductionFields();
-        setNewDeductionFieldName('');
+        showNotification('Employee allowance updated successfully');
+        loadEmployeeAllowances();
+        setShowEmployeeAllowanceModal(false);
       } else {
-        showNotification('Failed to add deduction field', 'error');
+        showNotification('Failed to update employee allowance', 'error');
       }
     } catch (error) {
-      console.error('Failed to add deduction field:', error);
-      showNotification('Failed to add deduction field', 'error');
+      console.error('Failed to save employee allowance:', error);
+      showNotification('Failed to save employee allowance', 'error');
     }
   };
 
-  const handleDeleteDeductionField = (fieldId) => {
+  // NEW: Employee Allowance Field handlers
+  const handleAddEmployeeAllowanceField = async () => {
+    if (!newEmployeeAllowanceFieldName.trim()) return;
+
+    try {
+      const result = await window.electron.indent.createEmployeeAllowanceField({
+        pastorateId: currentPastorate.id,
+        fieldData: { field_name: newEmployeeAllowanceFieldName.trim() }
+      });
+      if (result.success) {
+        showNotification('Employee allowance field added successfully');
+        loadEmployeeAllowanceFields();
+        setNewEmployeeAllowanceFieldName('');
+      } else {
+        showNotification('Failed to add employee allowance field', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to add employee allowance field:', error);
+      showNotification('Failed to add employee allowance field', 'error');
+    }
+  };
+
+  const handleDeleteEmployeeAllowanceField = (fieldId) => {
     showConfirm(
-      'Delete Deduction Field',
+      'Delete Employee Allowance Field',
       'Are you sure you want to delete this field? This action cannot be undone.',
       async () => {
         try {
-          const result = await window.electron.indent.deleteDeductionField({ fieldId });
+          const result = await window.electron.indent.deleteEmployeeAllowanceField({ fieldId });
           if (result.success) {
-            showNotification('Deduction field deleted successfully');
-            loadDeductionFields();
+            showNotification('Employee allowance field deleted successfully');
+            loadEmployeeAllowanceFields();
           } else {
-            showNotification('Failed to delete deduction field', 'error');
+            showNotification('Failed to delete employee allowance field', 'error');
           }
         } catch (error) {
-          console.error('Failed to delete deduction field:', error);
-          showNotification('Failed to delete deduction field', 'error');
+          console.error('Failed to delete employee allowance field:', error);
+          showNotification('Failed to delete employee allowance field', 'error');
         }
         hideConfirm();
       }
     );
   };
 
-  // Allowance handlers
+  // NEW: Employee Deduction handlers
+  const handleEditEmployeeDeduction = (deduction) => {
+    setEditingEmployeeDeduction(deduction);
+
+    // Parse custom_deductions safely
+    let customDeductions = {};
+    if (deduction.custom_deductions) {
+      if (typeof deduction.custom_deductions === 'string') {
+        try {
+          customDeductions = JSON.parse(deduction.custom_deductions);
+        } catch (e) {
+          console.error('Error parsing custom_deductions:', e);
+          customDeductions = {};
+        }
+      } else if (typeof deduction.custom_deductions === 'object') {
+        customDeductions = deduction.custom_deductions;
+      }
+    }
+
+    setEmployeeDeductionForm({
+      employee_id: deduction.employee_id,
+      sangam: deduction.sangam || 0,
+      dpf: deduction.dpf || 0,
+      cpf: deduction.cpf || 0,
+      dfbf: deduction.dfbf || 0,
+      cswf: deduction.cswf || 0,
+      dmaf: deduction.dmaf || 0,
+      custom_deductions: customDeductions,
+      total_deduction: deduction.total_deduction || 0
+    });
+    setShowEmployeeDeductionModal(true);
+  };
+
+  const handleSaveEmployeeDeduction = async () => {
+    if (!employeeDeductionForm.employee_id) {
+      showNotification('Invalid employee selection', 'error');
+      return;
+    }
+
+    // Calculate total deduction
+    const fixedTotal = (parseFloat(employeeDeductionForm.sangam) || 0) +
+                       (parseFloat(employeeDeductionForm.dpf) || 0) +
+                       (parseFloat(employeeDeductionForm.cpf) || 0) +
+                       (parseFloat(employeeDeductionForm.dfbf) || 0) +
+                       (parseFloat(employeeDeductionForm.cswf) || 0) +
+                       (parseFloat(employeeDeductionForm.dmaf) || 0);
+    const customTotal = Object.values(employeeDeductionForm.custom_deductions || {})
+      .reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
+    const totalDeduction = fixedTotal + customTotal;
+
+    try {
+      const result = await window.electron.indent.updateEmployeeDeduction({
+        employeeId: employeeDeductionForm.employee_id,
+        deductionData: {
+          sangam: employeeDeductionForm.sangam,
+          dpf: employeeDeductionForm.dpf,
+          cpf: employeeDeductionForm.cpf,
+          dfbf: employeeDeductionForm.dfbf,
+          cswf: employeeDeductionForm.cswf,
+          dmaf: employeeDeductionForm.dmaf,
+          custom_deductions: JSON.stringify(employeeDeductionForm.custom_deductions || {}),
+          total_deduction: totalDeduction
+        }
+      });
+      if (result.success) {
+        showNotification('Employee deduction updated successfully');
+        loadEmployeeDeductions();
+        setShowEmployeeDeductionModal(false);
+      } else {
+        showNotification('Failed to update employee deduction', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to save employee deduction:', error);
+      showNotification('Failed to save employee deduction', 'error');
+    }
+  };
+
+  // NEW: Employee Deduction Field handlers
+  const handleAddEmployeeDeductionField = async () => {
+    if (!newEmployeeDeductionFieldName.trim()) return;
+
+    try {
+      const result = await window.electron.indent.createEmployeeDeductionField({
+        pastorateId: currentPastorate.id,
+        fieldData: { field_name: newEmployeeDeductionFieldName.trim() }
+      });
+      if (result.success) {
+        showNotification('Employee deduction field added successfully');
+        loadEmployeeDeductionFields();
+        setNewEmployeeDeductionFieldName('');
+      } else {
+        showNotification('Failed to add employee deduction field', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to add employee deduction field:', error);
+      showNotification('Failed to add employee deduction field', 'error');
+    }
+  };
+
+  const handleDeleteEmployeeDeductionField = (fieldId) => {
+    showConfirm(
+      'Delete Employee Deduction Field',
+      'Are you sure you want to delete this field? This action cannot be undone.',
+      async () => {
+        try {
+          const result = await window.electron.indent.deleteEmployeeDeductionField({ fieldId });
+          if (result.success) {
+            showNotification('Employee deduction field deleted successfully');
+            loadEmployeeDeductionFields();
+          } else {
+            showNotification('Failed to delete employee deduction field', 'error');
+          }
+        } catch (error) {
+          console.error('Failed to delete employee deduction field:', error);
+          showNotification('Failed to delete employee deduction field', 'error');
+        }
+        hideConfirm();
+      }
+    );
+  };
+
+  // OLD: Pastorate Workers Allowance handlers (keep as is - different from employee allowances)
   const handleAddAllowance = () => {
     setEditingAllowance(null);
     setAllowanceForm({
@@ -974,43 +1196,66 @@ const IndentPage = ({
 
   const handleSaveMonthlyPayout = async () => {
     try {
-      // Calculate total amounts from all three tables
-      const employeeTotal = employees.reduce((sum, emp) => {
-        let total = emp.salary + emp.da + emp.dpf + emp.cpf + emp.dfbf + emp.cswf + emp.dmaf + emp.sangam;
-        if (emp.custom_deductions) {
-          try {
-            const customDed = typeof emp.custom_deductions === 'string'
-              ? JSON.parse(emp.custom_deductions)
-              : emp.custom_deductions;
-            total += Object.values(customDed).reduce((s, v) => s + (parseFloat(v) || 0), 0);
-          } catch (e) {
-            console.error('Error parsing custom_deductions in monthly payout:', e);
-          }
-        }
-        return sum + total;
-      }, 0);
+      // NEW: Calculate total amounts from NEW three-table structure
+      // Combine salary + allowances + deductions for each employee
+      const employeeData = employeeSalaries.map(salary => {
+        const allowance = employeeAllowances.find(a => a.employee_id === salary.id);
+        const deduction = employeeDeductions.find(d => d.employee_id === salary.id);
 
-      const allowanceTotal = allowances.reduce((sum, allow) => sum + (allow.allowance_amount || 0), 0);
+        const salaryAmount = parseFloat(salary.salary) || 0;
+        const allowanceAmount = parseFloat(allowance?.total_allowance) || 0;
+        const deductionAmount = parseFloat(deduction?.total_deduction) || 0;
+
+        return {
+          id: salary.id,
+          name: salary.name,
+          position: salary.position,
+          salary: salaryAmount,
+          allowance: allowanceAmount,
+          deduction: deductionAmount,
+          total: salaryAmount + allowanceAmount + deductionAmount
+        };
+      });
+
+      const employeeTotal = employeeData.reduce((sum, emp) => sum + emp.total, 0);
+      const pastorateAllowanceTotal = allowances.reduce((sum, allow) => sum + (allow.allowance_amount || 0), 0);
       const paymentTotal = payments.reduce((sum, pay) => sum + (pay.payment_amount || 0), 0);
-      const totalAmount = employeeTotal + allowanceTotal + paymentTotal;
+      const totalAmount = employeeTotal + pastorateAllowanceTotal + paymentTotal;
 
-      // Create snapshot data
+      // Create snapshot data with NEW structure
       const snapshotData = {
-        employees: employees.map(emp => ({
-          id: emp.id,
-          name: emp.name,
-          position: emp.position,
-          salary: emp.salary,
-          da: emp.da,
-          dpf: emp.dpf,
-          cpf: emp.cpf,
-          dfbf: emp.dfbf,
-          cswf: emp.cswf,
-          dmaf: emp.dmaf,
-          sangam: emp.sangam,
-          custom_deductions: emp.custom_deductions
+        employees: employeeData,
+        employeeSalaries: employeeSalaries.map(s => ({
+          id: s.id,
+          name: s.name,
+          position: s.position,
+          date_of_birth: s.date_of_birth,
+          salary: s.salary
         })),
-        allowances: allowances.map(allow => ({
+        employeeAllowances: employeeAllowances.map(a => ({
+          id: a.id,
+          employee_id: a.employee_id,
+          name: a.name,
+          position: a.position,
+          dearness_allowance: a.dearness_allowance,
+          custom_allowances: a.custom_allowances,
+          total_allowance: a.total_allowance
+        })),
+        employeeDeductions: employeeDeductions.map(d => ({
+          id: d.id,
+          employee_id: d.employee_id,
+          name: d.name,
+          position: d.position,
+          sangam: d.sangam,
+          dpf: d.dpf,
+          cpf: d.cpf,
+          dfbf: d.dfbf,
+          cswf: d.cswf,
+          dmaf: d.dmaf,
+          custom_deductions: d.custom_deductions,
+          total_deduction: d.total_deduction
+        })),
+        pastorateAllowances: allowances.map(allow => ({
           id: allow.id,
           name: allow.name,
           position: allow.position,
@@ -1132,25 +1377,20 @@ const IndentPage = ({
 
       <div className={styles.content}>
 
-        {/* Two-column layout */}
+        {/* ROW 1: Employee Salary & Employee Allowances */}
         <div className={styles.twoColumnLayout}>
-          {/* Left: Employee Deductions Table */}
+          {/* Left: Employee Salary Table */}
           <div className={styles.tableSection}>
             <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>Employee Deductions</h2>
+              <h2 className={styles.sectionTitle}>Employee Salary</h2>
               <div className={styles.buttonGroup}>
-                <button className={styles.addButton} onClick={() => setShowDeductionFieldsModal(true)}>
-                  <SettingsRegular fontSize={18} />
-                  Add Fields
-                </button>
-                <button className={styles.addButton} onClick={handleAddEmployee}>
+                <button className={styles.addButton} onClick={handleAddEmployeeSalary}>
                   <AddRegular fontSize={18} />
-                  Add Entry
+                  Add Employee
                 </button>
               </div>
             </div>
 
-            {/* Employee table - simplified to show only Name, Position, Actions */}
             <div className={styles.tableContainer}>
               <div className={styles.tableWrapper}>
                 <table className={styles.table}>
@@ -1158,40 +1398,42 @@ const IndentPage = ({
                     <tr>
                       <th className={styles.th}>Name</th>
                       <th className={styles.th}>Position</th>
+                      <th className={styles.th}>Base Salary</th>
                       <th className={styles.th}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan="3" className={styles.emptyState}>
+                        <td colSpan="4" className={styles.emptyState}>
                           Loading...
                         </td>
                       </tr>
-                    ) : employees.length === 0 ? (
+                    ) : employeeSalaries.length === 0 ? (
                       <tr>
-                        <td colSpan="3" className={styles.emptyState}>
+                        <td colSpan="4" className={styles.emptyState}>
                           <PersonRegular fontSize={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-                          <p>No employees found. Click "Add Entry" to add your first employee.</p>
+                          <p>No employees found. Click "Add Employee" to add your first employee.</p>
                         </td>
                       </tr>
                     ) : (
-                      employees.map((employee) => (
+                      employeeSalaries.map((employee) => (
                         <tr key={employee.id}>
                           <td className={styles.td}>{employee.name}</td>
                           <td className={styles.td}>{employee.position}</td>
+                          <td className={styles.td}>{formatCurrency(employee.salary)}</td>
                           <td className={styles.td}>
                             <div className={styles.actionButtons}>
                               <button
                                 className={styles.iconButton}
-                                onClick={() => handleEditEmployee(employee)}
+                                onClick={() => handleEditEmployeeSalary(employee)}
                                 title="Edit"
                               >
                                 <EditRegular fontSize={18} style={{ color: '#B5316A' }} />
                               </button>
                               <button
                                 className={styles.iconButton}
-                                onClick={() => handleDeleteEmployee(employee.id)}
+                                onClick={() => handleDeleteEmployeeSalary(employee.id)}
                                 title="Delete"
                               >
                                 <DeleteRegular fontSize={18} style={{ color: '#D13438' }} />
@@ -1207,10 +1449,143 @@ const IndentPage = ({
             </div>
           </div>
 
-          {/* Right: Allowance Table - will be added in next step */}
+          {/* Right: Employee Allowances Table */}
           <div className={styles.tableSection}>
             <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>Allowance Table</h2>
+              <h2 className={styles.sectionTitle}>Employee Allowances</h2>
+              <div className={styles.buttonGroup}>
+                <button className={styles.addButton} onClick={() => setShowEmployeeAllowanceFieldsModal(true)}>
+                  <SettingsRegular fontSize={18} />
+                  Manage Fields
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.tableContainer}>
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                  <thead className={styles.tableHeader}>
+                    <tr>
+                      <th className={styles.th}>Name</th>
+                      <th className={styles.th}>Position</th>
+                      <th className={styles.th}>DA</th>
+                      <th className={styles.th}>Total</th>
+                      <th className={styles.th}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan="5" className={styles.emptyState}>
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : employeeAllowances.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className={styles.emptyState}>
+                          <MoneyRegular fontSize={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                          <p>No employee allowances found. Add employees first to manage their allowances.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      employeeAllowances.map((allowance) => (
+                        <tr key={allowance.id}>
+                          <td className={styles.td}>{allowance.name}</td>
+                          <td className={styles.td}>{allowance.position}</td>
+                          <td className={styles.td}>{formatCurrency(allowance.dearness_allowance)}</td>
+                          <td className={styles.td}>{formatCurrency(allowance.total_allowance)}</td>
+                          <td className={styles.td}>
+                            <div className={styles.actionButtons}>
+                              <button
+                                className={styles.iconButton}
+                                onClick={() => handleEditEmployeeAllowance(allowance)}
+                                title="Edit"
+                              >
+                                <EditRegular fontSize={18} style={{ color: '#B5316A' }} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ROW 2: Employee Deductions & Pastorate Workers Allowance */}
+        <div className={styles.twoColumnLayout}>
+          {/* Left: Employee Deductions Table */}
+          <div className={styles.tableSection}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Employee Deductions</h2>
+              <div className={styles.buttonGroup}>
+                <button className={styles.addButton} onClick={() => setShowEmployeeDeductionFieldsModal(true)}>
+                  <SettingsRegular fontSize={18} />
+                  Manage Fields
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.tableContainer}>
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                  <thead className={styles.tableHeader}>
+                    <tr>
+                      <th className={styles.th}>Name</th>
+                      <th className={styles.th}>Position</th>
+                      <th className={styles.th}>Sangam</th>
+                      <th className={styles.th}>Total</th>
+                      <th className={styles.th}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan="5" className={styles.emptyState}>
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : employeeDeductions.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className={styles.emptyState}>
+                          <PersonRegular fontSize={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                          <p>No employee deductions found. Add employees first to manage their deductions.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      employeeDeductions.map((deduction) => (
+                        <tr key={deduction.id}>
+                          <td className={styles.td}>{deduction.name}</td>
+                          <td className={styles.td}>{deduction.position}</td>
+                          <td className={styles.td}>{formatCurrency(deduction.sangam)}</td>
+                          <td className={styles.td}>{formatCurrency(deduction.total_deduction)}</td>
+                          <td className={styles.td}>
+                            <div className={styles.actionButtons}>
+                              <button
+                                className={styles.iconButton}
+                                onClick={() => handleEditEmployeeDeduction(deduction)}
+                                title="Edit"
+                              >
+                                <EditRegular fontSize={18} style={{ color: '#B5316A' }} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Pastorate Workers Allowance Table */}
+          <div className={styles.tableSection}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Pastorate Workers Allowance</h2>
               <div className={styles.buttonGroup}>
                 <button className={styles.addButton} onClick={() => setShowAllowanceFieldsModal(true)}>
                   <SettingsRegular fontSize={18} />
@@ -1223,7 +1598,6 @@ const IndentPage = ({
               </div>
             </div>
 
-            {/* Allowance table */}
             <div className={styles.tableContainer}>
               <div className={styles.tableWrapper}>
                 <table className={styles.table}>
@@ -1285,7 +1659,7 @@ const IndentPage = ({
           </div>
         </div>
 
-        {/* Second row: Indent Payments and Monthly Payouts */}
+        {/* ROW 3: Indent Payments & Monthly Payouts */}
         <div className={styles.twoColumnLayout}>
           {/* Left: Indent Payments Table */}
           <div className={styles.tableSection}>
@@ -1429,15 +1803,15 @@ const IndentPage = ({
         </div>
       </div>
 
-      {/* Employee Modal */}
-      {showEmployeeModal && (
-        <div className={styles.modal} onClick={() => setShowEmployeeModal(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      {/* NEW: Employee Salary Modal */}
+      {showEmployeeSalaryModal && (
+        <div className={styles.modal} onClick={() => setShowEmployeeSalaryModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
             <div className={styles.modalHeader}>
               <h2 className={styles.modalTitle}>
-                {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
+                {editingEmployeeSalary ? 'Edit Employee Salary' : 'Add New Employee'}
               </h2>
-              <button className={styles.closeButton} onClick={() => setShowEmployeeModal(false)}>
+              <button className={styles.closeButton} onClick={() => setShowEmployeeSalaryModal(false)}>
                 <DismissRegular fontSize={20} />
               </button>
             </div>
@@ -1448,8 +1822,8 @@ const IndentPage = ({
                 <input
                   type="text"
                   className={styles.input}
-                  value={employeeForm.name}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, name: e.target.value })}
+                  value={employeeSalaryForm.name}
+                  onChange={(e) => setEmployeeSalaryForm({ ...employeeSalaryForm, name: e.target.value })}
                   placeholder="Enter employee name"
                 />
               </div>
@@ -1459,8 +1833,8 @@ const IndentPage = ({
                 <input
                   type="text"
                   className={styles.input}
-                  value={employeeForm.position}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, position: e.target.value })}
+                  value={employeeSalaryForm.position}
+                  onChange={(e) => setEmployeeSalaryForm({ ...employeeSalaryForm, position: e.target.value })}
                   placeholder="Enter position"
                 />
               </div>
@@ -1470,119 +1844,89 @@ const IndentPage = ({
                 <input
                   type="date"
                   className={styles.input}
-                  value={employeeForm.date_of_birth}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, date_of_birth: e.target.value })}
+                  value={employeeSalaryForm.date_of_birth}
+                  onChange={(e) => setEmployeeSalaryForm({ ...employeeSalaryForm, date_of_birth: e.target.value })}
                 />
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.label}>Salary</label>
+                <label className={styles.label}>Base Salary *</label>
                 <input
                   type="number"
                   className={styles.input}
-                  value={employeeForm.salary}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, salary: parseFloat(e.target.value) || 0 })}
+                  value={employeeSalaryForm.salary}
+                  onChange={(e) => setEmployeeSalaryForm({ ...employeeSalaryForm, salary: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button className={styles.cancelButton} onClick={() => setShowEmployeeSalaryModal(false)}>
+                Cancel
+              </button>
+              <button className={styles.saveButton} onClick={handleSaveEmployeeSalary}>
+                {editingEmployeeSalary ? 'Update' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW: Employee Allowance Modal */}
+      {showEmployeeAllowanceModal && (
+        <div className={styles.modal} onClick={() => setShowEmployeeAllowanceModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Edit Employee Allowance</h2>
+              <button className={styles.closeButton} onClick={() => setShowEmployeeAllowanceModal(false)}>
+                <DismissRegular fontSize={20} />
+              </button>
+            </div>
+
+            <div className={styles.formGrid}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Employee</label>
+                <select
+                  className={styles.input}
+                  value={employeeAllowanceForm.employee_id}
+                  onChange={(e) => setEmployeeAllowanceForm({ ...employeeAllowanceForm, employee_id: e.target.value })}
+                  disabled={editingEmployeeAllowance}
+                >
+                  <option value="">Select Employee</option>
+                  {employeeSalaries.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} - {emp.position}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Dearness Allowance (DA)</label>
+                <input
+                  type="number"
+                  className={styles.input}
+                  value={employeeAllowanceForm.dearness_allowance}
+                  onChange={(e) => setEmployeeAllowanceForm({ ...employeeAllowanceForm, dearness_allowance: parseFloat(e.target.value) || 0 })}
                   placeholder="0.00"
                   step="0.01"
                 />
               </div>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>D.A (Dearness Allowance)</label>
-                <input
-                  type="number"
-                  className={styles.input}
-                  value={employeeForm.da}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, da: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  step="0.01"
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>DPF</label>
-                <input
-                  type="number"
-                  className={styles.input}
-                  value={employeeForm.dpf}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, dpf: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  step="0.01"
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>CPF</label>
-                <input
-                  type="number"
-                  className={styles.input}
-                  value={employeeForm.cpf}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, cpf: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  step="0.01"
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>DFBF</label>
-                <input
-                  type="number"
-                  className={styles.input}
-                  value={employeeForm.dfbf}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, dfbf: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  step="0.01"
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>CSWF</label>
-                <input
-                  type="number"
-                  className={styles.input}
-                  value={employeeForm.cswf}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, cswf: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  step="0.01"
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>DMAF</label>
-                <input
-                  type="number"
-                  className={styles.input}
-                  value={employeeForm.dmaf}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, dmaf: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  step="0.01"
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Sangam</label>
-                <input
-                  type="number"
-                  className={styles.input}
-                  value={employeeForm.sangam}
-                  onChange={(e) => setEmployeeForm({ ...employeeForm, sangam: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  step="0.01"
-                />
-              </div>
-
-              {/* Custom deduction fields */}
-              {deductionFields.map((field) => (
+              {/* Custom allowance fields */}
+              {employeeAllowanceFields.map((field) => (
                 <div key={field.id} className={styles.formGroup}>
                   <label className={styles.label}>{field.field_name}</label>
                   <input
                     type="number"
                     className={styles.input}
-                    value={employeeForm.custom_deductions[field.field_name] || 0}
-                    onChange={(e) => setEmployeeForm({
-                      ...employeeForm,
-                      custom_deductions: {
-                        ...employeeForm.custom_deductions,
+                    value={employeeAllowanceForm.custom_allowances[field.field_name] || 0}
+                    onChange={(e) => setEmployeeAllowanceForm({
+                      ...employeeAllowanceForm,
+                      custom_allowances: {
+                        ...employeeAllowanceForm.custom_allowances,
                         [field.field_name]: parseFloat(e.target.value) || 0
                       }
                     })}
@@ -1594,95 +1938,218 @@ const IndentPage = ({
             </div>
 
             <div className={styles.modalFooter}>
-              <button className={styles.cancelButton} onClick={() => setShowEmployeeModal(false)}>
+              <button className={styles.cancelButton} onClick={() => setShowEmployeeAllowanceModal(false)}>
                 Cancel
               </button>
-              <button className={styles.saveButton} onClick={handleSaveEmployee}>
-                {editingEmployee ? 'Update' : 'Save'}
+              <button className={styles.saveButton} onClick={handleSaveEmployeeAllowance}>
+                Update
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Deduction Fields Modal */}
-      {showDeductionFieldsModal && (
-        <div className={styles.modal} onClick={() => setShowDeductionFieldsModal(false)}>
+      {/* NEW: Employee Deduction Modal */}
+      {showEmployeeDeductionModal && (
+        <div className={styles.modal} onClick={() => setShowEmployeeDeductionModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Edit Employee Deduction</h2>
+              <button className={styles.closeButton} onClick={() => setShowEmployeeDeductionModal(false)}>
+                <DismissRegular fontSize={20} />
+              </button>
+            </div>
+
+            <div className={styles.formGrid}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Employee</label>
+                <select
+                  className={styles.input}
+                  value={employeeDeductionForm.employee_id}
+                  onChange={(e) => setEmployeeDeductionForm({ ...employeeDeductionForm, employee_id: e.target.value })}
+                  disabled={editingEmployeeDeduction}
+                >
+                  <option value="">Select Employee</option>
+                  {employeeSalaries.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} - {emp.position}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Sangam</label>
+                <input
+                  type="number"
+                  className={styles.input}
+                  value={employeeDeductionForm.sangam}
+                  onChange={(e) => setEmployeeDeductionForm({ ...employeeDeductionForm, sangam: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>DPF</label>
+                <input
+                  type="number"
+                  className={styles.input}
+                  value={employeeDeductionForm.dpf}
+                  onChange={(e) => setEmployeeDeductionForm({ ...employeeDeductionForm, dpf: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>CPF</label>
+                <input
+                  type="number"
+                  className={styles.input}
+                  value={employeeDeductionForm.cpf}
+                  onChange={(e) => setEmployeeDeductionForm({ ...employeeDeductionForm, cpf: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>DFBF</label>
+                <input
+                  type="number"
+                  className={styles.input}
+                  value={employeeDeductionForm.dfbf}
+                  onChange={(e) => setEmployeeDeductionForm({ ...employeeDeductionForm, dfbf: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>CSWF</label>
+                <input
+                  type="number"
+                  className={styles.input}
+                  value={employeeDeductionForm.cswf}
+                  onChange={(e) => setEmployeeDeductionForm({ ...employeeDeductionForm, cswf: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>DMAF</label>
+                <input
+                  type="number"
+                  className={styles.input}
+                  value={employeeDeductionForm.dmaf}
+                  onChange={(e) => setEmployeeDeductionForm({ ...employeeDeductionForm, dmaf: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00"
+                  step="0.01"
+                />
+              </div>
+
+              {/* Custom deduction fields */}
+              {employeeDeductionFields.map((field) => (
+                <div key={field.id} className={styles.formGroup}>
+                  <label className={styles.label}>{field.field_name}</label>
+                  <input
+                    type="number"
+                    className={styles.input}
+                    value={employeeDeductionForm.custom_deductions[field.field_name] || 0}
+                    onChange={(e) => setEmployeeDeductionForm({
+                      ...employeeDeductionForm,
+                      custom_deductions: {
+                        ...employeeDeductionForm.custom_deductions,
+                        [field.field_name]: parseFloat(e.target.value) || 0
+                      }
+                    })}
+                    placeholder="0.00"
+                    step="0.01"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button className={styles.cancelButton} onClick={() => setShowEmployeeDeductionModal(false)}>
+                Cancel
+              </button>
+              <button className={styles.saveButton} onClick={handleSaveEmployeeDeduction}>
+                Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW: Employee Allowance Fields Modal */}
+      {showEmployeeAllowanceFieldsModal && (
+        <div className={styles.modal} onClick={() => setShowEmployeeAllowanceFieldsModal(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
             <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>Manage Deduction Fields</h2>
-              <button className={styles.closeButton} onClick={() => setShowDeductionFieldsModal(false)}>
+              <h2 className={styles.modalTitle}>Manage Employee Allowance Fields</h2>
+              <button className={styles.closeButton} onClick={() => setShowEmployeeAllowanceFieldsModal(false)}>
                 <DismissRegular fontSize={20} />
               </button>
             </div>
 
             <div style={{ marginBottom: '24px' }}>
               <p style={{ fontSize: '14px', color: '#605e5c', marginBottom: '16px' }}>
-                Add custom deduction fields that will appear in the employee form.
+                Add custom allowance fields for employees (e.g., HRA, Transport Allowance).
               </p>
 
               <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
                 <input
                   type="text"
                   className={styles.input}
-                  value={newDeductionFieldName}
-                  onChange={(e) => setNewDeductionFieldName(e.target.value)}
-                  placeholder="Enter field name (e.g., EPF, Insurance)"
+                  value={newEmployeeAllowanceFieldName}
+                  onChange={(e) => setNewEmployeeAllowanceFieldName(e.target.value)}
+                  placeholder="Enter field name"
                   style={{ flex: 1 }}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddDeductionField();
-                    }
-                  }}
                 />
-                <button className={styles.addButton} onClick={handleAddDeductionField}>
-                  <AddRegular fontSize={18} />
-                  Add
+                <button className={styles.saveButton} onClick={handleAddEmployeeAllowanceField}>
+                  Add Field
                 </button>
               </div>
 
-              <div>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#323130' }}>
-                  Current Fields
-                </h3>
-                {deductionFields.length === 0 ? (
-                  <p style={{ fontSize: '14px', color: '#605e5c', fontStyle: 'italic' }}>
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {employeeAllowanceFields.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: '#8a8886', padding: '20px' }}>
                     No custom fields added yet.
                   </p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {deductionFields.map((field) => (
-                      <div
-                        key={field.id}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '12px',
-                          backgroundColor: '#f8f8f8',
-                          borderRadius: '6px',
-                          border: '1px solid #e1dfdd'
-                        }}
-                      >
-                        <span style={{ fontSize: '14px', fontWeight: '500', color: '#323130' }}>
-                          {field.field_name}
-                        </span>
-                        <button
-                          className={styles.iconButton}
-                          onClick={() => handleDeleteDeductionField(field.id)}
-                          title="Delete field"
-                        >
-                          <DeleteRegular fontSize={18} style={{ color: '#D13438' }} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  <table className={styles.table}>
+                    <thead className={styles.tableHeader}>
+                      <tr>
+                        <th className={styles.th}>Field Name</th>
+                        <th className={styles.th}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {employeeAllowanceFields.map((field) => (
+                        <tr key={field.id}>
+                          <td className={styles.td}>{field.field_name}</td>
+                          <td className={styles.td}>
+                            <button
+                              className={styles.iconButton}
+                              onClick={() => handleDeleteEmployeeAllowanceField(field.id)}
+                              title="Delete"
+                            >
+                              <DeleteRegular fontSize={18} style={{ color: '#D13438' }} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </div>
             </div>
 
             <div className={styles.modalFooter}>
-              <button className={styles.cancelButton} onClick={() => setShowDeductionFieldsModal(false)}>
+              <button className={styles.cancelButton} onClick={() => setShowEmployeeAllowanceFieldsModal(false)}>
                 Close
               </button>
             </div>
@@ -1690,7 +2157,80 @@ const IndentPage = ({
         </div>
       )}
 
-      {/* Allowance Modal */}
+      {/* NEW: Employee Deduction Fields Modal */}
+      {showEmployeeDeductionFieldsModal && (
+        <div className={styles.modal} onClick={() => setShowEmployeeDeductionFieldsModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Manage Employee Deduction Fields</h2>
+              <button className={styles.closeButton} onClick={() => setShowEmployeeDeductionFieldsModal(false)}>
+                <DismissRegular fontSize={20} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ fontSize: '14px', color: '#605e5c', marginBottom: '16px' }}>
+                Add custom deduction fields for employees (e.g., EPF, Insurance).
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={newEmployeeDeductionFieldName}
+                  onChange={(e) => setNewEmployeeDeductionFieldName(e.target.value)}
+                  placeholder="Enter field name"
+                  style={{ flex: 1 }}
+                />
+                <button className={styles.saveButton} onClick={handleAddEmployeeDeductionField}>
+                  Add Field
+                </button>
+              </div>
+
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {employeeDeductionFields.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: '#8a8886', padding: '20px' }}>
+                    No custom fields added yet.
+                  </p>
+                ) : (
+                  <table className={styles.table}>
+                    <thead className={styles.tableHeader}>
+                      <tr>
+                        <th className={styles.th}>Field Name</th>
+                        <th className={styles.th}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {employeeDeductionFields.map((field) => (
+                        <tr key={field.id}>
+                          <td className={styles.td}>{field.field_name}</td>
+                          <td className={styles.td}>
+                            <button
+                              className={styles.iconButton}
+                              onClick={() => handleDeleteEmployeeDeductionField(field.id)}
+                              title="Delete"
+                            >
+                              <DeleteRegular fontSize={18} style={{ color: '#D13438' }} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button className={styles.cancelButton} onClick={() => setShowEmployeeDeductionFieldsModal(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pastorate Workers Allowance Modal (keep as is - different from employee allowances) */}
       {showAllowanceModal && (
         <div className={styles.modal} onClick={() => setShowAllowanceModal(false)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>

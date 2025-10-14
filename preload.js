@@ -405,6 +405,29 @@ contextBridge.exposeInMainWorld('electron', {
     getMonthlyPayout: (data) => ipcRenderer.invoke('indent-get-monthly-payout', data),
     createMonthlyPayout: (data) => ipcRenderer.invoke('indent-create-monthly-payout', data),
     updateMonthlyPayout: (data) => ipcRenderer.invoke('indent-update-monthly-payout', data),
-    deleteMonthlyPayout: (data) => ipcRenderer.invoke('indent-delete-monthly-payout', data)
+    deleteMonthlyPayout: (data) => ipcRenderer.invoke('indent-delete-monthly-payout', data),
+
+    // Employee Salary
+    getEmployeeSalaries: (data) => ipcRenderer.invoke('indent-get-employee-salaries', data),
+    getEmployeeSalary: (data) => ipcRenderer.invoke('indent-get-employee-salary', data),
+    createEmployeeSalary: (data) => ipcRenderer.invoke('indent-create-employee-salary', data),
+    updateEmployeeSalary: (data) => ipcRenderer.invoke('indent-update-employee-salary', data),
+    deleteEmployeeSalary: (data) => ipcRenderer.invoke('indent-delete-employee-salary', data),
+
+    // Employee Allowances
+    getEmployeeAllowances: (data) => ipcRenderer.invoke('indent-get-employee-allowances', data),
+    getEmployeeAllowance: (data) => ipcRenderer.invoke('indent-get-employee-allowance', data),
+    updateEmployeeAllowance: (data) => ipcRenderer.invoke('indent-update-employee-allowance', data),
+    getEmployeeAllowanceFields: (data) => ipcRenderer.invoke('indent-get-employee-allowance-fields', data),
+    createEmployeeAllowanceField: (data) => ipcRenderer.invoke('indent-create-employee-allowance-field', data),
+    deleteEmployeeAllowanceField: (data) => ipcRenderer.invoke('indent-delete-employee-allowance-field', data),
+
+    // Employee Deductions
+    getEmployeeDeductions: (data) => ipcRenderer.invoke('indent-get-employee-deductions', data),
+    getEmployeeDeduction: (data) => ipcRenderer.invoke('indent-get-employee-deduction', data),
+    updateEmployeeDeduction: (data) => ipcRenderer.invoke('indent-update-employee-deduction', data),
+    getEmployeeDeductionFields: (data) => ipcRenderer.invoke('indent-get-employee-deduction-fields', data),
+    createEmployeeDeductionField: (data) => ipcRenderer.invoke('indent-create-employee-deduction-field', data),
+    deleteEmployeeDeductionField: (data) => ipcRenderer.invoke('indent-delete-employee-deduction-field', data)
   }
 });

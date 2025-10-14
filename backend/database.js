@@ -791,6 +791,92 @@ class DatabaseManager {
                         FOREIGN KEY (created_by) REFERENCES users (id),
                         UNIQUE(pastorate_id, month, year)
                     )
+                `);
+
+                // ========== NEW RESTRUCTURED EMPLOYEE TABLES ==========
+
+                // Employee Salary table - stores basic employee info and salary only
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_employee_salary (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        position TEXT NOT NULL,
+                        date_of_birth DATE NOT NULL,
+                        salary REAL NOT NULL DEFAULT 0,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id)
+                    )
+                `);
+
+                // Employee Allowance Fields table - for custom allowance field definitions
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_employee_allowance_fields (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        field_name TEXT NOT NULL,
+                        field_order INTEGER NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(pastorate_id, field_name)
+                    )
+                `);
+
+                // Employee Allowances table - stores allowance amounts per employee
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_employee_allowances (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        employee_id INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        dearness_allowance REAL NOT NULL DEFAULT 0,
+                        custom_allowances TEXT,
+                        total_allowance REAL NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (employee_id) REFERENCES indent_employee_salary (id) ON DELETE CASCADE,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(employee_id)
+                    )
+                `);
+
+                // Employee Deduction Fields table - for custom deduction field definitions
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_employee_deduction_fields (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        pastorate_id INTEGER NOT NULL,
+                        field_name TEXT NOT NULL,
+                        field_order INTEGER NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(pastorate_id, field_name)
+                    )
+                `);
+
+                // Employee Deductions table - stores deduction amounts per employee
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS indent_employee_deductions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        employee_id INTEGER NOT NULL,
+                        pastorate_id INTEGER NOT NULL,
+                        sangam REAL NOT NULL DEFAULT 0,
+                        dpf REAL NOT NULL DEFAULT 0,
+                        cpf REAL NOT NULL DEFAULT 0,
+                        dfbf REAL NOT NULL DEFAULT 0,
+                        cswf REAL NOT NULL DEFAULT 0,
+                        dmaf REAL NOT NULL DEFAULT 0,
+                        custom_deductions TEXT,
+                        total_deduction REAL NOT NULL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (employee_id) REFERENCES indent_employee_salary (id) ON DELETE CASCADE,
+                        FOREIGN KEY (pastorate_id) REFERENCES pastorates (id) ON DELETE CASCADE,
+                        UNIQUE(employee_id)
+                    )
                 `, (err) => {
                     if (err) {
                         console.error('Error creating tables:', err);

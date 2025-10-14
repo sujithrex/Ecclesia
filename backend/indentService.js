@@ -805,6 +805,432 @@ class IndentService {
             });
         });
     }
+
+    // ========== EMPLOYEE SALARY MANAGEMENT ==========
+
+    /**
+     * Get all employees from salary table
+     */
+    async getEmployeeSalaries(pastorateId, filters = {}) {
+        return new Promise((resolve, reject) => {
+            this.db.db.all(`
+                SELECT * FROM indent_employee_salary
+                WHERE pastorate_id = ?
+                ORDER BY created_at DESC
+            `, [pastorateId], (err, rows) => {
+                if (err) {
+                    console.error('Error fetching employee salaries:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, employees: rows || [] });
+                }
+            });
+        });
+    }
+
+    /**
+     * Get employee salary by ID
+     */
+    async getEmployeeSalaryById(employeeId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.get(`
+                SELECT * FROM indent_employee_salary WHERE id = ?
+            `, [employeeId], (err, row) => {
+                if (err) {
+                    console.error('Error fetching employee salary:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, employee: row });
+                }
+            });
+        });
+    }
+
+    /**
+     * Create a new employee (salary + auto-create allowance and deduction entries)
+     */
+    async createEmployeeSalary(pastorateId, userId, employeeData) {
+        return new Promise((resolve, reject) => {
+            const { name, position, date_of_birth, salary } = employeeData;
+            const db = this.db.db; // Capture db reference before callback
+
+            db.run(`
+                INSERT INTO indent_employee_salary (
+                    pastorate_id, name, position, date_of_birth, salary, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            `, [pastorateId, name, position, date_of_birth, salary, userId], function(err) {
+                if (err) {
+                    console.error('Error creating employee salary:', err);
+                    reject(err);
+                    return;
+                }
+
+                const employeeId = this.lastID;
+
+                // Auto-create allowance entry
+                db.run(`
+                    INSERT INTO indent_employee_allowances (
+                        employee_id, pastorate_id, dearness_allowance, total_allowance
+                    ) VALUES (?, ?, 0, 0)
+                `, [employeeId, pastorateId], (err2) => {
+                    if (err2) {
+                        console.error('Error creating employee allowance:', err2);
+                        reject(err2);
+                        return;
+                    }
+
+                    // Auto-create deduction entry
+                    db.run(`
+                        INSERT INTO indent_employee_deductions (
+                            employee_id, pastorate_id, sangam, dpf, cpf, dfbf, cswf, dmaf, total_deduction
+                        ) VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0)
+                    `, [employeeId, pastorateId], (err3) => {
+                        if (err3) {
+                            console.error('Error creating employee deduction:', err3);
+                            reject(err3);
+                        } else {
+                            resolve({ success: true, employeeId: employeeId });
+                        }
+                    });
+                });
+            });
+        });
+    }
+
+    /**
+     * Update employee salary
+     */
+    async updateEmployeeSalary(employeeId, employeeData) {
+        return new Promise((resolve, reject) => {
+            const { name, position, date_of_birth, salary } = employeeData;
+
+            this.db.db.run(`
+                UPDATE indent_employee_salary
+                SET name = ?, position = ?, date_of_birth = ?, salary = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [name, position, date_of_birth, salary, employeeId], function(err) {
+                if (err) {
+                    console.error('Error updating employee salary:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    /**
+     * Delete employee (cascades to allowance and deduction tables)
+     */
+    async deleteEmployeeSalary(employeeId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.run(`
+                DELETE FROM indent_employee_salary WHERE id = ?
+            `, [employeeId], function(err) {
+                if (err) {
+                    console.error('Error deleting employee salary:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // ========== EMPLOYEE ALLOWANCE MANAGEMENT ==========
+
+    /**
+     * Get all employee allowances with employee info
+     */
+    async getEmployeeAllowances(pastorateId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.all(`
+                SELECT
+                    ea.*,
+                    es.name,
+                    es.position
+                FROM indent_employee_allowances ea
+                JOIN indent_employee_salary es ON ea.employee_id = es.id
+                WHERE ea.pastorate_id = ?
+                ORDER BY es.name ASC
+            `, [pastorateId], (err, rows) => {
+                if (err) {
+                    console.error('Error fetching employee allowances:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, allowances: rows || [] });
+                }
+            });
+        });
+    }
+
+    /**
+     * Get employee allowance by employee ID
+     */
+    async getEmployeeAllowanceByEmployeeId(employeeId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.get(`
+                SELECT
+                    ea.*,
+                    es.name,
+                    es.position
+                FROM indent_employee_allowances ea
+                JOIN indent_employee_salary es ON ea.employee_id = es.id
+                WHERE ea.employee_id = ?
+            `, [employeeId], (err, row) => {
+                if (err) {
+                    console.error('Error fetching employee allowance:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, allowance: row });
+                }
+            });
+        });
+    }
+
+    /**
+     * Update employee allowance
+     */
+    async updateEmployeeAllowance(employeeId, allowanceData) {
+        return new Promise((resolve, reject) => {
+            const { dearness_allowance, custom_allowances, total_allowance } = allowanceData;
+
+            this.db.db.run(`
+                UPDATE indent_employee_allowances
+                SET dearness_allowance = ?, custom_allowances = ?, total_allowance = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE employee_id = ?
+            `, [dearness_allowance, custom_allowances, total_allowance, employeeId], function(err) {
+                if (err) {
+                    console.error('Error updating employee allowance:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    /**
+     * Get employee allowance fields
+     */
+    async getEmployeeAllowanceFields(pastorateId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.all(`
+                SELECT * FROM indent_employee_allowance_fields
+                WHERE pastorate_id = ?
+                ORDER BY field_order ASC, id ASC
+            `, [pastorateId], (err, rows) => {
+                if (err) {
+                    console.error('Error fetching employee allowance fields:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, fields: rows || [] });
+                }
+            });
+        });
+    }
+
+    /**
+     * Create employee allowance field
+     */
+    async createEmployeeAllowanceField(pastorateId, fieldData) {
+        return new Promise((resolve, reject) => {
+            const { field_name } = fieldData;
+
+            this.db.db.get(`
+                SELECT MAX(field_order) as max_order
+                FROM indent_employee_allowance_fields
+                WHERE pastorate_id = ?
+            `, [pastorateId], (err, row) => {
+                if (err) {
+                    console.error('Error getting max order:', err);
+                    reject(err);
+                    return;
+                }
+
+                const nextOrder = (row?.max_order || 0) + 1;
+
+                this.db.db.run(`
+                    INSERT INTO indent_employee_allowance_fields (
+                        pastorate_id, field_name, field_order
+                    ) VALUES (?, ?, ?)
+                `, [pastorateId, field_name, nextOrder], function(err) {
+                    if (err) {
+                        console.error('Error creating employee allowance field:', err);
+                        reject(err);
+                    } else {
+                        resolve({ success: true, fieldId: this.lastID });
+                    }
+                });
+            });
+        });
+    }
+
+    /**
+     * Delete employee allowance field
+     */
+    async deleteEmployeeAllowanceField(fieldId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.run(`
+                DELETE FROM indent_employee_allowance_fields WHERE id = ?
+            `, [fieldId], function(err) {
+                if (err) {
+                    console.error('Error deleting employee allowance field:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // ========== EMPLOYEE DEDUCTION MANAGEMENT ==========
+
+    /**
+     * Get all employee deductions with employee info
+     */
+    async getEmployeeDeductions(pastorateId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.all(`
+                SELECT
+                    ed.*,
+                    es.name,
+                    es.position
+                FROM indent_employee_deductions ed
+                JOIN indent_employee_salary es ON ed.employee_id = es.id
+                WHERE ed.pastorate_id = ?
+                ORDER BY es.name ASC
+            `, [pastorateId], (err, rows) => {
+                if (err) {
+                    console.error('Error fetching employee deductions:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, deductions: rows || [] });
+                }
+            });
+        });
+    }
+
+    /**
+     * Get employee deduction by employee ID
+     */
+    async getEmployeeDeductionByEmployeeId(employeeId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.get(`
+                SELECT
+                    ed.*,
+                    es.name,
+                    es.position
+                FROM indent_employee_deductions ed
+                JOIN indent_employee_salary es ON ed.employee_id = es.id
+                WHERE ed.employee_id = ?
+            `, [employeeId], (err, row) => {
+                if (err) {
+                    console.error('Error fetching employee deduction:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, deduction: row });
+                }
+            });
+        });
+    }
+
+    /**
+     * Update employee deduction
+     */
+    async updateEmployeeDeduction(employeeId, deductionData) {
+        return new Promise((resolve, reject) => {
+            const { sangam, dpf, cpf, dfbf, cswf, dmaf, custom_deductions, total_deduction } = deductionData;
+
+            this.db.db.run(`
+                UPDATE indent_employee_deductions
+                SET sangam = ?, dpf = ?, cpf = ?, dfbf = ?, cswf = ?, dmaf = ?,
+                    custom_deductions = ?, total_deduction = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE employee_id = ?
+            `, [sangam, dpf, cpf, dfbf, cswf, dmaf, custom_deductions, total_deduction, employeeId], function(err) {
+                if (err) {
+                    console.error('Error updating employee deduction:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    /**
+     * Get employee deduction fields
+     */
+    async getEmployeeDeductionFields(pastorateId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.all(`
+                SELECT * FROM indent_employee_deduction_fields
+                WHERE pastorate_id = ?
+                ORDER BY field_order ASC, id ASC
+            `, [pastorateId], (err, rows) => {
+                if (err) {
+                    console.error('Error fetching employee deduction fields:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, fields: rows || [] });
+                }
+            });
+        });
+    }
+
+    /**
+     * Create employee deduction field
+     */
+    async createEmployeeDeductionField(pastorateId, fieldData) {
+        return new Promise((resolve, reject) => {
+            const { field_name } = fieldData;
+
+            this.db.db.get(`
+                SELECT MAX(field_order) as max_order
+                FROM indent_employee_deduction_fields
+                WHERE pastorate_id = ?
+            `, [pastorateId], (err, row) => {
+                if (err) {
+                    console.error('Error getting max order:', err);
+                    reject(err);
+                    return;
+                }
+
+                const nextOrder = (row?.max_order || 0) + 1;
+
+                this.db.db.run(`
+                    INSERT INTO indent_employee_deduction_fields (
+                        pastorate_id, field_name, field_order
+                    ) VALUES (?, ?, ?)
+                `, [pastorateId, field_name, nextOrder], function(err) {
+                    if (err) {
+                        console.error('Error creating employee deduction field:', err);
+                        reject(err);
+                    } else {
+                        resolve({ success: true, fieldId: this.lastID });
+                    }
+                });
+            });
+        });
+    }
+
+    /**
+     * Delete employee deduction field
+     */
+    async deleteEmployeeDeductionField(fieldId) {
+        return new Promise((resolve, reject) => {
+            this.db.db.run(`
+                DELETE FROM indent_employee_deduction_fields WHERE id = ?
+            `, [fieldId], function(err) {
+                if (err) {
+                    console.error('Error deleting employee deduction field:', err);
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
 }
 
 module.exports = IndentService;
