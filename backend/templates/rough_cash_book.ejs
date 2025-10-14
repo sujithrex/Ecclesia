@@ -387,14 +387,54 @@
         });
       });
     }
-    
+
+    // NEW: Deductions section (from monthly payout snapshot - Receipts side)
+    if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.deductionItems && reportData.monthlyPayoutData.deductionItems.length > 0) {
+      creditEntries.push({
+        type: 'section-header',
+        particulars: 'Deductions'
+      });
+
+      reportData.monthlyPayoutData.deductionItems.forEach(item => {
+        creditEntries.push({
+          type: 'deduction',
+          date: '', // No date for snapshot items
+          particulars: item.particulars,
+          rno: 'DED', // Voucher prefix
+          cash: item.amount,
+          bank: 0,
+          diocese: 0
+        });
+      });
+    }
+
+    // NEW: Indent section (from monthly payout snapshot - Receipts side)
+    if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.indentReceiptItems && reportData.monthlyPayoutData.indentReceiptItems.length > 0) {
+      creditEntries.push({
+        type: 'section-header',
+        particulars: 'Indent'
+      });
+
+      reportData.monthlyPayoutData.indentReceiptItems.forEach(item => {
+        creditEntries.push({
+          type: 'indent-receipt',
+          date: '', // No date for snapshot items
+          particulars: item.particulars,
+          rno: 'IND', // Voucher prefix
+          cash: item.amount,
+          bank: 0,
+          diocese: 0
+        });
+      });
+    }
+
     // Bills and Vouchers section
     if (reportData.billVouchers && reportData.billVouchers.length > 0) {
       debitEntries.push({
         type: 'section-header',
         particulars: 'Bills and Vouchers'
       });
-      
+
       reportData.billVouchers.forEach(bv => {
         debitEntries.push({
           type: 'bill-voucher',
@@ -407,23 +447,43 @@
         });
       });
     }
-    
-    // Acquittance section
-    if (reportData.acquittance && reportData.acquittance.length > 0) {
+
+    // NEW: Acquittance section (from monthly payout snapshot)
+    if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.acquittanceItems && reportData.monthlyPayoutData.acquittanceItems.length > 0) {
       debitEntries.push({
         type: 'section-header',
         particulars: 'Acquittance'
       });
-      
-      reportData.acquittance.forEach(aq => {
+
+      reportData.monthlyPayoutData.acquittanceItems.forEach(item => {
         debitEntries.push({
           type: 'acquittance',
-          date: formatDate(aq.date),
-          particulars: aq.payee_name,
-          rno: aq.voucher_number,
-          cash: aq.book_type === 'cash' ? aq.amount : 0,
-          bank: aq.book_type === 'bank' ? aq.amount : 0,
-          diocese: aq.book_type === 'diocese' ? aq.amount : 0
+          date: '', // No date for snapshot items
+          particulars: item.particulars,
+          rno: 'ACQ', // Voucher prefix
+          cash: item.amount,
+          bank: 0,
+          diocese: 0
+        });
+      });
+    }
+
+    // NEW: Indent section (from monthly payout snapshot)
+    if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.indentItems && reportData.monthlyPayoutData.indentItems.length > 0) {
+      debitEntries.push({
+        type: 'section-header',
+        particulars: 'Indent'
+      });
+
+      reportData.monthlyPayoutData.indentItems.forEach(item => {
+        debitEntries.push({
+          type: 'indent',
+          date: '', // No date for snapshot items
+          particulars: item.particulars,
+          rno: 'IND', // Voucher prefix
+          cash: item.amount,
+          bank: 0,
+          diocese: 0
         });
       });
     }

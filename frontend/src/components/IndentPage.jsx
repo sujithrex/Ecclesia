@@ -1259,6 +1259,7 @@ const IndentPage = ({
           id: allow.id,
           name: allow.name,
           position: allow.position,
+          date_of_birth: allow.date_of_birth,
           allowance_name: allow.allowance_name,
           allowance_amount: allow.allowance_amount
         })),
