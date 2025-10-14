@@ -528,21 +528,85 @@
       });
     }
     
-    // Calculate totals
-    const totalCash = reportData.openingBalance.cash + reportData.totalCredits.cash;
-    const totalBank = reportData.openingBalance.bank + reportData.totalCredits.bank;
-    const totalDiocese = reportData.openingBalance.diocese + reportData.totalCredits.diocese;
-    
-    const totalDebitCash = reportData.totalDebits.cash;
-    const totalDebitBank = reportData.totalDebits.bank;
-    const totalDebitDiocese = reportData.totalDebits.diocese;
-    
-    // Add closing balance to appropriate side
-    const closingCash = reportData.closingBalance.cash;
-    const closingBank = reportData.closingBalance.bank;
-    const closingDiocese = reportData.closingBalance.diocese;
-    
+    // Calculate Indent Advance/Surplus FIRST (before totals)
+    // Indent Payments total (from debit side)
+    let indentPaymentsTotal = 0;
+    if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.indentItems) {
+      indentPaymentsTotal = reportData.monthlyPayoutData.indentItems.reduce((sum, item) => {
+        return sum + (parseFloat(item.amount) || 0);
+      }, 0);
+    }
+
+    // Indent Receipts total (from credit side)
+    let indentReceiptsTotal = 0;
+    if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.indentReceiptItems) {
+      indentReceiptsTotal = reportData.monthlyPayoutData.indentReceiptItems.reduce((sum, item) => {
+        return sum + (parseFloat(item.amount) || 0);
+      }, 0);
+    }
+
+    // Calculate difference: Indent Payments - Indent Receipts
+    const indentDifference = indentPaymentsTotal - indentReceiptsTotal;
+
+    // Determine if it's Advance (positive) or Surplus (negative)
+    const isIndentAdvance = indentDifference > 0;
+    const hasIndentDifference = Math.abs(indentDifference) > 0.01; // Check if there's a meaningful difference
+    const indentDifferenceAbs = Math.abs(indentDifference);
+
+    // Calculate Deductions total (from Receipts side)
+    let deductionsTotal = 0;
+    if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.deductionItems) {
+      deductionsTotal = reportData.monthlyPayoutData.deductionItems.reduce((sum, item) => {
+        return sum + (parseFloat(item.amount) || 0);
+      }, 0);
+    }
+
+    // Calculate base totals from backend data
+    let creditCash = reportData.openingBalance.cash + reportData.totalCredits.cash;
+    let creditBank = reportData.openingBalance.bank + reportData.totalCredits.bank;
+    let creditDiocese = reportData.openingBalance.diocese + reportData.totalCredits.diocese;
+
+    let debitCash = reportData.totalDebits.cash;
+    let debitBank = reportData.totalDebits.bank;
+    let debitDiocese = reportData.totalDebits.diocese;
+
+    // Add Deductions and Indent to Receipts Cash
+    // These represent cash received from Diocese to cover employee expenses
+    creditCash += deductionsTotal + indentReceiptsTotal;
+
+    // Add Indent Advance/Surplus to the appropriate columns
+    if (hasIndentDifference) {
+      if (isIndentAdvance) {
+        // Indent Advance: Add to Receipts Cash and Payments Diocese
+        creditCash += indentDifferenceAbs;
+        debitDiocese += indentDifferenceAbs;
+      } else {
+        // Indent Surplus: Add to Receipts Diocese and Payments Cash
+        creditDiocese += indentDifferenceAbs;
+        debitCash += indentDifferenceAbs;
+      }
+    }
+
+    // Calculate closing balance for each account
+    // Closing balance = Credits - Debits for each account
+    const closingCash = creditCash - debitCash;
+    const closingBank = creditBank - debitBank;
+    const closingDiocese = creditDiocese - debitDiocese;
+
     const totalClosing = closingCash + closingBank + closingDiocese;
+
+    // Calculate final totals (to be displayed in the final total row)
+    // Both sides should show the same total after adding closing balance/deficit
+    //
+    // Logic:
+    // - If closingCash >= 0 (surplus): creditCash > debitCash, so total = creditCash
+    //   (because debitCash + closingCash = creditCash)
+    // - If closingCash < 0 (deficit): debitCash > creditCash, so total = debitCash
+    //   (because creditCash + abs(closingCash) = debitCash)
+
+    const totalCash = closingCash >= 0 ? creditCash : debitCash;
+    const totalBank = closingBank >= 0 ? creditBank : debitBank;
+    const totalDiocese = closingDiocese >= 0 ? creditDiocese : debitDiocese;
   %>
 
   <!-- Header -->
@@ -618,30 +682,6 @@
       <% } %>
       
       <%
-        // Calculate Indent Advance/Surplus
-        // Indent Payments total (from debit side)
-        let indentPaymentsTotal = 0;
-        if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.indentItems) {
-          indentPaymentsTotal = reportData.monthlyPayoutData.indentItems.reduce((sum, item) => {
-            return sum + (parseFloat(item.amount) || 0);
-          }, 0);
-        }
-
-        // Indent Receipts total (from credit side)
-        let indentReceiptsTotal = 0;
-        if (reportData.monthlyPayoutData && reportData.monthlyPayoutData.indentReceiptItems) {
-          indentReceiptsTotal = reportData.monthlyPayoutData.indentReceiptItems.reduce((sum, item) => {
-            return sum + (parseFloat(item.amount) || 0);
-          }, 0);
-        }
-
-        // Calculate difference: Indent Payments - Indent Receipts
-        const indentDifference = indentPaymentsTotal - indentReceiptsTotal;
-
-        // Determine if it's Advance (positive) or Surplus (negative)
-        const isIndentAdvance = indentDifference > 0;
-        const hasIndentDifference = Math.abs(indentDifference) > 0.01; // Check if there's a meaningful difference
-
         // For each account, determine if closing balance or deficit
         // If credits > debits: closing balance goes to RIGHT (debit side)
         // If debits > credits: deficit goes to LEFT (credit side)
