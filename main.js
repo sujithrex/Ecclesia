@@ -45,6 +45,9 @@ const RoughCashBookService = require('./backend/roughCashBookService.js');
 const RoughCashBookReportPuppeteerService = require('./backend/roughCashBookReportPuppeteerService.js');
 const OfferingsReportService = require('./backend/offeringsReportService.js');
 const OfferingsReportPuppeteerService = require('./backend/offeringsReportPuppeteerService.js');
+const GoogleDriveService = require('./backend/googleDriveService.js');
+const BackupService = require('./backend/backupService.js');
+const BackupScheduler = require('./backend/backupScheduler.js');
 
 let mainWindow;
 let db;
@@ -91,6 +94,9 @@ let roughCashBookService;
 let roughCashBookReportPuppeteerService;
 let offeringsReportService;
 let offeringsReportPuppeteerService;
+let googleDriveService;
+let backupService;
+let backupScheduler;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -1329,6 +1335,103 @@ ipcMain.handle('indent-delete-employee-deduction-field', async (event, { fieldId
   return await indentService.deleteEmployeeDeductionField(fieldId);
 });
 
+// Backup IPC handlers
+ipcMain.handle('backup-authenticate', async (event, { userId }) => {
+  try {
+    const result = await googleDriveService.authenticate(userId);
+
+    // Trigger first backup after successful authentication
+    if (result.success) {
+      try {
+        await backupService.createBackup(userId, 'auto');
+      } catch (backupError) {
+        console.error('Error creating first backup:', backupError);
+        // Don't fail authentication if first backup fails
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('backup-disconnect', async (event, { userId }) => {
+  try {
+    await googleDriveService.disconnect(userId);
+    return { success: true };
+  } catch (error) {
+    console.error('Disconnect error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('backup-trigger-manual', async (event, { userId }) => {
+  try {
+    const result = await backupScheduler.triggerManualBackup(userId);
+    return { success: true, ...result };
+  } catch (error) {
+    console.error('Manual backup error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('backup-get-history', async (event, { userId }) => {
+  try {
+    const history = await db.getBackupHistory(userId);
+    return { success: true, backups: history };
+  } catch (error) {
+    console.error('Get backup history error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('backup-get-status', async (event, { userId }) => {
+  try {
+    const status = await backupService.getBackupStatus(userId);
+    return { success: true, ...status };
+  } catch (error) {
+    console.error('Get backup status error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('backup-restore', async (event, { userId, backupId }) => {
+  try {
+    const result = await backupService.restoreBackup(userId, backupId);
+    return { success: true, ...result };
+  } catch (error) {
+    console.error('Restore backup error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('backup-finalize-restore', async (event, { tempRestorePath, dbPath }) => {
+  try {
+    // Close database connection
+    if (db) {
+      db.close();
+    }
+
+    // Replace database file
+    const fsSync = require('fs');
+    fsSync.copyFileSync(tempRestorePath, dbPath);
+
+    // Clean up temp file
+    fsSync.unlinkSync(tempRestorePath);
+
+    // Relaunch app
+    app.relaunch();
+    app.exit(0);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Finalize restore error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // File management IPC handlers
 ipcMain.handle('file-open-image-picker', async (event) => {
   try {
@@ -1487,16 +1590,22 @@ app.on('ready', async () => {
   roughCashBookReportPuppeteerService = new RoughCashBookReportPuppeteerService(db);
   offeringsReportService = new OfferingsReportService(db);
   offeringsReportPuppeteerService = new OfferingsReportPuppeteerService(db);
+  googleDriveService = new GoogleDriveService(db);
+  backupService = new BackupService(db, googleDriveService);
+  backupScheduler = new BackupScheduler(db, backupService);
 
-  // Wait a moment for database to be ready, then clean expired sessions
+  // Wait a moment for database to be ready, then clean expired sessions and start backup scheduler
   setTimeout(async () => {
     try {
       await db.cleanExpiredSessions();
+
+      // Start backup scheduler
+      backupScheduler.start();
     } catch (error) {
       console.error('Error cleaning expired sessions:', error);
     }
   }, 1000);
-  
+
   createWindow();
 });
 

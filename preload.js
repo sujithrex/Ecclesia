@@ -447,5 +447,16 @@ contextBridge.exposeInMainWorld('electron', {
     getEmployeeDeductionFields: (data) => ipcRenderer.invoke('indent-get-employee-deduction-fields', data),
     createEmployeeDeductionField: (data) => ipcRenderer.invoke('indent-create-employee-deduction-field', data),
     deleteEmployeeDeductionField: (data) => ipcRenderer.invoke('indent-delete-employee-deduction-field', data)
+  },
+
+  // Backup API
+  backup: {
+    authenticate: (data) => ipcRenderer.invoke('backup-authenticate', data),
+    disconnect: (data) => ipcRenderer.invoke('backup-disconnect', data),
+    triggerManualBackup: (data) => ipcRenderer.invoke('backup-trigger-manual', data),
+    getBackupHistory: (data) => ipcRenderer.invoke('backup-get-history', data),
+    getBackupStatus: (data) => ipcRenderer.invoke('backup-get-status', data),
+    restoreBackup: (data) => ipcRenderer.invoke('backup-restore', data),
+    finalizeRestore: (data) => ipcRenderer.invoke('backup-finalize-restore', data)
   }
 });

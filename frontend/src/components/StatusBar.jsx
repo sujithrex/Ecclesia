@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { makeStyles } from '@fluentui/react-components';
 import {
   BuildingRegular,
@@ -300,6 +301,7 @@ const StatusBar = ({
   disableChurchSelector = false
 }) => {
   const styles = useStyles();
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showPastorateDropdown, setShowPastorateDropdown] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -828,6 +830,14 @@ const StatusBar = ({
       <div className={styles.statusRight}>
         {user && (
           <>
+            <button
+              className={styles.logoutButton}
+              onClick={() => navigate('/backup')}
+              title="Backup & Restore"
+            >
+              Backup
+            </button>
+            <span className={styles.divider}>|</span>
             <button
               className={styles.logoutButton}
               onClick={handleLogout}

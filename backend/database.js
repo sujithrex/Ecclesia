@@ -195,6 +195,39 @@ class DatabaseManager {
                     )
                 `);
 
+                // Google Drive authentication table for backup
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS google_drive_auth (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        encrypted_refresh_token TEXT NOT NULL,
+                        access_token TEXT,
+                        token_expiry DATETIME,
+                        google_email TEXT,
+                        drive_folder_id TEXT,
+                        authenticated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                        UNIQUE(user_id)
+                    )
+                `);
+
+                // Backup history table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS backup_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        backup_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        drive_file_id TEXT NOT NULL,
+                        file_size INTEGER NOT NULL,
+                        backup_status TEXT NOT NULL DEFAULT 'success',
+                        backup_type TEXT NOT NULL DEFAULT 'auto',
+                        error_message TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                `);
+
                 // Pastorate settings table
                 this.db.run(`
                     CREATE TABLE IF NOT EXISTS pastorate_settings (
@@ -4050,6 +4083,196 @@ class DatabaseManager {
                 }
             });
         });
+    }
+
+    // Google Drive Authentication Methods
+    async saveGoogleDriveAuth(userId, authData) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT OR REPLACE INTO google_drive_auth
+                (user_id, encrypted_refresh_token, access_token, token_expiry, google_email, drive_folder_id, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            `;
+
+            this.db.run(query, [
+                userId,
+                authData.encrypted_refresh_token,
+                authData.access_token,
+                authData.token_expiry,
+                authData.google_email,
+                authData.drive_folder_id
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getGoogleDriveAuth(userId) {
+        return new Promise((resolve, reject) => {
+            const query = 'SELECT * FROM google_drive_auth WHERE user_id = ?';
+
+            this.db.get(query, [userId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async updateGoogleDriveTokens(userId, accessToken, tokenExpiry) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                UPDATE google_drive_auth
+                SET access_token = ?, token_expiry = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+            `;
+
+            this.db.run(query, [accessToken, tokenExpiry, userId], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deleteGoogleDriveAuth(userId) {
+        return new Promise((resolve, reject) => {
+            const query = 'DELETE FROM google_drive_auth WHERE user_id = ?';
+
+            this.db.run(query, [userId], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // Backup History Methods
+    async createBackupHistory(userId, backupData) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                INSERT INTO backup_history
+                (user_id, drive_file_id, file_size, backup_status, backup_type, error_message)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `;
+
+            this.db.run(query, [
+                userId,
+                backupData.drive_file_id,
+                backupData.file_size,
+                backupData.backup_status || 'success',
+                backupData.backup_type || 'auto',
+                backupData.error_message || null
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true, id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getBackupHistory(userId, limit = 50) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT * FROM backup_history
+                WHERE user_id = ?
+                ORDER BY backup_timestamp DESC
+                LIMIT ?
+            `;
+
+            this.db.all(query, [userId, limit], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getBackupCount(userId) {
+        return new Promise((resolve, reject) => {
+            const query = 'SELECT COUNT(*) as count FROM backup_history WHERE user_id = ? AND backup_status = ?';
+
+            this.db.get(query, [userId, 'success'], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row ? row.count : 0);
+                }
+            });
+        });
+    }
+
+    async getLastBackupTime(userId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT backup_timestamp FROM backup_history
+                WHERE user_id = ? AND backup_status = 'success'
+                ORDER BY backup_timestamp DESC
+                LIMIT 1
+            `;
+
+            this.db.get(query, [userId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row ? row.backup_timestamp : null);
+                }
+            });
+        });
+    }
+
+    async deleteBackupHistory(backupId) {
+        return new Promise((resolve, reject) => {
+            const query = 'DELETE FROM backup_history WHERE id = ?';
+
+            this.db.run(query, [backupId], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ success: true, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async getOldestBackup(userId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT * FROM backup_history
+                WHERE user_id = ? AND backup_status = 'success'
+                ORDER BY backup_timestamp ASC
+                LIMIT 1
+            `;
+
+            this.db.get(query, [userId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    getDbPath() {
+        const { app } = require('electron');
+        return app.isPackaged
+            ? path.join(app.getPath('userData'), 'ecclesia.db')
+            : path.join(__dirname, 'ecclesia.db');
     }
 
     close() {
