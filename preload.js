@@ -365,6 +365,12 @@ contextBridge.exposeInMainWorld('electron', {
     generatePDF: (data) => ipcRenderer.invoke('rough-cash-book-generate-pdf', data)
   },
 
+  // Offerings Report API
+  offeringsReport: {
+    getReportData: (data) => ipcRenderer.invoke('offerings-report-get-report-data', data),
+    generatePDF: (data) => ipcRenderer.invoke('offerings-report-generate-pdf', data)
+  },
+
   // Indent API (Pastorate Level Only)
   indent: {
     // Deduction Fields

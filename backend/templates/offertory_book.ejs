@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @font-face {
+      font-family: 'Vijaya';
+      src: url('file:///<%= fontPath %>') format('truetype');
+    }
+    @font-face {
+      font-family: 'Times New Roman';
+      src: local('Times New Roman');
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      width: 297.00mm;
+      height: 210.00mm;
+      position: relative;
+      font-family: 'Times New Roman', serif;
+      padding: 5mm;
+      overflow: hidden;
+    }
+
+    .english-text {
+      font-family: 'Times New Roman', serif;
+    }
+    .tamil-text {
+      font-family: 'Vijaya', serif;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 3mm;
+    }
+
+    .header-title {
+      font-size: 17pt;
+      font-weight: bold;
+      margin-bottom: 2mm;
+    }
+
+    .header-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12pt;
+      margin-bottom: 2mm;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7pt;
+    }
+
+    th, td {
+      border: 0.35mm solid #000000;
+      padding: 1mm;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    th {
+      background-color: #f8f8f8;
+      font-weight: bold;
+    }
+
+    .date-col {
+      width: 15mm;
+    }
+
+    .category-col {
+      width: 15mm;
+    }
+
+    .total-col {
+      width: 15mm;
+      font-weight: bold;
+    }
+
+    .signature-col {
+      width: 15mm;
+    }
+
+    .section-header {
+      background-color: #e0e0e0;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .total-row {
+      font-weight: bold;
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+<%
+// Helper functions
+function isTamilText(text) {
+  if (!text) return false;
+  const tamilRegex = /[\u0B80-\u0BFF]/;
+  return tamilRegex.test(text);
+}
+
+function getFontClass(text) {
+  return isTamilText(text) ? 'tamil-text' : 'english-text';
+}
+
+function getFontSize(text, baseSize) {
+  return isTamilText(text) ? (baseSize + 1) : baseSize;
+}
+
+function formatCurrency(amount) {
+  if (!amount || amount === 0) return '';
+  return new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
+function formatMonthDisplay(monthStr) {
+  if (!monthStr) return '';
+  const [year, month] = monthStr.split('-');
+  const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 
+                      'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+  return monthNames[parseInt(month) - 1];
+}
+
+// Extract data
+const pastorate = reportData.pastorate;
+const church = reportData.church;
+const month = reportData.month;
+const offeringsByDate = reportData.offeringsByDate || [];
+const categoryTotals = reportData.categoryTotals || {};
+const grandTotal = reportData.grandTotal || 0;
+const allCategories = reportData.allCategories || [];
+
+const pastorateName = pastorate.pastorate_name || '';
+const churchName = church ? church.church_name : 'All Churches';
+const [year, monthNum] = month.split('-');
+const monthDisplay = formatMonthDisplay(month);
+%>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title <%= getFontClass('சபை காணிக்கை புத்தகம்') %>" style="font-size: <%= getFontSize('சபை காணிக்கை புத்தகம்', 17) %>pt;">
+      சபை காணிக்கை புத்தகம்
+    </div>
+    <div class="header-info">
+      <div class="<%= getFontClass(pastorateName) %>" style="font-size: <%= getFontSize(pastorateName, 12) %>pt;">
+        சேகரம் : <%= pastorateName %>
+      </div>
+      <div class="<%= getFontClass(churchName) %>" style="font-size: <%= getFontSize(churchName, 12) %>pt;">
+        சபை : <%= churchName %>
+      </div>
+      <div>
+        மாதம் : <%= monthDisplay %>
+      </div>
+      <div>
+        வருடம் : <%= year %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Table -->
+  <table>
+    <thead>
+      <!-- Column Headers Row -->
+      <tr>
+        <th class="date-col <%= getFontClass('தேதி') %>" style="font-size: <%= getFontSize('தேதி', 7) %>pt;">தேதி</th>
+        <% allCategories.forEach(category => { %>
+          <th class="category-col <%= getFontClass(category.tamil) %>" style="font-size: <%= getFontSize(category.tamil, 7) %>pt;">
+            <%= category.tamil %>
+          </th>
+        <% }); %>
+        <th class="total-col <%= getFontClass('மொத்தம்') %>" style="font-size: <%= getFontSize('மொத்தம்', 7) %>pt;">மொத்தம்</th>
+        <th class="signature-col <%= getFontClass('கையெழுத்து') %>" style="font-size: <%= getFontSize('கையெழுத்து', 7) %>pt;">கையெழுத்து</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (offeringsByDate.length === 0) { %>
+        <tr>
+          <td colspan="<%= allCategories.length + 3 %>">No data available for this month</td>
+        </tr>
+      <% } else { %>
+        <% offeringsByDate.forEach(dateEntry => { 
+          const rowTotal = Object.values(dateEntry.categories).reduce((sum, val) => sum + val, 0);
+        %>
+          <tr>
+            <td class="date-col"><%= formatDate(dateEntry.date) %></td>
+            <% allCategories.forEach(category => { 
+              const amount = dateEntry.categories[category.key] || 0;
+            %>
+              <td class="category-col"><%= formatCurrency(amount) %></td>
+            <% }); %>
+            <td class="total-col"><%= formatCurrency(rowTotal) %></td>
+            <td class="signature-col"></td>
+          </tr>
+        <% }); %>
+        
+        <!-- Total Row -->
+        <tr class="total-row">
+          <td class="date-col">Total</td>
+          <% allCategories.forEach(category => { 
+            const total = categoryTotals[category.key] || 0;
+          %>
+            <td class="category-col"><%= formatCurrency(total) %></td>
+          <% }); %>
+          <td class="total-col"><%= formatCurrency(grandTotal) %></td>
+          <td class="signature-col"></td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+</body>
+</html>
+

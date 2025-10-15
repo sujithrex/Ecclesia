@@ -12,9 +12,11 @@ import {
   CheckmarkCircleRegular,
   DismissCircleRegular,
   InfoRegular,
+  DocumentPdfRegular,
 } from '@fluentui/react-icons';
 import StatusBar from './StatusBar';
 import Breadcrumb from './Breadcrumb';
+import { generateOfferingsReport } from '../utils/offeringsReportPuppeteer';
 
 const useStyles = makeStyles({
   container: {
@@ -309,9 +311,15 @@ const useStyles = makeStyles({
   },
   filterSection: {
     display: 'flex',
-    gap: '12px',
+    gap: '24px',
     alignItems: 'center',
     marginBottom: '20px',
+    flexWrap: 'wrap',
+  },
+  filterGroup: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center',
   },
   filterLabel: {
     fontSize: '14px',
@@ -376,6 +384,31 @@ const useStyles = makeStyles({
     fontWeight: '600',
     color: '#B5316A',
   },
+  pdfButton: {
+    backgroundColor: '#B5316A',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '10px 20px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#A12B5E',
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(181, 49, 106, 0.3)',
+    },
+    '&:disabled': {
+      backgroundColor: '#d1d1d1',
+      cursor: 'not-allowed',
+      transform: 'none',
+      boxShadow: 'none',
+    },
+  },
 });
 
 const OfferingsPage = ({
@@ -405,6 +438,9 @@ const OfferingsPage = ({
   const [transactionToDelete, setTransactionToDelete] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState('all'); // Format: 'YYYY-MM' or 'all'
   const [summaryMonth, setSummaryMonth] = useState(''); // For summary section
+  const [churches, setChurches] = useState([]); // List of churches
+  const [selectedChurch, setSelectedChurch] = useState('all'); // Selected church for PDF
+  const [reportLoading, setReportLoading] = useState(false); // PDF generation loading state
   const itemsPerPage = 10;
 
   const showNotification = (message, type = 'info') => {
@@ -441,6 +477,7 @@ const OfferingsPage = ({
   useEffect(() => {
     if (currentPastorate && user) {
       loadAllTransactions();
+      loadChurches();
     }
   }, [currentPastorate?.id, user?.id]);
 
@@ -448,6 +485,18 @@ const OfferingsPage = ({
   React.useEffect(() => {
     setCurrentPage(1);
   }, [selectedMonth]);
+
+  const loadChurches = async () => {
+    try {
+      const result = await window.electron.church.getUserChurchesByPastorate(currentPastorate.id, user.id);
+      if (result.success) {
+        setChurches(result.churches || []);
+      }
+    } catch (error) {
+      console.error('Failed to load churches:', error);
+      setChurches([]);
+    }
+  };
 
   const loadAllTransactions = async () => {
     setLoading(true);
@@ -476,6 +525,38 @@ const OfferingsPage = ({
 
   const handleAddTransaction = () => {
     navigate('/offerings/add');
+  };
+
+  const handleGeneratePDF = async (action = 'view') => {
+    // Validate month selection
+    if (selectedMonth === 'all') {
+      showNotification('Please select a specific month to generate the report', 'error');
+      return;
+    }
+
+    setReportLoading(true);
+    try {
+      const churchId = selectedChurch === 'all' ? null : parseInt(selectedChurch);
+
+      const result = await generateOfferingsReport(
+        currentPastorate.id,
+        user.id,
+        selectedMonth,
+        churchId,
+        action
+      );
+
+      if (result.success) {
+        showNotification(`Offertory book report ${action === 'view' ? 'opened' : action === 'download' ? 'downloaded' : 'sent to printer'} successfully`, 'success');
+      } else {
+        showNotification(`Failed to ${action} report: ${result.error}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      showNotification(`Error generating report: ${error.message}`, 'error');
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   const handleEditTransaction = (transaction) => {
@@ -695,25 +776,53 @@ const OfferingsPage = ({
           </button>
         </div>
 
-        {/* Filter Section */}
+        {/* Filter and PDF Generation Section - Combined on Same Row */}
         {allTransactions.length > 0 && (
           <div className={styles.filterSection}>
-            <span className={styles.filterLabel}>Filter by Month:</span>
-            <select
-              className={styles.filterDropdown}
-              value={selectedMonth}
-              onChange={(e) => {
-                setSelectedMonth(e.target.value);
-                setCurrentPage(1); // Reset to first page when filter changes
-              }}
-            >
-              <option value="all">All Months</option>
-              {availableMonths.map(month => (
-                <option key={month} value={month}>
-                  {formatMonthDisplay(month)}
-                </option>
-              ))}
-            </select>
+            {/* Month Filter Group */}
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>Filter by Month:</span>
+              <select
+                className={styles.filterDropdown}
+                value={selectedMonth}
+                onChange={(e) => {
+                  setSelectedMonth(e.target.value);
+                  setCurrentPage(1); // Reset to first page when filter changes
+                }}
+              >
+                <option value="all">All Months</option>
+                {availableMonths.map(month => (
+                  <option key={month} value={month}>
+                    {formatMonthDisplay(month)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* PDF Generation Group */}
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>Generate Offertory Book:</span>
+              <select
+                className={styles.filterDropdown}
+                value={selectedChurch}
+                onChange={(e) => setSelectedChurch(e.target.value)}
+              >
+                <option value="all">All Churches</option>
+                {churches.map(church => (
+                  <option key={church.id} value={church.id}>
+                    {church.church_name}
+                  </option>
+                ))}
+              </select>
+              <button
+                className={styles.pdfButton}
+                onClick={() => handleGeneratePDF('view')}
+                disabled={reportLoading || selectedMonth === 'all'}
+              >
+                <DocumentPdfRegular />
+                {reportLoading ? 'Generating...' : 'Generate PDF'}
+              </button>
+            </div>
           </div>
         )}
 

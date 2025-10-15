@@ -41,6 +41,8 @@ const AccountListService = require('./backend/accountListService.js');
 const IndentService = require('./backend/indentService.js');
 const RoughCashBookService = require('./backend/roughCashBookService.js');
 const RoughCashBookReportPuppeteerService = require('./backend/roughCashBookReportPuppeteerService.js');
+const OfferingsReportService = require('./backend/offeringsReportService.js');
+const OfferingsReportPuppeteerService = require('./backend/offeringsReportPuppeteerService.js');
 
 let mainWindow;
 let db;
@@ -83,6 +85,8 @@ let accountListService;
 let indentService;
 let roughCashBookService;
 let roughCashBookReportPuppeteerService;
+let offeringsReportService;
+let offeringsReportPuppeteerService;
 
 function createWindow() {
   // Force light theme before creating window (if available)
@@ -1072,6 +1076,15 @@ ipcMain.handle('rough-cash-book-generate-pdf', async (event, { reportData, optio
   return await roughCashBookReportPuppeteerService.generateRoughCashBookPDF(reportData, options);
 });
 
+// Offerings Report IPC handlers
+ipcMain.handle('offerings-report-get-report-data', async (event, { pastorateId, userId, month, churchId }) => {
+  return await offeringsReportService.getReportData(pastorateId, userId, month, churchId);
+});
+
+ipcMain.handle('offerings-report-generate-pdf', async (event, { reportData, options }) => {
+  return await offeringsReportPuppeteerService.generateOffertoryBookPDF(reportData, options);
+});
+
 // Indent IPC handlers
 // Deduction Fields
 ipcMain.handle('indent-get-deduction-fields', async (event, { pastorateId }) => {
@@ -1433,6 +1446,8 @@ app.on('ready', async () => {
   indentService = new IndentService(db);
   roughCashBookService = new RoughCashBookService(db);
   roughCashBookReportPuppeteerService = new RoughCashBookReportPuppeteerService(db);
+  offeringsReportService = new OfferingsReportService(db);
+  offeringsReportPuppeteerService = new OfferingsReportPuppeteerService(db);
 
   // Wait a moment for database to be ready, then clean expired sessions
   setTimeout(async () => {
