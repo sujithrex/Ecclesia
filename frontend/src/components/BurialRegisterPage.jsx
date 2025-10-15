@@ -564,6 +564,8 @@ function BurialRegisterPage({ user, selectedChurch }) {
   // Handle delete
   const handleDelete = (registerId) => {
     setConfirmDelete(registerId);
+    // Scroll to top to show the warning
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Confirm delete
@@ -700,10 +702,15 @@ function BurialRegisterPage({ user, selectedChurch }) {
         {/* Delete Warning */}
         {confirmDelete && (
           <div className={classes.deleteWarning}>
-            <strong>Warning:</strong> Are you sure you want to delete this register? This action cannot be undone.
+            <strong>⚠️ Warning:</strong> Are you sure you want to delete this burial register? This action cannot be undone.
+            {registers.find(r => r.id === confirmDelete) && (
+              <div style={{ marginTop: '8px', fontSize: '14px' }}>
+                <strong>Register:</strong> {registers.find(r => r.id === confirmDelete).certificate_number} - {registers.find(r => r.id === confirmDelete).name_of_person_died}
+              </div>
+            )}
             <div className={classes.deleteWarningButtons}>
               <button className={classes.confirmDeleteButton} onClick={confirmDeleteRegister}>
-                Yes, Delete
+                <DeleteRegular /> Yes, Delete
               </button>
               <button className={classes.cancelDeleteButton} onClick={cancelDelete}>
                 Cancel
