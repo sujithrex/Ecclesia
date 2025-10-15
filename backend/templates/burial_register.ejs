@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @font-face {
+      font-family: 'Vijaya';
+      src: url('file:///<%= fontPath.replace(/\\/g, '/') %>') format('truetype');
+    }
+    @font-face {
+      font-family: 'Times New Roman';
+      src: local('Times New Roman');
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      width: 297.00mm;
+      height: 210.00mm;
+      position: relative;
+      overflow: hidden;
+      font-family: 'Times New Roman', serif;
+    }
+    .text-frame {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .text-content {
+      width: 100%;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    .shape {
+      position: absolute;
+    }
+    .line {
+      position: absolute;
+    }
+    .table-cell {
+      position: absolute;
+      overflow: hidden;
+    }
+    .image-frame {
+      position: absolute;
+    }
+    .english-text {
+      font-family: 'Times New Roman', serif;
+    }
+    .tamil-text {
+      font-family: 'Vijaya', serif;
+    }
+  </style>
+</head>
+<body>
+<%
+// Helper function to check if text contains Tamil characters
+function isTamilText(text) {
+  if (!text) return false;
+  const tamilRegex = /[\u0B80-\u0BFF]/;
+  return tamilRegex.test(text);
+}
+
+// Get font class based on text content
+function getFontClass(text) {
+  return isTamilText(text) ? 'tamil-text' : 'english-text';
+}
+
+// Get font size based on text content (Tamil gets +1pt)
+function getFontSize(text, baseSize) {
+  return isTamilText(text) ? (baseSize + 1) : baseSize;
+}
+
+// Format date to DD-MM-YYYY
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return dateStr;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
+// Register data
+const certNumber = register.certificate_number || '';
+const dateOfDeath = formatDate(register.date_of_death);
+const whenBuried = formatDate(register.when_buried);
+const nameOfPersonDied = register.name_of_person_died || '';
+const sex = register.sex === 'male' ? 'Male' : 'Female';
+const age = register.age || '';
+const profession = register.profession || '';
+const causeOfDeath = register.cause_of_death || '';
+const fatherName = register.father_name || '';
+const motherName = register.mother_name || '';
+const whereBuried = register.where_buried || '';
+const signatureWhoBuried = register.signature_who_buried || '';
+const certifiedRevName = register.certified_rev_name || '';
+const holdingOffice = register.holding_office || '';
+const certDate = formatDate(register.certificate_date);
+const certPlace = register.certificate_place || '';
+
+// Build certification text
+const certificationText = `I ${certifiedRevName} hereby certify that the above is a true extract from the Register of Burials kept at ${holdingOffice}.`;
+
+// Pastorate name from pastorate table - convert to uppercase for display
+const pastorateNameRaw = pastorate ? `${pastorate.pastorate_name} Pastorate` : (church.church_name || 'Pastorate');
+const pastorateName = pastorateNameRaw.toUpperCase();
+const pastorateFont = getFontClass(pastorateName);
+const pastorateSize = getFontSize(pastorateName, 14.2);
+%>
+
+  <!-- Background Image (must be first/bottom layer) -->
+  <div class="image-frame" style="left: 0.00mm; top: 0.00mm; width: 297.05mm; height: 210.00mm; overflow: hidden; position: absolute; z-index: 0;">
+    <img src="<%= imageBase64 %>" style="width: 100%; height: 100%; object-fit: cover;" />
+  </div>
+
+  <!-- Pastorate Name -->
+  <div class="text-frame" style="left: 13.19mm; top: 20.00mm; width: 271.03mm; height: 7.62mm; z-index: 1;">
+    <div class="text-content <%= pastorateFont %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; font-size: <%= pastorateSize %>pt; color: #000000; text-align: center; line-height: 1.67;"><%= pastorateName %></div>
+  </div>
+
+  <!-- Number -->
+  <div class="text-frame" style="left: 20.35mm; top: 120.50mm; margin-left: -34.00mm; margin-top: -7.65mm; width: 68.00mm; height: 15.30mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(certNumber) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(certNumber, 12.0) %>pt; color: #000000; text-align: center;"><%= certNumber %></div>
+  </div>
+
+  <!-- Date of Death -->
+  <div class="text-frame" style="left: 39.55mm; top: 120.50mm; margin-left: -34.00mm; margin-top: -11.55mm; width: 68.00mm; height: 23.10mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(dateOfDeath) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(dateOfDeath, 10.4) %>pt; color: #000000; text-align: center;"><%= dateOfDeath %></div>
+  </div>
+
+  <!-- When Buried -->
+  <div class="text-frame" style="left: 62.65mm; top: 120.50mm; margin-left: -34.00mm; margin-top: -11.55mm; width: 68.00mm; height: 23.10mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(whenBuried) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(whenBuried, 12.0) %>pt; color: #000000; text-align: center;"><%= whenBuried %></div>
+  </div>
+
+  <!-- Name of the Person died -->
+  <div class="text-frame" style="left: 88.97mm; top: 120.50mm; margin-left: -34.00mm; margin-top: -14.78mm; width: 68.00mm; height: 29.55mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(nameOfPersonDied) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(nameOfPersonDied, 10.4) %>pt; color: #000000; text-align: center;"><%= nameOfPersonDied %></div>
+  </div>
+
+  <!-- Sex -->
+  <div class="text-frame" style="left: 112.62mm; top: 121.25mm; margin-left: -34.00mm; margin-top: -8.88mm; width: 68.00mm; height: 17.75mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(sex) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(sex, 10.4) %>pt; color: #000000; text-align: center;"><%= sex %></div>
+  </div>
+
+  <!-- Age -->
+  <div class="text-frame" style="left: 132.25mm; top: 121.00mm; margin-left: -34.00mm; margin-top: -10.75mm; width: 68.00mm; height: 21.50mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(age) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(age, 10.4) %>pt; color: #000000; text-align: center;"><%= age %></div>
+  </div>
+
+  <!-- Profession -->
+  <div class="text-frame" style="left: 156.75mm; top: 120.50mm; margin-left: -34.00mm; margin-top: -13.75mm; width: 68.00mm; height: 27.50mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(profession) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(profession, 10.4) %>pt; color: #000000; text-align: center;"><%= profession %></div>
+  </div>
+
+  <!-- Cause of Death -->
+  <div class="text-frame" style="left: 184.25mm; top: 120.50mm; margin-left: -34.00mm; margin-top: -13.75mm; width: 68.00mm; height: 27.50mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(causeOfDeath) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(causeOfDeath, 10.4) %>pt; color: #000000; text-align: center;"><%= causeOfDeath %></div>
+  </div>
+
+  <!-- Father Name -->
+  <div class="text-frame" style="left: 206.25mm; top: 120.50mm; margin-left: -34.00mm; margin-top: -8.25mm; width: 68.00mm; height: 16.50mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(fatherName) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(fatherName, 10.4) %>pt; color: #000000; text-align: center;"><%= fatherName %></div>
+  </div>
+
+  <!-- Mother Name -->
+  <div class="text-frame" style="left: 222.75mm; top: 121.00mm; margin-left: -34.00mm; margin-top: -8.25mm; width: 68.00mm; height: 16.50mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(motherName) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(motherName, 10.4) %>pt; color: #000000; text-align: center;"><%= motherName %></div>
+  </div>
+
+  <!-- Where Buried -->
+  <div class="text-frame" style="left: 243.25mm; top: 120.50mm; margin-left: -34.00mm; margin-top: -12.25mm; width: 68.00mm; height: 24.50mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(whereBuried) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(whereBuried, 10.4) %>pt; color: #000000; text-align: center;"><%= whereBuried %></div>
+  </div>
+
+  <!-- Signature of the person by whom Buried -->
+  <div class="text-frame" style="left: 270.27mm; top: 120.50mm; margin-left: -34.00mm; margin-top: -14.78mm; width: 68.00mm; height: 29.55mm; transform: rotate(-90.0deg); transform-origin: center center; z-index: 1;">
+    <div class="text-content <%= getFontClass(signatureWhoBuried) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: <%= getFontSize(signatureWhoBuried, 10.4) %>pt; color: #000000; text-align: center;"><%= signatureWhoBuried %></div>
+  </div>
+
+  <!-- Certification Text -->
+  <div class="text-frame" style="left: 12.70mm; top: 160.45mm; width: 271.72mm; height: 12.80mm; z-index: 1;">
+    <div class="text-content <%= getFontClass(certificationText) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; font-size: <%= getFontSize(certificationText, 10.4) %>pt; color: #000000; text-align: left;"><%= certificationText %></div>
+  </div>
+
+  <!-- Date of Certificate Issue -->
+  <div class="text-frame" style="left: 25.75mm; top: 176.25mm; width: 49.70mm; height: 7.55mm; z-index: 1;">
+    <div class="text-content <%= getFontClass(certDate) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; font-size: <%= getFontSize(certDate, 10.4) %>pt; color: #000000; text-align: left;"><%= certDate %></div>
+  </div>
+
+  <!-- Place of Certificate Issue -->
+  <div class="text-frame" style="left: 26.25mm; top: 184.75mm; width: 49.70mm; height: 7.55mm; z-index: 1;">
+    <div class="text-content <%= getFontClass(certPlace) %>" style="width: 100%; height: 100%; box-sizing: border-box; padding: 0.00mm 0.00mm 0.00mm 0.00mm; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; font-size: <%= getFontSize(certPlace, 10.4) %>pt; color: #000000; text-align: left;"><%= certPlace %></div>
+  </div>
+
+</body>
+</html>
+

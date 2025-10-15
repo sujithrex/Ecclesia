@@ -306,6 +306,10 @@ const PastorateDashboard = ({
     navigate('/infant-baptism');
   };
 
+  const handleBurialRegister = () => {
+    navigate('/burial-register');
+  };
+
   const handleLetterpad = () => {
     navigate('/letterpad');
   };
@@ -390,6 +394,14 @@ const PastorateDashboard = ({
           >
             <DocumentRegular />
             Certificate - Infant Bap
+          </button>
+          <button
+            className={styles.actionButton}
+            onClick={handleBurialRegister}
+            type="button"
+          >
+            <DocumentRegular />
+            Burial Register
           </button>
           <button
             className={styles.actionButton}

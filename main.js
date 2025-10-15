@@ -20,6 +20,8 @@ const AdultBaptismService = require('./backend/adultBaptismService.js');
 const AdultBaptismReportPuppeteerService = require('./backend/adultBaptismReportPuppeteerService.js');
 const InfantBaptismService = require('./backend/infantBaptismService.js');
 const InfantBaptismReportPuppeteerService = require('./backend/infantBaptismReportPuppeteerService.js');
+const BurialRegisterService = require('./backend/burialRegisterService.js');
+const BurialRegisterReportPuppeteerService = require('./backend/burialRegisterReportPuppeteerService.js');
 const LetterpadService = require('./backend/letterpadService.js');
 const LetterpadReportPuppeteerService = require('./backend/letterpadReportPuppeteerService.js');
 const OfferingsService = require('./backend/offeringsService.js');
@@ -64,6 +66,8 @@ let adultBaptismService;
 let adultBaptismReportPuppeteerService;
 let infantBaptismService;
 let infantBaptismReportPuppeteerService;
+let burialRegisterService;
+let burialRegisterReportPuppeteerService;
 let letterpadService;
 let letterpadReportPuppeteerService;
 let offeringsService;
@@ -533,6 +537,39 @@ ipcMain.handle('infant-baptism-get-certificate-data-for-pdf', async (event, { ce
 
 ipcMain.handle('infant-baptism-generate-pdf-puppeteer', async (event, { certificate, church, options }) => {
   return await infantBaptismReportPuppeteerService.generateCertificatePDF(certificate, church, options);
+});
+
+// Burial Register IPC handlers
+ipcMain.handle('burial-register-create', async (event, { registerData, userId }) => {
+  return await burialRegisterService.createRegister(registerData, userId);
+});
+
+ipcMain.handle('burial-register-get-registers', async (event, { churchId, userId, page, limit }) => {
+  return await burialRegisterService.getRegistersByChurch(churchId, userId, page, limit);
+});
+
+ipcMain.handle('burial-register-get-by-id', async (event, { registerId, userId }) => {
+  return await burialRegisterService.getRegisterById(registerId, userId);
+});
+
+ipcMain.handle('burial-register-update', async (event, { registerId, registerData, userId }) => {
+  return await burialRegisterService.updateRegister(registerId, registerData, userId);
+});
+
+ipcMain.handle('burial-register-delete', async (event, { registerId, userId }) => {
+  return await burialRegisterService.deleteRegister(registerId, userId);
+});
+
+ipcMain.handle('burial-register-get-next-number', async (event, { churchId, userId }) => {
+  return await burialRegisterService.getNextRegisterNumber(churchId, userId);
+});
+
+ipcMain.handle('burial-register-get-data-for-pdf', async (event, { registerId, userId }) => {
+  return await burialRegisterService.getRegisterDataForPDF(registerId, userId);
+});
+
+ipcMain.handle('burial-register-generate-pdf-puppeteer', async (event, { register, church, options }) => {
+  return await burialRegisterReportPuppeteerService.generateRegisterPDF(register, church, options);
 });
 
 // Letterpad IPC handlers
@@ -1425,6 +1462,8 @@ app.on('ready', async () => {
   adultBaptismReportPuppeteerService = new AdultBaptismReportPuppeteerService(db);
   infantBaptismService = new InfantBaptismService(db);
   infantBaptismReportPuppeteerService = new InfantBaptismReportPuppeteerService(db);
+  burialRegisterService = new BurialRegisterService(db);
+  burialRegisterReportPuppeteerService = new BurialRegisterReportPuppeteerService(db);
   letterpadService = new LetterpadService(db);
   letterpadReportPuppeteerService = new LetterpadReportPuppeteerService(db);
   offeringsService = new OfferingsService(db);

@@ -308,6 +308,36 @@ class DatabaseManager {
                     )
                 `);
 
+                // Burial Register table
+                this.db.run(`
+                    CREATE TABLE IF NOT EXISTS burial_registers (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        church_id INTEGER NOT NULL,
+                        certificate_number TEXT NOT NULL,
+                        date_of_death DATE NOT NULL,
+                        when_buried DATE NOT NULL,
+                        name_of_person_died TEXT NOT NULL,
+                        sex TEXT NOT NULL CHECK (sex IN ('male', 'female')),
+                        age TEXT NOT NULL,
+                        profession TEXT,
+                        cause_of_death TEXT NOT NULL,
+                        father_name TEXT NOT NULL,
+                        mother_name TEXT NOT NULL,
+                        where_buried TEXT NOT NULL,
+                        signature_who_buried TEXT NOT NULL,
+                        certified_rev_name TEXT NOT NULL,
+                        holding_office TEXT NOT NULL,
+                        certificate_date DATE NOT NULL,
+                        certificate_place TEXT NOT NULL,
+                        created_by INTEGER NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (church_id) REFERENCES churches (id) ON DELETE CASCADE,
+                        FOREIGN KEY (created_by) REFERENCES users (id),
+                        UNIQUE(church_id, certificate_number)
+                    )
+                `);
+
                 // Letterpad table
                 this.db.run(`
                     CREATE TABLE IF NOT EXISTS letterpads (
@@ -3853,6 +3883,170 @@ class DatabaseManager {
                     reject(err);
                 } else {
                     resolve({ id: this.lastID, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // Burial Register methods
+    async createBurialRegister(registerData) {
+        return new Promise((resolve, reject) => {
+            const {
+                church_id, certificate_number, date_of_death, when_buried, name_of_person_died,
+                sex, age, profession, cause_of_death, father_name, mother_name,
+                where_buried, signature_who_buried, certified_rev_name, holding_office,
+                certificate_date, certificate_place, created_by
+            } = registerData;
+
+            const query = `
+                INSERT INTO burial_registers (
+                    church_id, certificate_number, date_of_death, when_buried, name_of_person_died,
+                    sex, age, profession, cause_of_death, father_name, mother_name,
+                    where_buried, signature_who_buried, certified_rev_name, holding_office,
+                    certificate_date, certificate_place, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            this.db.run(query, [
+                church_id, certificate_number, date_of_death, when_buried, name_of_person_died,
+                sex, age, profession, cause_of_death, father_name, mother_name,
+                where_buried, signature_who_buried, certified_rev_name, holding_office,
+                certificate_date, certificate_place, created_by
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ id: this.lastID });
+                }
+            });
+        });
+    }
+
+    async getBurialRegistersByChurch(churchId, limit = 8, offset = 0) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT br.*, u.name as created_by_name
+                FROM burial_registers br
+                LEFT JOIN users u ON br.created_by = u.id
+                WHERE br.church_id = ?
+                ORDER BY br.created_at DESC
+                LIMIT ? OFFSET ?
+            `;
+
+            this.db.all(query, [churchId, limit, offset], (err, rows) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    async getBurialRegisterById(registerId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT br.*, u.name as created_by_name
+                FROM burial_registers br
+                LEFT JOIN users u ON br.created_by = u.id
+                WHERE br.id = ?
+            `;
+
+            this.db.get(query, [registerId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    async getBurialRegistersCount(churchId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT COUNT(*) as count
+                FROM burial_registers
+                WHERE church_id = ?
+            `;
+
+            this.db.get(query, [churchId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(row ? row.count : 0);
+                }
+            });
+        });
+    }
+
+    async updateBurialRegister(registerId, registerData) {
+        return new Promise((resolve, reject) => {
+            const {
+                certificate_number, date_of_death, when_buried, name_of_person_died,
+                sex, age, profession, cause_of_death, father_name, mother_name,
+                where_buried, signature_who_buried, certified_rev_name, holding_office,
+                certificate_date, certificate_place
+            } = registerData;
+
+            const query = `
+                UPDATE burial_registers
+                SET certificate_number = ?, date_of_death = ?, when_buried = ?, name_of_person_died = ?,
+                    sex = ?, age = ?, profession = ?, cause_of_death = ?, father_name = ?, mother_name = ?,
+                    where_buried = ?, signature_who_buried = ?, certified_rev_name = ?, holding_office = ?,
+                    certificate_date = ?, certificate_place = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `;
+
+            this.db.run(query, [
+                certificate_number, date_of_death, when_buried, name_of_person_died,
+                sex, age, profession, cause_of_death, father_name, mother_name,
+                where_buried, signature_who_buried, certified_rev_name, holding_office,
+                certificate_date, certificate_place, registerId
+            ], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async deleteBurialRegister(registerId) {
+        return new Promise((resolve, reject) => {
+            const query = 'DELETE FROM burial_registers WHERE id = ?';
+
+            this.db.run(query, [registerId], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes });
+                }
+            });
+        });
+    }
+
+    async getNextBurialRegisterNumber(churchId) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT certificate_number
+                FROM burial_registers
+                WHERE church_id = ?
+                ORDER BY CAST(certificate_number AS INTEGER) DESC
+                LIMIT 1
+            `;
+
+            this.db.get(query, [churchId], (err, row) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    if (row && row.certificate_number) {
+                        const nextNumber = parseInt(row.certificate_number) + 1;
+                        resolve(String(nextNumber));
+                    } else {
+                        resolve('1');
+                    }
                 }
             });
         });

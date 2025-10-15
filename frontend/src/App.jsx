@@ -29,6 +29,7 @@ import WeddingListPage from './components/WeddingListPage';
 import SabaiJabithaPage from './components/SabaiJabithaPage';
 import AdultBaptismPage from './components/AdultBaptismPage';
 import InfantBaptismPage from './components/InfantBaptismPage';
+import BurialRegisterPage from './components/BurialRegisterPage';
 import LetterpadPage from './components/LetterpadPage';
 import PastorateAccountsPage from './components/PastorateAccountsPage';
 import ChurchAccountsPage from './components/ChurchAccountsPage';
@@ -931,6 +932,19 @@ function App() {
                 onCreateChurch={handleCreateChurchFromStatus}
                 onEditChurch={handleEditChurch}
                 onDeleteChurch={handleDeleteChurch}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/burial-register"
+          element={
+            user ? (
+              <BurialRegisterPage
+                user={user}
+                selectedChurch={currentChurch}
               />
             ) : (
               <Navigate to="/login" replace />

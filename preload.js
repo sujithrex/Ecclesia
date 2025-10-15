@@ -149,6 +149,18 @@ contextBridge.exposeInMainWorld('electron', {
     generatePDFPuppeteer: (data) => ipcRenderer.invoke('infant-baptism-generate-pdf-puppeteer', data)
   },
 
+  // Burial Register API
+  burialRegister: {
+    createRegister: (data) => ipcRenderer.invoke('burial-register-create', data),
+    getRegisters: (data) => ipcRenderer.invoke('burial-register-get-registers', data),
+    getRegisterById: (data) => ipcRenderer.invoke('burial-register-get-by-id', data),
+    updateRegister: (data) => ipcRenderer.invoke('burial-register-update', data),
+    deleteRegister: (data) => ipcRenderer.invoke('burial-register-delete', data),
+    getNextRegisterNumber: (data) => ipcRenderer.invoke('burial-register-get-next-number', data),
+    getRegisterDataForPDF: (data) => ipcRenderer.invoke('burial-register-get-data-for-pdf', data),
+    generatePDFPuppeteer: (data) => ipcRenderer.invoke('burial-register-generate-pdf-puppeteer', data)
+  },
+
   // Letterpad API
   letterpad: {
     create: (data) => ipcRenderer.invoke('letterpad-create', data),
