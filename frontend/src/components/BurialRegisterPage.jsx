@@ -335,7 +335,23 @@ const useStyles = makeStyles({
   },
 });
 
-function BurialRegisterPage({ user, selectedChurch }) {
+function BurialRegisterPage({
+  user,
+  onLogout,
+  onProfileClick,
+  currentPastorate,
+  userPastorates,
+  onPastorateChange,
+  onCreatePastorate,
+  onEditPastorate,
+  onDeletePastorate,
+  currentChurch,
+  userChurches,
+  onChurchChange,
+  onCreateChurch,
+  onEditChurch,
+  onDeleteChurch
+}) {
   const classes = useStyles();
   const navigate = useNavigate();
 
@@ -370,28 +386,22 @@ function BurialRegisterPage({ user, selectedChurch }) {
   const [formErrors, setFormErrors] = useState({});
   const [editingId, setEditingId] = useState(null);
 
-  // Breadcrumb items
-  const breadcrumbItems = [
-    { label: 'Pastorate Dashboard', icon: <HomeRegular />, onClick: () => navigate('/pastorate-dashboard') },
-    { label: 'Burial Register', icon: <DocumentRegular /> }
-  ];
-
   // Load registers on mount and when church/page changes
   useEffect(() => {
-    if (selectedChurch) {
+    if (currentChurch) {
       loadRegisters();
       loadNextRegisterNumber();
     }
-  }, [selectedChurch, currentPage]);
+  }, [currentChurch, currentPage]);
 
   // Load registers from database
   const loadRegisters = async () => {
-    if (!selectedChurch) return;
+    if (!currentChurch) return;
 
     setLoading(true);
     try {
       const result = await window.electron.burialRegister.getRegisters({
-        churchId: selectedChurch.id,
+        churchId: currentChurch.id,
         userId: user.id,
         page: currentPage,
         limit: 10
@@ -413,11 +423,11 @@ function BurialRegisterPage({ user, selectedChurch }) {
 
   // Load next register number
   const loadNextRegisterNumber = async () => {
-    if (!selectedChurch || editingId) return;
+    if (!currentChurch || editingId) return;
 
     try {
       const result = await window.electron.burialRegister.getNextRegisterNumber({
-        churchId: selectedChurch.id,
+        churchId: currentChurch.id,
         userId: user.id
       });
 
@@ -476,7 +486,7 @@ function BurialRegisterPage({ user, selectedChurch }) {
       return;
     }
 
-    if (!selectedChurch) {
+    if (!currentChurch) {
       showNotification('error', 'No church selected');
       return;
     }
@@ -485,7 +495,7 @@ function BurialRegisterPage({ user, selectedChurch }) {
     try {
       const registerData = {
         ...formData,
-        church_id: selectedChurch.id
+        church_id: currentChurch.id
       };
 
       let result;
@@ -670,34 +680,35 @@ function BurialRegisterPage({ user, selectedChurch }) {
     }
   };
 
-  if (!selectedChurch) {
-    return (
-      <div className={classes.container}>
-        <Breadcrumb items={breadcrumbItems} />
-        <div className={classes.content}>
-          <h1 className={classes.pageTitle}>Burial Register</h1>
-          <div className={classes.formContainer}>
-            <p>Please select a church from the Pastorate Dashboard to manage burial registers.</p>
-          </div>
-        </div>
-        <StatusBar user={user} />
-      </div>
-    );
-  }
-
   return (
     <div className={classes.container}>
-      <Breadcrumb items={breadcrumbItems} />
-      <div className={classes.content}>
-        <h1 className={classes.pageTitle}>Burial Register - {selectedChurch.church_name}</h1>
+      {/* Notification */}
+      {notification && (
+        <div className={`${classes.notification} ${notification.type === 'success' ? classes.notificationSuccess : classes.notificationError}`}>
+          {notification.type === 'success' ? <CheckmarkCircleRegular /> : <DismissCircleRegular />}
+          {notification.message}
+        </div>
+      )}
 
-        {/* Notification */}
-        {notification && (
-          <div className={`${classes.notification} ${notification.type === 'success' ? classes.notificationSuccess : classes.notificationError}`}>
-            {notification.type === 'success' ? <CheckmarkCircleRegular /> : <DismissCircleRegular />}
-            {notification.message}
-          </div>
-        )}
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb
+        pageTitle="Burial Register"
+        breadcrumbs={[
+          {
+            label: `${currentPastorate?.pastorate_short_name || 'Pastorate'} Dashboard`,
+            icon: <HomeRegular />,
+            onClick: () => navigate('/pastorate-dashboard')
+          },
+          {
+            label: 'Burial Register',
+            current: true
+          }
+        ]}
+        onNavigate={(path) => navigate(path)}
+      />
+
+      {/* Content */}
+      <div className={classes.content}>
 
         {/* Delete Warning */}
         {confirmDelete && (
@@ -719,7 +730,86 @@ function BurialRegisterPage({ user, selectedChurch }) {
           </div>
         )}
 
-        {/* Form */}
+        {/* Registers Table */}
+        <div className={classes.tableContainer}>
+          <div className={classes.tableHeader}>
+            <h2 className={classes.tableTitle}>Previous Records</h2>
+            <button className={classes.refreshButton} onClick={loadRegisters} disabled={loading}>
+              <ArrowClockwiseRegular />
+              Refresh
+            </button>
+          </div>
+
+          <table className={classes.table}>
+            <thead className={classes.tableHead}>
+              <tr>
+                <th className={classes.th}>Cert. No.</th>
+                <th className={classes.th}>Name</th>
+                <th className={classes.th}>Date of Death</th>
+                <th className={classes.th}>When Buried</th>
+                <th className={classes.th}>Age</th>
+                <th className={classes.th}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {registers.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className={classes.td} style={{ textAlign: 'center', padding: '24px' }}>
+                    {loading ? 'Loading...' : 'No registers found'}
+                  </td>
+                </tr>
+              ) : (
+                registers.map((register) => (
+                  <tr key={register.id}>
+                    <td className={classes.td}>{register.certificate_number}</td>
+                    <td className={classes.td}>{register.name_of_person_died}</td>
+                    <td className={classes.td}>{new Date(register.date_of_death).toLocaleDateString()}</td>
+                    <td className={classes.td}>{new Date(register.when_buried).toLocaleDateString()}</td>
+                    <td className={classes.td}>{register.age}</td>
+                    <td className={classes.td}>
+                      <button className={classes.actionButton} onClick={() => handleGeneratePDF(register.id)}>
+                        <PrintRegular /> View PDF
+                      </button>
+                      <button className={classes.actionButton} onClick={() => handleEdit(register.id)}>
+                        Edit
+                      </button>
+                      <button className={`${classes.actionButton} ${classes.deleteButton}`} onClick={() => handleDelete(register.id)}>
+                        <DeleteRegular /> Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className={classes.pagination}>
+              <div className={classes.paginationInfo}>
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className={classes.paginationButtons}>
+                <button
+                  className={classes.paginationButton}
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1 || loading}
+                >
+                  <ChevronLeftRegular /> Previous
+                </button>
+                <button
+                  className={classes.paginationButton}
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages || loading}
+                >
+                  Next <ChevronRightRegular />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Entry Form */}
         <div className={classes.formContainer}>
           <h2 className={classes.formTitle}>{editingId ? 'Edit Register' : 'New Register'}</h2>
 
@@ -1001,87 +1091,27 @@ function BurialRegisterPage({ user, selectedChurch }) {
             )}
           </div>
         </div>
-
-        {/* Registers Table */}
-        <div className={classes.tableContainer}>
-          <div className={classes.tableHeader}>
-            <h2 className={classes.tableTitle}>Burial Registers</h2>
-            <button className={classes.refreshButton} onClick={loadRegisters} disabled={loading}>
-              <ArrowClockwiseRegular />
-              Refresh
-            </button>
-          </div>
-
-          <table className={classes.table}>
-            <thead className={classes.tableHead}>
-              <tr>
-                <th className={classes.th}>Cert. No.</th>
-                <th className={classes.th}>Name</th>
-                <th className={classes.th}>Date of Death</th>
-                <th className={classes.th}>When Buried</th>
-                <th className={classes.th}>Age</th>
-                <th className={classes.th}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registers.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className={classes.td} style={{ textAlign: 'center', padding: '24px' }}>
-                    {loading ? 'Loading...' : 'No registers found'}
-                  </td>
-                </tr>
-              ) : (
-                registers.map((register) => (
-                  <tr key={register.id}>
-                    <td className={classes.td}>{register.certificate_number}</td>
-                    <td className={classes.td}>{register.name_of_person_died}</td>
-                    <td className={classes.td}>{new Date(register.date_of_death).toLocaleDateString()}</td>
-                    <td className={classes.td}>{new Date(register.when_buried).toLocaleDateString()}</td>
-                    <td className={classes.td}>{register.age}</td>
-                    <td className={classes.td}>
-                      <button className={classes.actionButton} onClick={() => handleGeneratePDF(register.id)}>
-                        <PrintRegular /> View PDF
-                      </button>
-                      <button className={classes.actionButton} onClick={() => handleEdit(register.id)}>
-                        Edit
-                      </button>
-                      <button className={`${classes.actionButton} ${classes.deleteButton}`} onClick={() => handleDelete(register.id)}>
-                        <DeleteRegular /> Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className={classes.pagination}>
-              <div className={classes.paginationInfo}>
-                Page {currentPage} of {totalPages}
-              </div>
-              <div className={classes.paginationButtons}>
-                <button
-                  className={classes.paginationButton}
-                  onClick={handlePreviousPage}
-                  disabled={currentPage === 1 || loading}
-                >
-                  <ChevronLeftRegular /> Previous
-                </button>
-                <button
-                  className={classes.paginationButton}
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages || loading}
-                >
-                  Next <ChevronRightRegular />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
-      <StatusBar user={user} />
+
+      {/* Status Bar */}
+      <StatusBar
+        user={user}
+        onLogout={onLogout}
+        onProfileClick={onProfileClick}
+        currentPastorate={currentPastorate}
+        userPastorates={userPastorates}
+        onPastorateChange={onPastorateChange}
+        onCreatePastorate={onCreatePastorate}
+        onEditPastorate={onEditPastorate}
+        onDeletePastorate={onDeletePastorate}
+        currentChurch={currentChurch}
+        userChurches={userChurches}
+        onChurchChange={onChurchChange}
+        onCreateChurch={onCreateChurch}
+        onEditChurch={onEditChurch}
+        onDeleteChurch={onDeleteChurch}
+        currentView="burial-register"
+      />
     </div>
   );
 }
